@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Debug webui (Chromium - MacOS)",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/webui",
+            "runtimeExecutable": "/Applications/Chromium.app/Contents/MacOS/Chromium"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Webui",
+            "runtimeExecutable": "yarn",
+            "runtimeArgs": [
+                "dev"
+            ],
+            "cwd": "${workspaceFolder}/webui"
+        },
+        {
+            "name": "Launch CLI",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/cli/main.go",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "serve"
+            ]
+        },
+        {
+            "name": "Launch Server",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/server/main.go",
+            "cwd": "${workspaceFolder}",
+        },
+    ]
+}

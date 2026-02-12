@@ -1,0 +1,709 @@
+components:
+  schemas:
+    fiber.Error:
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+      type: object
+    payload:
+      properties:
+        payload:
+          $ref: '#/components/schemas/types.TreeNodeRes'
+      type: object
+    time.Duration:
+      enum:
+      - -9223372036854775808
+      - 9223372036854775807
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
+      - 60000000000
+      - 3600000000000
+      type: integer
+      x-enum-varnames:
+      - minDuration
+      - maxDuration
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
+      - Minute
+      - Hour
+    types.DstReq:
+      properties:
+        name:
+          type: string
+      type: object
+    types.MetaRes:
+      properties:
+        comments:
+          type: string
+        extension:
+          type: string
+        id:
+          type: string
+        isDir:
+          type: boolean
+        modified:
+          type: string
+        name:
+          type: string
+        path:
+          type: string
+        size:
+          type: integer
+        url:
+          type: string
+      type: object
+    types.SSEData:
+      properties:
+        message:
+          type: string
+        meta:
+          $ref: '#/components/schemas/types.SSEMeta'
+        status:
+          type: boolean
+        timestamp:
+          type: string
+      type: object
+    types.SSEEvent:
+      enum:
+      - heartbeat
+      - subscribe
+      - unsubscribe
+      - publish
+      - error
+      type: string
+      x-enum-varnames:
+      - SSEEventHeartbeat
+      - SSEEventSubscribe
+      - SSEEventUnsubscribe
+      - SSEEventPublish
+      - SSEEventError
+    types.SSEMessage:
+      properties:
+        data:
+          $ref: '#/components/schemas/types.SSEData'
+        event:
+          $ref: '#/components/schemas/types.SSEEvent'
+        id:
+          type: string
+        retry:
+          $ref: '#/components/schemas/time.Duration'
+      type: object
+    types.SSEMeta:
+      properties:
+        action:
+          type: string
+        id:
+          type: string
+        path:
+          type: string
+      type: object
+    types.TreeNodeRes:
+      properties:
+        children:
+          items:
+            $ref: '#/components/schemas/types.TreeNodeRes'
+          type: array
+          uniqueItems: false
+        meta:
+          $ref: '#/components/schemas/types.MetaRes'
+      type: object
+    types.VfsRes:
+      allOf:
+      - $ref: '#/components/schemas/payload'
+      properties:
+        path:
+          type: string
+        payload:
+          type: object
+        viewType:
+          enum:
+          - list
+          - tree
+          type: string
+      type: object
+    types.WriteReq:
+      properties:
+        content:
+          type: string
+      type: object
+externalDocs:
+  description: ""
+  url: ""
+info:
+  contact:
+    email: miniyu97@gmail.com
+    name: meteormin
+  description: go-vfs is a virtual file system server
+  title: go-vfs
+  version: 1.0.0
+openapi: 3.1.0
+paths:
+  /sse/:id/publish:
+    post:
+      description: Publish a Server-Sent Event message
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - type: object
+              - $ref: '#/components/schemas/types.SSEMeta'
+                description: meta data
+                summary: metaData
+        description: meta data
+        required: true
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Bad Request
+      summary: Publish SSE Message
+      tags:
+      - SSE
+  /sse/subscribe:
+    get:
+      description: Subscribe to Server-Sent Events
+      responses:
+        "200":
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/types.SSEMessage'
+          description: OK
+        "500":
+          content:
+            text/event-stream:
+              schema:
+                type: object
+          description: Internal Server Error
+      summary: SSE Subscribe
+      tags:
+      - SSE
+  /vfs:
+    get:
+      description: get files and directories
+      parameters:
+      - description: name search by q
+        in: query
+        name: q
+        schema:
+          type: string
+      - description: view type
+        in: query
+        name: viewType
+        schema:
+          enum:
+          - list
+          - tree
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - allOf:
+                  - $ref: '#/components/schemas/payload'
+                  properties:
+                    path:
+                      type: string
+                    payload:
+                      type: object
+                    viewType:
+                      enum:
+                      - list
+                      - tree
+                      type: string
+                  type: object
+                - allOf:
+                  - $ref: '#/components/schemas/payload'
+                  properties:
+                    path:
+                      type: string
+                    payload:
+                      type: object
+                    viewType:
+                      enum:
+                      - list
+                      - tree
+                      type: string
+                  type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Internal Server Error
+      summary: List files and directories
+      tags:
+      - vfs
+    post:
+      description: create file or directory
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              oneOf:
+              - title: isDir
+                type: string
+              - title: name
+                type: string
+              - title: file
+                type: file
+          multipart/form-data:
+            schema:
+              type: object
+        description: is directory | name | file
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.MetaRes'
+          description: Created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Internal Server Error
+      summary: Create file or directory
+      tags:
+      - vfs
+  /vfs/:id:
+    delete:
+      description: delete file or directory
+      parameters:
+      - description: file id
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Accepted
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Internal Server Error
+      summary: Delete file or directory
+      tags:
+      - vfs
+    get:
+      description: read file
+      parameters:
+      - description: file id
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/octet-stream:
+              schema:
+                type: file
+          description: OK
+        "400":
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Bad Request
+        "404":
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Not Found
+        "500":
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Internal Server Error
+      summary: Read file
+      tags:
+      - vfs
+    patch:
+      description: move file or directory
+      parameters:
+      - description: file id
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - type: object
+              - $ref: '#/components/schemas/types.DstReq'
+                description: destination
+                summary: dst
+        description: destination
+        required: true
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Accepted
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Internal Server Error
+      summary: Move file or directory
+      tags:
+      - vfs
+    put:
+      description: write content to a file
+      parameters:
+      - description: file id
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - type: object
+              - $ref: '#/components/schemas/types.WriteReq'
+                description: content
+                summary: content
+        description: content
+        required: true
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Accepted
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Internal Server Error
+      summary: Write content to a file
+      tags:
+      - vfs
+  /vfs/:id/comments:
+    patch:
+      description: write comments to a file
+      parameters:
+      - description: file id
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      - description: comment
+        in: query
+        name: comment
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Accepted
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Internal Server Error
+      summary: Write comments to a file
+      tags:
+      - vfs
+  /vfs/:id/copy:
+    post:
+      description: copy file or directory
+      parameters:
+      - description: file id
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - type: object
+              - $ref: '#/components/schemas/types.DstReq'
+                description: destination
+                summary: dst
+        description: destination
+        required: true
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Accepted
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Internal Server Error
+      summary: Copy file or directory
+      tags:
+      - vfs
+  /vfs/:id/stat:
+    get:
+      description: stat file
+      parameters:
+      - description: file id
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.MetaRes'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Internal Server Error
+      summary: Stat file
+      tags:
+      - vfs
+  /vfs/backup:
+    post:
+      description: backup all file
+      responses:
+        "200":
+          content:
+            application/octet-stream:
+              schema:
+                type: file
+          description: OK
+        "500":
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Internal Server Error
+      summary: Backup all file
+      tags:
+      - vfs
+  /vfs/restore:
+    post:
+      description: restore all file
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              title: file
+              type: file
+          multipart/form-data:
+            schema:
+              type: object
+        description: file
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Internal Server Error
+      summary: Restore all file
+      tags:
+      - vfs
+  /vfs/rotate:
+    post:
+      description: rotate encryption key
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+          text/plain:
+            schema:
+              title: key
+              type: string
+        description: new key
+        required: true
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Accepted
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Internal Server Error
+      summary: Rotate encryption key
+      tags:
+      - vfs
+servers:
+- description: Localhost
+  url: localhost:3000

@@ -1,0 +1,19 @@
+services:
+  go-vfs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VERSION=${VERSION:-0.0.1}
+        - BUILD_TIME=${BUILD_TIME:-}
+    env_file:
+      - .env
+    volumes:
+      - "${VOLUME_DATA:-./data}:/app/data"
+    ports:
+      - "${OUTBOUND_PORT:-3000}:${SERVER_PORT:-3000}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${SERVER_PORT}/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3

@@ -1,0 +1,26 @@
+[server]
+# fiber server port
+port = 3000
+[server.config]
+# for debugging, defualt: false
+enablePrintRoutes = false
+[server.logger]
+path = "./logs/server.log"
+accessLogPath = "./logs/access-log.log"
+# log-level: debug=-4, info=0, warn=4, error=8
+level = 0
+[server.basicAuth]
+enabled = false
+username = "${BASIC_AUTH_USERNAME}"
+password = "${BASIC_AUTH_PASSWORD}"
+[vfs.badger]
+path = "./data"
+encryptKeyRotateDuration = "24h"
+[vfs.logger]
+path = "./logs/vfs.log"
+# log-level: debug=-4, info=0, warn=4, error=8
+level = 0
+[cloud.googleDrive]
+clientID = "${CLOUD_GOOGLEDRIVE_CLIENT_ID}"
+clientSecret = "${CLOUD_GOOGLEDRIVE_CLIENT_SECRET}"
+parentFolderID = "go-vfs"

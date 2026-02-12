@@ -1,0 +1,348 @@
+package badger
+
+import (
+	"bytes"
+	"crypto/rand"
+	"encoding/binary"
+	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/goccy/go-json"
+
+	"github.com/dgraph-io/badger/v4"
+	"github.com/google/uuid"
+	"github.com/meteormin/go-vfs"
+)
+
+const (
+	secretFileMode = 0o600
+	secretDirMode  = 0o755
+	chunkSeqLen    = 4
+)
+
+func randomSecretKey(keySize int) ([]byte, error) {
+	key := make([]byte, keySize) // AES-256에 필요한 32바이트 키
+	_, err := rand.Read(key)
+	return key, err
+}
+
+func getEncryptionKey(secretFile string) ([]byte, error) {
+	if _, err := os.Stat(secretFile); err != nil {
+		return nil, err
+	}
+
+	key, err := os.ReadFile(secretFile)
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
+}
+
+// GenerateEncryptionKey 32바이트(256비트)의 랜덤 암호화 키를 생성합니다.
+func GenerateEncryptionKey(secretFile string, keySize int) ([]byte, error) {
+	key, err := randomSecretKey(keySize)
+	if err != nil {
+		return nil, err
+	}
+
+	err = os.MkdirAll(filepath.Dir(secretFile), secretDirMode)
+	if err != nil {
+		return nil, err
+	}
+
+	err = os.WriteFile(secretFile, key, secretFileMode)
+	if err != nil {
+		return nil, err
+	}
+
+	return key, nil
+}
+
+func extractExtension(path string) string {
+	ext := filepath.Ext(path)
+	if ext != "" {
+		return strings.ToLower(strings.TrimPrefix(ext, "."))
+	}
+	return ""
+}
+
+// 경로 문자열에서 부모 경로를 찾는 헬퍼 함수
+func getParentPath(path string) string {
+	if path == vfs.Root || path == "" {
+		return vfs.Root
+	}
+
+	// 1. 마지막 슬래시가 경로의 맨 끝이라면 제거하고 탐색 (디렉토리 대응)
+	// 예: "/test/" -> "/test"
+	p := strings.TrimSuffix(path, "/")
+
+	// 2. 마지막 슬래시 위치 찾기
+	lastIndex := strings.LastIndex(p, "/")
+
+	// 3. 부모 경로 결정
+	if lastIndex < 0 {
+		return vfs.Root // 부모가 없음 (이런 경우는 VFS 구조상 드묾)
+	}
+
+	// lastIndex가 0이면(예: "/test"), 부모는 바로 "/"
+	if lastIndex == 0 {
+		return vfs.Root
+	}
+
+	// 그 외에는 마지막 슬래시를 포함한 위치까지 자름
+	// 예: "/test/abc.txt" -> "/test/"
+	return p[:lastIndex+1]
+}
+
+// 키 생성을 안전하게 처리하는 헬퍼
+func makeKey(prefix, suffix []byte) []byte {
+	k := make([]byte, len(prefix)+len(suffix))
+	copy(k, prefix)
+	copy(k[len(prefix):], suffix)
+	return k
+}
+
+func makeChunkKey(id []byte, seq uint32) []byte {
+	k := make([]byte, len(prefixBlob)+len(id)+chunkSeqLen)
+	copy(k, prefixBlob)
+	copy(k[len(prefixBlob):], id)
+	binary.BigEndian.PutUint32(k[len(prefixBlob)+len(id):], seq)
+	return k
+}
+
+func setMeta(txn *badger.Txn, metaKey []byte, im *internalMeta) error {
+	jsonByte, err := json.Marshal(im)
+	if err != nil {
+		return err
+	}
+	return txn.Set(metaKey, jsonByte)
+}
+
+func getMeta(item *badger.Item) (internalMeta, error) {
+	var im internalMeta
+	err := item.Value(func(val []byte) error {
+		return json.Unmarshal(val, &im)
+	})
+	if err != nil {
+		return internalMeta{}, err
+	}
+
+	return im, nil
+}
+
+func findMetaItemByID(txn *badger.Txn, id uuid.UUID) (*badger.Item, error) {
+	idBytes, err := id.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	indexKey := makeKey(prefixIndex, idBytes)
+	pathItem, err := txn.Get(indexKey)
+	if err != nil {
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return nil, vfs.ErrNotFound
+		}
+		return nil, err
+	}
+
+	var path string
+	err = pathItem.Value(func(val []byte) error {
+		path = string(val)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return txn.Get([]byte("meta:" + path))
+}
+
+func findByPath(txn *badger.Txn, path string) (internalMeta, error) {
+	if path == vfs.Root {
+		return internalMeta{}, vfs.ErrNotFound
+	}
+
+	metaKey := makeKey(prefixMeta, []byte(path))
+	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	defer it.Close()
+	for it.Seek(metaKey); it.ValidForPrefix(metaKey); it.Next() {
+		var im internalMeta
+		item := it.Item()
+		key := item.Key()
+
+		err := item.Value(func(val []byte) error {
+			if err := json.Unmarshal(val, &im); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return internalMeta{}, err
+		}
+
+		if bytes.Equal(key, metaKey) {
+			return im, nil
+		}
+
+		// Check directory match (path/ vs path)
+		// We want to match if key is exactly metaKey + "/"
+		// metaKey is "meta:path". key is "meta:path/"
+		if len(key) == len(metaKey)+1 && key[len(key)-1] == '/' && bytes.Equal(key[:len(metaKey)], metaKey) {
+			return im, nil
+		}
+	}
+
+	return internalMeta{}, vfs.ErrNotFound
+}
+
+func deleteIndex(txn *badger.Txn, meta *vfs.Meta) error {
+	// Delete Index
+	idBytes, marshalBinErr := meta.ID.MarshalBinary()
+	if marshalBinErr != nil {
+		return marshalBinErr
+	}
+	idxKey := makeKey(prefixIndex, idBytes)
+	if err := txn.Delete(idxKey); err != nil {
+		return err
+	}
+	return nil
+}
+
+func deleteChunks(txn *badger.Txn, id []byte) error {
+	prefix := make([]byte, len(prefixBlob)+len(id))
+	copy(prefix, prefixBlob)
+	copy(prefix[len(prefixBlob):], id)
+
+	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	defer it.Close()
+
+	// Collect keys to delete
+	var keys [][]byte
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		keys = append(keys, it.Item().KeyCopy(nil))
+	}
+
+	for _, k := range keys {
+		if err := txn.Delete(k); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func deleteItem(txn *badger.Txn, im *internalMeta) error {
+	// Single file delete
+	idBytes, marshalBinErr := im.InternalID.MarshalBinary()
+	if marshalBinErr != nil {
+		return marshalBinErr
+	}
+	// Delete chunks
+	if err := deleteChunks(txn, idBytes); err != nil {
+		return err
+	}
+
+	// Delete Index
+	if err := deleteIndex(txn, &im.Meta); err != nil {
+		return err
+	}
+
+	// Delete Meta
+	metaKey := makeKey(prefixMeta, []byte(im.Path))
+	if err := txn.Delete(metaKey); err != nil {
+		return err
+	}
+	return nil
+}
+
+func deleteItems(txn *badger.Txn, items []internalMeta) error {
+	for i := range items {
+		if !items[i].IsDir {
+			if err := deleteItem(txn, &items[i]); err != nil {
+				return err
+			}
+		} else {
+			// Delete Index
+			if err := deleteIndex(txn, &items[i].Meta); err != nil {
+				return err
+			}
+
+			// Delete Meta
+			mKey := makeKey(prefixMeta, []byte(items[i].Path))
+			if err := txn.Delete(mKey); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func moveItem(txn *badger.Txn, im *internalMeta, newPath string) error {
+	// 1. Delete old meta key
+	oldKey := makeKey(prefixMeta, []byte(im.Path))
+	if err := txn.Delete(oldKey); err != nil {
+		return err
+	}
+
+	// 2. Update meta with new path and time
+	im.Path = newPath
+	im.Name = filepath.Base(strings.TrimSuffix(newPath, "/"))
+	im.Modified = time.Now()
+	// 3. Set new meta key
+	newKey := makeKey(prefixMeta, []byte(newPath))
+	if err := setMeta(txn, newKey, im); err != nil {
+		return err
+	}
+
+	// 4. Update index (ID -> Path)
+	idBytes, err := im.ID.MarshalBinary()
+	if err != nil {
+		return err
+	}
+	idxKey := makeKey(prefixIndex, idBytes)
+	if err := txn.Set(idxKey, []byte(newPath)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func moveChildren(txn *badger.Txn, srcPath, dstPath string) error {
+	prefix := srcPath
+	if !strings.HasSuffix(prefix, "/") {
+		prefix += "/"
+	}
+
+	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	defer it.Close()
+
+	seekKey := makeKey(prefixMeta, []byte(prefix))
+
+	var children []internalMeta
+
+	// Scan all descendants
+	for it.Seek(seekKey); it.ValidForPrefix(seekKey); it.Next() {
+		im, err := getMeta(it.Item())
+		if err != nil {
+			continue
+		}
+		children = append(children, im)
+	}
+
+	// Move children
+	for i := range children {
+		relPath := strings.TrimPrefix(children[i].Path, prefix)
+		newChildPath := filepath.Join(dstPath, relPath)
+
+		// Preserve trailing slash for directories
+		if children[i].IsDir && !strings.HasSuffix(newChildPath, "/") {
+			newChildPath += "/"
+		}
+
+		if err := moveItem(txn, &children[i], newChildPath); err != nil {
+			return err
+		}
+	}
+	return nil
+}

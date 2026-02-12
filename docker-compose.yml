@@ -1,0 +1,15 @@
+services:
+  go-vfs:
+    container_name: go-vfs-server
+    image: ghcr.io/meteormin/go-vfs:${TAG:-latest}
+    env_file:
+      - .env
+    volumes:
+      - "${VOLUME_DATA:-./data}:/app/data"
+    ports:
+      - "${OUTBOUND_PORT:-3000}:${SERVER_PORT:-3000}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${SERVER_PORT}/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3

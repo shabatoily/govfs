@@ -1,0 +1,12 @@
+webui/node_modules
+.git
+logs
+data
+build
+.vscode
+.idea
+.docker
+release
+tools
+scripts
+.env

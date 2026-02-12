@@ -1,0 +1,13 @@
+{
+    "editor.fontSize": 14,
+    "editor.fontFamily": "D2CodingLigature Nerd Font",
+    "svelte.language-server.runtime": "node",
+    "[svelte]": {
+        "editor.defaultFormatter": "svelte.svelte-vscode",
+        "editor.formatOnSave": true
+    },
+    "go.lintTool": "golangci-lint-v2",
+    "gopls": {
+        "formatting.gofumpt": true
+    }
+}
