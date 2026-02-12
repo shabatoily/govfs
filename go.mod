@@ -1,4 +1,4 @@
-module github.com/meteormin/go-vfs
+module github.com/meteormin/govfs
 
 go 1.25.0
 

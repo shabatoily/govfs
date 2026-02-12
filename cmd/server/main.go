@@ -13,21 +13,21 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/joho/godotenv"
-	"github.com/meteormin/go-vfs/bootstrap"
-	"github.com/meteormin/go-vfs/config"
-	_ "github.com/meteormin/go-vfs/docs"
+	"github.com/meteormin/govfs/bootstrap"
+	"github.com/meteormin/govfs/config"
+	_ "github.com/meteormin/govfs/docs"
 )
 
 var (
-	name        = "go-vfs"
+	name        = "govfs"
 	version     = "0.0.1"
 	buildTime   = time.Now().UTC().Format(time.RFC3339)
-	description = "go-vfs is a virtual file system server"
+	description = "govfs is a virtual file system server"
 )
 
-// @title go-vfs
+// @title govfs
 // @version 1.0.0
-// @description go-vfs is a virtual file system server
+// @description govfs is a virtual file system server
 // @contact.name meteormin
 // @contact.email miniyu97@gmail.com
 // @servers.url localhost:3000

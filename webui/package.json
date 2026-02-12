@@ -1,5 +1,5 @@
 {
-  "name": "go-vfs-webui",
+  "name": "govfs-webui",
   "private": true,
   "version": "0.0.0",
   "type": "module",

@@ -6,11 +6,11 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/log"
-	"github.com/meteormin/go-vfs"
-	"github.com/meteormin/go-vfs/docs"
-	"github.com/meteormin/go-vfs/drivers"
-	"github.com/meteormin/go-vfs/drivers/badger"
-	"github.com/meteormin/go-vfs/drivers/localstorage"
+	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/docs"
+	"github.com/meteormin/govfs/drivers"
+	"github.com/meteormin/govfs/drivers/badger"
+	"github.com/meteormin/govfs/drivers/localstorage"
 )
 
 type AppInfo struct {

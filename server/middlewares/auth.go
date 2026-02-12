@@ -3,7 +3,7 @@ package middlewares
 import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/basicauth"
-	"github.com/meteormin/go-vfs/config"
+	"github.com/meteormin/govfs/config"
 )
 
 // BasicAuthMiddleware creates a new basic auth middleware

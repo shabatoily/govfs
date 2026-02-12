@@ -139,8 +139,8 @@ info:
   contact:
     email: miniyu97@gmail.com
     name: meteormin
-  description: go-vfs is a virtual file system server
-  title: go-vfs
+  description: govfs is a virtual file system server
+  title: govfs
   version: 1.0.0
 openapi: 3.1.0
 paths:

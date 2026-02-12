@@ -1,8 +1,8 @@
-# go-vfs 프로젝트 디자인 문서
+# govfs 프로젝트 디자인 문서
 
 ## 1. 프로젝트 개요
 
-**go-vfs**는 Go 언어로 작성된 가상 파일 시스템(Virtual File System) 프로젝트입니다. BadgerDB를 기반으로 한 로컬 스토리지와 Google Drive와 같은 클라우드 스토리지 통합을 지원합니다. 웹 서버, 웹 UI, 그리고 강력한 CLI 도구를 통해 파일 시스템을 효율적으로 관리할 수 있습니다.
+**govfs**는 Go 언어로 작성된 가상 파일 시스템(Virtual File System) 프로젝트입니다. BadgerDB를 기반으로 한 로컬 스토리지와 Google Drive와 같은 클라우드 스토리지 통합을 지원합니다. 웹 서버, 웹 UI, 그리고 강력한 CLI 도구를 통해 파일 시스템을 효율적으로 관리할 수 있습니다.
 
 ## 2. 프로젝트 구조
 
@@ -62,12 +62,12 @@
 - **CLI (Command Line Interface)**
   - **Framework**: `cobra`, `viper` 기반.
   - **Commands**:
-    - `go-vfs [command]`: VFS 조작 및 관리 명령어 (Root Level)
+    - `govfs [command]`: VFS 조작 및 관리 명령어 (Root Level)
       - `backup`, `restore`: 데이터 백업 및 복원
       - `rotate`: 암호화 키 교체
       - `ls`, `tree`, `stat`: 파일 조회
       - `cp`, `mkdir`, `rm`: 파일/디렉토리 조작
-    - `go-vfs cloud [command]`: 클라우드 스토리지 관리
+    - `govfs cloud [command]`: 클라우드 스토리지 관리
       - `list`: 파일 목록 조회
       - `upload`, `download`: 파일 전송
 
@@ -75,14 +75,14 @@
 
 ### 4.1 클라이언트-서버 모델 (Client-Server Model)
 
-**go-vfs**는 클라이언트-서버 아키텍처를 채택했습니다. 사용자는 CLI(Client)를 통해 명령을 내리고, 실제 파일 시스템 조작은 백그라운드에서 실행 중인 서버(Daemon)가 수행합니다.
+**govfs**는 클라이언트-서버 아키텍처를 채택했습니다. 사용자는 CLI(Client)를 통해 명령을 내리고, 실제 파일 시스템 조작은 백그라운드에서 실행 중인 서버(Daemon)가 수행합니다.
 
 - **Daemon (Server)**:
-    - **역할**: 실제 스토리지(BadgerDB, LocalStorage)에 접근하여 I/O를 수행하고 상태를 관리합니다.
-    - **통신**: HTTP REST API 및 SSE(Server-Sent Events)를 통해 클라이언트와 통신합니다.
+  - **역할**: 실제 스토리지(BadgerDB, LocalStorage)에 접근하여 I/O를 수행하고 상태를 관리합니다.
+  - **통신**: HTTP REST API 및 SSE(Server-Sent Events)를 통해 클라이언트와 통신합니다.
 - **CLI (Client)**:
-    - **역할**: 사용자 명령을 파싱하여 서버 API를 호출하고 결과를 출력합니다.
-    - **특징**: 무상태(Stateless)이며, 로컬 설정 파일이나 환경 변수를 통해 서버 연결 정보를 참조합니다.
+  - **역할**: 사용자 명령을 파싱하여 서버 API를 호출하고 결과를 출력합니다.
+  - **특징**: 무상태(Stateless)이며, 로컬 설정 파일이나 환경 변수를 통해 서버 연결 정보를 참조합니다.
 
 ### 4.2 드라이버 추상화 (Driver Abstraction)
 
@@ -102,4 +102,3 @@
 - **Handlers**: HTTP 요청을 처리하고 적절한 Service 메서드를 호출합니다. Fiber Context를 통해 요청 파라미터를 파싱합니다.
 - **Services**: 비즈니스 로직을 수행합니다. `VfsService`는 `vfs.VFS` 인터페이스를 사용하여 실제 파일 작업을 수행합니다. `SSEBroker`는 클라이언트에게 실시간 이벤트를 브로드캐스트합니다.
 - **Async Execution**: `Write`, `Copy`, `Move` 등 시간이 걸릴 수 있는 작업은 `SSEBroker.AsyncExcute`를 통해 별도 고루틴에서 실행되며, 완료 시 클라이언트에게 SSE 이벤트를 발송합니다.
-

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
-	"github.com/meteormin/go-vfs"
-	"github.com/meteormin/go-vfs/server/types"
+	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/server/types"
 )
 
 type VfsService struct {

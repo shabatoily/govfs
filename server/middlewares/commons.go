@@ -17,8 +17,8 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
 	"github.com/gofiber/fiber/v3/middleware/responsetime"
-	"github.com/meteormin/go-vfs"
-	"github.com/meteormin/go-vfs/config"
+	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/config"
 )
 
 // CommonMiddlewares returns a middleware that applies common middlewares to the app.

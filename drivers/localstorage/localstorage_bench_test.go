@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/meteormin/go-vfs"
+	vfs "github.com/meteormin/govfs"
 	"github.com/stretchr/testify/require"
 )
 

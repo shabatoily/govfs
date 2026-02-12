@@ -5,7 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/log"
-	"github.com/meteormin/go-vfs"
+	vfs "github.com/meteormin/govfs"
 )
 
 func ErrorHandler(c fiber.Ctx, err error) error {

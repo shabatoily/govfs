@@ -19,7 +19,7 @@ FROM golang:1.25-alpine AS go
 ARG VERSION=0.0.1
 ARG BUILD_TIME="unknown"
 
-WORKDIR /go-vfs
+WORKDIR /govfs
 
 COPY go.mod go.sum ./
 
@@ -39,8 +39,8 @@ WORKDIR /app
 
 RUN apk add curl
 
-COPY --from=go /go-vfs/build/server ./server
-COPY --from=go /go-vfs/config.toml ./config.toml
+COPY --from=go /govfs/build/server ./server
+COPY --from=go /govfs/config.toml ./config.toml
 
 RUN mkdir -p /app/data
 

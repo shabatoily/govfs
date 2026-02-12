@@ -1,4 +1,4 @@
-PRJ_NAME=go-vfs
+PRJ_NAME=govfs
 GITHUB_USER=meteormin
 AUTHOR="Meteormin \(miniyu97@gmail.com\)"
 PRJ_BASE=$(shell pwd)

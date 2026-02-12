@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/meteormin/go-vfs"
+	vfs "github.com/meteormin/govfs"
 )
 
 const IndexFileName = "vfs_index.json"

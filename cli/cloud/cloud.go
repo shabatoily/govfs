@@ -3,9 +3,9 @@ package cloud
 import (
 	"context"
 
-	"github.com/meteormin/go-vfs/bootstrap"
-	"github.com/meteormin/go-vfs/cloud"
-	"github.com/meteormin/go-vfs/config"
+	"github.com/meteormin/govfs/bootstrap"
+	"github.com/meteormin/govfs/cloud"
+	"github.com/meteormin/govfs/config"
 )
 
 func NewStorage(ctx context.Context, cfg *config.CloudConfig) (cloud.Storage, error) {

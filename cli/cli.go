@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/meteormin/go-vfs/config"
+	"github.com/meteormin/govfs/config"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

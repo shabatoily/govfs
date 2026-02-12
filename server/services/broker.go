@@ -8,7 +8,7 @@ import (
 	"github.com/gofiber/fiber/v3/log"
 	"github.com/google/uuid"
 
-	"github.com/meteormin/go-vfs/server/types"
+	"github.com/meteormin/govfs/server/types"
 )
 
 const (
