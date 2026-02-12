@@ -23,4 +23,4 @@ level = 0
 [cloud.googleDrive]
 clientID = "${CLOUD_GOOGLEDRIVE_CLIENT_ID}"
 clientSecret = "${CLOUD_GOOGLEDRIVE_CLIENT_SECRET}"
-parentFolderID = "go-vfs"
+parentFolderID = "govfs"

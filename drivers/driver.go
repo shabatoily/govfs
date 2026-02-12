@@ -3,9 +3,9 @@ package drivers
 import (
 	"fmt"
 
-	"github.com/meteormin/go-vfs"
-	driverBadger "github.com/meteormin/go-vfs/drivers/badger"
-	driverLocalStorage "github.com/meteormin/go-vfs/drivers/localstorage"
+	vfs "github.com/meteormin/govfs"
+	driverBadger "github.com/meteormin/govfs/drivers/badger"
+	driverLocalStorage "github.com/meteormin/govfs/drivers/localstorage"
 )
 
 type DriverType string

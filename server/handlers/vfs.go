@@ -10,8 +10,8 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
-	"github.com/meteormin/go-vfs/server/services"
-	"github.com/meteormin/go-vfs/server/types"
+	"github.com/meteormin/govfs/server/services"
+	"github.com/meteormin/govfs/server/types"
 )
 
 type VfsHandler struct {

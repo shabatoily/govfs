@@ -12,12 +12,15 @@ type BadgerSlogAdapter struct {
 func (a *BadgerSlogAdapter) Errorf(f string, v ...any) {
 	a.core.Error(fmt.Sprintf(f, v...))
 }
+
 func (a *BadgerSlogAdapter) Warningf(f string, v ...any) {
 	a.core.Warn(fmt.Sprintf(f, v...))
 }
+
 func (a *BadgerSlogAdapter) Infof(f string, v ...any) {
 	a.core.Info(fmt.Sprintf(f, v...))
 }
+
 func (a *BadgerSlogAdapter) Debugf(f string, v ...any) {
 	a.core.Debug(fmt.Sprintf(f, v...))
 }

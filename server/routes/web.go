@@ -3,10 +3,10 @@ package routes
 import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/static"
-	"github.com/meteormin/go-vfs"
-	"github.com/meteormin/go-vfs/server/handlers"
-	"github.com/meteormin/go-vfs/server/services"
-	"github.com/meteormin/go-vfs/webui"
+	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/server/handlers"
+	"github.com/meteormin/govfs/server/services"
+	"github.com/meteormin/govfs/webui"
 )
 
 var (

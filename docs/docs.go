@@ -1156,8 +1156,8 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0.0",
-	Title:            "go-vfs",
-	Description:      "go-vfs is a virtual file system server",
+	Title:            "govfs",
+	Description:      "govfs is a virtual file system server",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

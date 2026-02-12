@@ -1,4 +1,4 @@
-# go-vfs
+# govfs
 
 Go로 작성된 가상 파일 시스템 (VFS) 프로젝트입니다. 웹 서버를 통해 파일 시스템에 접근하고 관리할 수 있는 기능을 제공하며, 웹 UI를 통해 사용자 친화적인 인터페이스를 제공합니다.
 
@@ -14,10 +14,10 @@ Go로 작성된 가상 파일 시스템 (VFS) 프로젝트입니다. 웹 서버�
 
 ## 아키텍처 (Client-Server)
 
-go-vfs는 Client-Server 아키텍처를 따릅니다.
+govfs는 Client-Server 아키텍처를 따릅니다.
 
-- **Server (Daemon)**: 서버 바이너리(예: `go-vfs`)로 실행되며, 스토리지 엔진(BadgerDB/LocalStorage)을 관리하고 API를 제공하는 백그라운드 프로세스입니다.
-- **Client (CLI)**: CLI 바이너리(예: `go-vfs-cli`)를 사용하여 실행 중인 서버에 HTTP API 요청을 보내 작업을 수행합니다.
+- **Server (Daemon)**: 서버 바이너리(예: `govfs`)로 실행되며, 스토리지 엔진(BadgerDB/LocalStorage)을 관리하고 API를 제공하는 백그라운드 프로세스입니다.
+- **Client (CLI)**: CLI 바이너리(예: `govfs-cli`)를 사용하여 실행 중인 서버에 HTTP API 요청을 보내 작업을 수행합니다.
 
 > **Note**: 따라서 CLI 명령어를 사용하기 위해서는 먼저 서버 프로세스를 실행해야 합니다.
 
@@ -45,8 +45,8 @@ go-vfs는 Client-Server 아키텍처를 따릅니다.
 ## 설치 방법
 
 ```bash
-git clone https://github.com/meteormin/go-vfs.git
-cd go-vfs
+git clone https://github.com/meteormin/govfs.git
+cd govfs
 go mod tidy
 cd webui && yarn install
 ```
@@ -82,7 +82,7 @@ make build-docker tag=latest
 **Docker 컨테이너 실행:**
 
 ```bash
-docker run -d -p 3000:3000 --name go-vfs go-vfs:latest
+docker run -d -p 3000:3000 --name govfs govfs:latest
 ```
 
 ## SSE (Server-Sent Events) API
@@ -94,7 +94,6 @@ docker run -d -p 3000:3000 --name go-vfs go-vfs:latest
 - **Publish**: `POST /sse/:id/publish`
   - 특정 클라이언트(`:id`) 또는 모든 클라이언트에게 이벤트를 발송합니다.
 
-
 ## CLI 명령어
 
 애플리케이션은 다음과 같은 주요 명령어를 제공합니다.
@@ -105,37 +104,37 @@ docker run -d -p 3000:3000 --name go-vfs go-vfs:latest
 
 ```bash
 # 직접 실행 (예시: Linux/AMD64)
-./go-vfs-linux-amd64
+./govfs-linux-amd64
 
 # 또는 systemd 서비스 등으로 등록하여 실행
 ```
 
 ### CLI 명령어 (Client)
 
-CLI 바이너리(`go-vfs-cli-***`)를 사용하여 실행 중인 서버를 제어합니다. 아래 예시는 `go-vfs-cli`로 통칭합니다.
+CLI 바이너리(`govfs-cli-***`)를 사용하여 실행 중인 서버를 제어합니다. 아래 예시는 `govfs-cli`로 통칭합니다.
 
 #### 기본 명령어 (Root Level)
 
 - **데이터 관리**
-  - `go-vfs-cli backup`: VFS 데이터베이스 백업
-  - `go-vfs-cli restore`: 백업 파일에서 복원
-  - `go-vfs-cli rotate`: 암호화 키 교체
+  - `govfs-cli backup`: VFS 데이터베이스 백업
+  - `govfs-cli restore`: 백업 파일에서 복원
+  - `govfs-cli rotate`: 암호화 키 교체
 
 - **파일 조작**
-  - `go-vfs-cli ls`: 파일 목록 조회
-  - `go-vfs-cli tree`: 트리 구조 조회
-  - `go-vfs-cli stat`: 파일 메타데이터 조회
-  - `go-vfs-cli cp`: 로컬-VFS 간 파일 복사
-  - `go-vfs-cli mkdir`: 디렉토리 생성
-  - `go-vfs-cli rm`: 파일/디렉토리 삭제
+  - `govfs-cli ls`: 파일 목록 조회
+  - `govfs-cli tree`: 트리 구조 조회
+  - `govfs-cli stat`: 파일 메타데이터 조회
+  - `govfs-cli cp`: 로컬-VFS 간 파일 복사
+  - `govfs-cli mkdir`: 디렉토리 생성
+  - `govfs-cli rm`: 파일/디렉토리 삭제
 
 #### 클라우드 명령어 (Cloud)
 
 클라우드 스토리지 관련 명령어는 `cloud` 서브커맨드 하위에 있습니다.
 
-- `go-vfs-cli cloud list`: 클라우드 파일 목록 조회
-- `go-vfs-cli cloud upload`: 로컬 파일을 클라우드로 업로드
-- `go-vfs-cli cloud download`: 클라우드 파일을 로컬로 다운로드
+- `govfs-cli cloud list`: 클라우드 파일 목록 조회
+- `govfs-cli cloud upload`: 로컬 파일을 클라우드로 업로드
+- `govfs-cli cloud download`: 클라우드 파일을 로컬로 다운로드
 
 ## 설정 (config.toml)
 
@@ -180,5 +179,5 @@ path = "./vfs_root"
 [cloud.googleDrive]
 clientID = "${CLOUD_GOOGLEDRIVE_CLIENT_ID}"
 clientSecret = "${CLOUD_GOOGLEDRIVE_CLIENT_SECRET}"
-parentFolderID = "go-vfs"
+parentFolderID = "govfs"
 ```

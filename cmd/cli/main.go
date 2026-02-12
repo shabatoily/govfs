@@ -7,17 +7,17 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/meteormin/go-vfs/cli"
-	"github.com/meteormin/go-vfs/cli/cloud"
-	"github.com/meteormin/go-vfs/cli/vfs"
-	"github.com/meteormin/go-vfs/config"
+	"github.com/meteormin/govfs/cli"
+	"github.com/meteormin/govfs/cli/cloud"
+	"github.com/meteormin/govfs/cli/vfs"
+	"github.com/meteormin/govfs/config"
 )
 
 var (
-	name        = "go-vfs"
+	name        = "govfs"
 	version     = "0.0.1"
 	buildTime   = time.Now().UTC().Format(time.RFC3339)
-	description = "go-vfs is a virtual file system server"
+	description = "govfs is a virtual file system server"
 )
 
 func main() {

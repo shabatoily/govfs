@@ -13,9 +13,9 @@ import (
 
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"
-	"github.com/meteormin/go-vfs"
-	"github.com/meteormin/go-vfs/client"
-	"github.com/meteormin/go-vfs/server/types"
+	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/client"
+	"github.com/meteormin/govfs/server/types"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -149,7 +149,7 @@
                     class="h-full flex items-center justify-center text-gray-600"
                 >
                     <div class="text-center">
-                        <h1 class="text-2xl font-bold mb-2">Go-VFS</h1>
+                        <h1 class="text-2xl font-bold mb-2">govfs</h1>
                         <p>Select a file to view</p>
                         <p class="text-sm mt-2 text-gray-500">
                             or drop files here to upload

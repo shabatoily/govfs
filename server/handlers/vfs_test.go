@@ -11,9 +11,9 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
-	"github.com/meteormin/go-vfs"
-	"github.com/meteormin/go-vfs/server/services"
-	"github.com/meteormin/go-vfs/server/types"
+	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/server/services"
+	"github.com/meteormin/govfs/server/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

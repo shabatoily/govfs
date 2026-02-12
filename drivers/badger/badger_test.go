@@ -12,7 +12,7 @@ import (
 	"github.com/dgraph-io/badger/v4"
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"
-	"github.com/meteormin/go-vfs"
+	vfs "github.com/meteormin/govfs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

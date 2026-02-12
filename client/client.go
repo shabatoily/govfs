@@ -11,7 +11,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/client"
 	"github.com/google/uuid"
-	"github.com/meteormin/go-vfs/server/types"
+	"github.com/meteormin/govfs/server/types"
 )
 
 type Client struct {

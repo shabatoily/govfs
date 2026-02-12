@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
+	vfs "github.com/meteormin/govfs"
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/google/uuid"
-	"github.com/meteormin/go-vfs"
 )
 
 const (

@@ -8,10 +8,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/v6/list"
 	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/meteormin/go-vfs"
-	"github.com/meteormin/go-vfs/cli"
-	"github.com/meteormin/go-vfs/client"
-	"github.com/meteormin/go-vfs/config"
+	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/cli"
+	"github.com/meteormin/govfs/client"
+	"github.com/meteormin/govfs/config"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +37,7 @@ func NewBackupCommand() *cobra.Command {
 
 	backupCmd := &cobra.Command{
 		Use:   "backup",
-		Short: "Backup go-vfs database",
+		Short: "Backup govfs database",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c := getClient(cmd)
 			return Backup(c, backupFile)
@@ -54,7 +54,7 @@ func NewRestoreCommand() *cobra.Command {
 	var restoreFile string
 	restoreCmd := &cobra.Command{
 		Use:   "restore",
-		Short: "Restore go-vfs database",
+		Short: "Restore govfs database",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c := getClient(cmd)
 			return Restore(c, restoreFile)

@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 
 	"github.com/jedib0t/go-pretty/v6/list"
-	"github.com/meteormin/go-vfs/cli"
-	"github.com/meteormin/go-vfs/config"
+	"github.com/meteormin/govfs/cli"
+	"github.com/meteormin/govfs/config"
 	"github.com/spf13/cobra"
 )
 

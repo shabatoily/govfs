@@ -14,24 +14,24 @@ import (
 	"github.com/gofiber/contrib/v3/swaggo"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/log"
-	"github.com/meteormin/go-vfs"
-	"github.com/meteormin/go-vfs/cloud"
-	"github.com/meteormin/go-vfs/cloud/googledrive"
-	"github.com/meteormin/go-vfs/config"
-	"github.com/meteormin/go-vfs/drivers"
-	"github.com/meteormin/go-vfs/server/middlewares"
-	"github.com/meteormin/go-vfs/server/routes"
+	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/cloud"
+	"github.com/meteormin/govfs/cloud/googledrive"
+	"github.com/meteormin/govfs/config"
+	"github.com/meteormin/govfs/drivers"
+	"github.com/meteormin/govfs/server/middlewares"
+	"github.com/meteormin/govfs/server/routes"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
 )
 
 const banner = `
-  ____          __     _______ ____  
- / ___| ___     \ \   / /  ___/ ___| 
-| |  _ / _ \ ____\ \ / /| |_  \___ \ 
-| |_| | (_) |_____\ V / |  _|  ___) |
- \____|\___/       \_/  |_|   |____/ 
+   ____             __     
+  / ___| _____   __/ _|___ 
+ | |  _ / _ \ \ / / |_/ __|
+ | |_| | (_) \ V /|  _\__ \
+  \____|\___/ \_/ |_| |___/
 `
 
 func InitServer(fs vfs.VFS, cfg *config.ServerConfig) *fiber.App {
@@ -135,9 +135,9 @@ func InitCloud(ctx context.Context, cfg *config.CloudConfig) (cloud.Storage, err
 		return nil, err
 	}
 
-	tokenPath := filepath.Join(dir, ".go-vfs")
+	tokenPath := filepath.Join(dir, ".govfs")
 	if _, err = os.Stat(tokenPath); errors.Is(err, os.ErrNotExist) {
-		err = os.Mkdir(tokenPath, 0o755)
+		err = os.Mkdir(tokenPath, vfs.DefaultDirMode)
 		if err != nil {
 			return nil, err
 		}

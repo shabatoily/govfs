@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/meteormin/go-vfs/cloud/googledrive"
+	"github.com/meteormin/govfs/cloud/googledrive"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
 )

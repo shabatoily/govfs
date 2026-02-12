@@ -26,7 +26,7 @@ func main() {
 	flag.IntVar(&fps, "fps", 24, "Frames per second")
 	flag.Parse()
 
-	if err := os.MkdirAll(outDir, 0755); err != nil {
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		fmt.Printf("Error creating output directory: %v\n", err)
 		os.Exit(1)
 	}

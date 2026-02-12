@@ -305,7 +305,7 @@ func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 
 func saveToken(p string, token *oauth2.Token) error {
 	fmt.Printf("Saving credential file to: %s\n", p)
-	f, err := os.OpenFile(p, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	f, err := os.OpenFile(p, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/meteormin/go-vfs"
+	vfs "github.com/meteormin/govfs"
 )
 
 type ViewType string
