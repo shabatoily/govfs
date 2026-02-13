@@ -36,16 +36,22 @@ ARCH := $(shell ./scripts/detect-arch)
 ##install: install development packages
 .PHONY: install
 install:
-	@echo "[install] Installing development packages"
+	@echo "[install] installing development packages"
+	@echo "[install] go mod download"
 	go mod download
+	@echo "[install] go mod tidy"
 	go mod tidy
-	cd webui && yarn install
+	@echo "[install] yarn install"
+	yarn --cwd webui install
+	@echo "[install] complete install"
 
 ##build-webui
 .PHONY: build-webui
 build-webui:
-	@echo "[build-webui] Building webui"
-	cd webui && yarn build
+	@echo "[build-webui] building webui"
+	@echo "[build-webui] yarn build"
+	yarn --cwd webui build
+	@echo "[build-webui] complete build-webui"
 
 ##build os={os [linux, darwin]} arch={arch [amd64, arm64]} tag={tag [v1.0.0]}: build application
 .PHONY: build
@@ -55,33 +61,37 @@ build: tag ?= "0.0.1"
 build: swag
 build: build-webui
 build:
-	@echo "[build] Building for $(os)/$(arch) at $(DATE_UTC)"
-	@echo "tag: $(tag)"
-	GOOS=$(os) GOARCH=$(arch) go build -trimpath -ldflags="-X 'main.version=$(tag)' -X 'main.buildTime=$(DATE_UTC)'" -o build/$(PRJ_NAME)-$(os)-$(arch) cmd/server/main.go 
-	GOOS=$(os) GOARCH=$(arch) go build -trimpath -ldflags="-X 'main.version=$(tag)' -X 'main.buildTime=$(DATE_UTC)'" -o build/$(PRJ_NAME)-cli-$(os)-$(arch) cmd/cli/main.go 
+	@echo "[build] building for $(os)/$(arch) at $(DATE_UTC)"
+	@echo "[build] tag: $(tag)"
+	@echo "[build] target: bin/$(PRJ_NAME)-$(os)-$(arch)"
+	GOOS=$(os) GOARCH=$(arch) go build -trimpath -ldflags="-X 'main.version=$(tag)' -X 'main.buildTime=$(DATE_UTC)'" -o bin/$(PRJ_NAME)-$(os)-$(arch) cmd/server/main.go 
+	@echo "[build] target: bin/$(PRJ_NAME)-cli-$(os)-$(arch)"
+	GOOS=$(os) GOARCH=$(arch) go build -trimpath -ldflags="-X 'main.version=$(tag)' -X 'main.buildTime=$(DATE_UTC)'" -o bin/$(PRJ_NAME)-cli-$(os)-$(arch) cmd/cli/main.go 
+	@echo "[build] Complete build"
 
 ##build-docker tag={tag [v1.0.0]}: build docker image
 .PHONY: build-docker
 build-docker: tag ?= "latest"
 build-docker: swag
 build-docker:
-	@echo "[build-docker] Build docker image at $(DATE_UTC)"
-	@echo "tag: $(tag)"
+	@echo "[build-docker] building docker image at $(DATE_UTC)"
+	@echo "[build-docker] tag: $(tag)"
+	@echo "[build-docker] image: ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):$(tag)"
 	docker build -t ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):$(tag) --build-arg "VERSION=$(tag)" --build-arg "BUILD_TIME=$(DATE_UTC)" .
+	@echo "[build-docker] complete build-docker"
 
 ##release tag={tag [v1.0.0]}: release application
 .PHONY: release
-release: os ?= $(OS)
-release: arch ?= $(ARCH)
 release: tag ?= "0.0.1"
-release: build
 release:
-	@echo "[release] $(tag)"
+	@echo "[release] releasing at $(DATE_UTC)"
+	@echo "[release] tag: $(tag)"
+	@echo "[release] target: release/$(tag)"
 	mkdir -p release/$(tag)
 	$(foreach os, $(SUPPORTED_OS), \
 		$(foreach arch, $(SUPPORTED_ARCH), \
 			$(MAKE) build os=$(os) arch=$(arch)))
-	cp build/$(PRJ_NAME)-$(os)-$(arch) release/$(tag)
+	cp bin/$(PRJ_NAME)-$(os)-$(arch) release/$(tag)
 	cp config.yml release/$(tag)/config.yml
 
 ##release-docker tag={tag [v1.0.0]}: release application
@@ -98,7 +108,7 @@ release-docker:
 .PHONY: clean
 clean:
 	@echo "[clean] Cleaning build directory"
-	rm -rf build/*
+	rm -rf bin/*
 	rm -rf webui/dist/*
 
 ##clean-docker: clean docker
