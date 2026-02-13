@@ -23,6 +23,10 @@ jobs:
         with:
           go-version: '1.21'
           cache: true
+      - name: Create webui/dist (for test)
+        run: mkdir -p webui/dist
+      - name: Copy index.html (for test)
+        run: cp webui/index.html webui/dist/index.html
       - name: Run make test
         run: make test
   # [2] 빌드 단계: develop 브랜치가 아닐 때만 수행
