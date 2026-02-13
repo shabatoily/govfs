@@ -98,11 +98,13 @@ release:
 .PHONY: release-docker
 release-docker: tag ?= "latest"
 release-docker:
-	@echo "[release-docker] $(tag)"
+	@echo "[release-docker] starting release-docker"
 	$(MAKE) build-docker tag=$(tag)
+	@echo "[release-docker] pushing docker image"
 	docker tag ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):$(tag) ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):latest
 	docker push ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):$(tag)
 	docker push ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):latest
+	@echo "[release-docker] complete release-docker"
 
 ##clean: clean application
 .PHONY: clean
@@ -110,25 +112,20 @@ clean:
 	@echo "[clean] Cleaning build directory"
 	rm -rf bin/*
 	rm -rf webui/dist/*
+	@echo "[clean] complete clean"
 
 ##clean-docker: clean docker
 .PHONY: clean-docker
 clean-docker:
+	@echo "[clean-docker] cleaning docker"
 	rm -rf .docker/*
 	./scripts/docker-clean
-
-##run args={args}: run application
-.PHONY: run
-run: args ?= ""
-run: build-webui
-run:
-	@echo "[run] running application"
-	@echo "args: $(args)"
-	go run main.go $(args)
+	@echo "[clean-docker] complete clean-docker"
 
 ##test report={[0=inactive, 1=active]}: test
 .PHONY: test
 test:
+	@echo "[test] starting test"
 ifeq ($(report), 1)
 	@echo "[test] go test with report"
 	mkdir -p reports
@@ -137,20 +134,27 @@ else
 	@echo "[test] go test"
 	go test ./...
 endif
+	@echo "[test] complete test"
 
 ##benchmark: 📈 Benchmark code performance
 .PHONY: benchmark
 benchmark:
 	@echo "[benchmark] starting benchmark $(PRJ_NAME)"
 	go test ./... -benchmem -bench=. -run=^Benchmark$
+	@echo "[benchmark] complete benchmark"
 
 ##coverage: ☂️  Generate coverage report
 .PHONY: coverage
 coverage:
-	go test -coverprofile=/tmp/coverage.out
+	@echo "[coverage] starting coverage"
+	go test ./... -coverprofile=/tmp/coverage.out
+	@echo "[coverage] generating coverage report"
 	go tool cover -html=/tmp/coverage.out
+	@echo "[coverage] complete coverage"
 
 ##swag: generate api docs
 .PHONY: swag
 swag:
+	@echo "[swag] generating api docs"
 	swag init -g cmd/server/main.go --parseDependency --parseInternal --v3.1
+	@echo "[swag] complete swag"
