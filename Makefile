@@ -58,8 +58,8 @@ build-webui:
 build: os ?= $(OS)
 build: arch ?= $(ARCH)
 build: tag ?= "0.0.1"
-build: swag
 build: build-webui
+build: swag
 build:
 	@echo "[build] building for $(os)/$(arch) at $(DATE_UTC)"
 	@echo "[build] tag: $(tag)"
