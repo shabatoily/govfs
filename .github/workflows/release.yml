@@ -1,0 +1,71 @@
+name: Go CI and Conditional Build
+on:
+  push:
+    branches:
+      - 'develop'
+      - 'release/**'
+      - 'v[0-9].*'
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches:
+      - 'develop'
+      - 'release/**'
+jobs:
+  # [1] 검증 단계: 모든 브랜치에서 공통 수행
+  test:
+    name: Unit Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
+      - name: Run make test
+        run: make test
+  # [2] 빌드 단계: develop 브랜치가 아닐 때만 수행
+  build:
+    name: Build Artifact
+    needs: test
+    # 논리 조건: 현재 브랜치가 develop이 아닐 때만 실행
+    if: github.ref_name != 'develop'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      - name: Run make release
+        run: make release tag=${{github.ref_name}}
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-binaries
+          path: release/
+          retention-days: 5
+  # [3] 릴리즈 단계: 실제 버전 태그(v1.0.0 등)가 푸시될 때만 수행
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          # 현재 작업 디렉토리 하위의 'release' 폴더로 다운로드
+          path: ./release-download
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # 재귀적으로 모든 바이너리와 config.yml을 찾아 업로드
+          # ./release-download/v1.0.0/ 하위의 모든 파일을 찾습니다.
+          files: |
+            ./release-download/**/*
+          generate_release_notes: true

@@ -90,9 +90,11 @@ release:
 	mkdir -p release/$(tag)
 	$(foreach os, $(SUPPORTED_OS), \
 		$(foreach arch, $(SUPPORTED_ARCH), \
-			$(MAKE) build os=$(os) arch=$(arch)))
-	cp bin/$(PRJ_NAME)-$(os)-$(arch) release/$(tag)
-	cp config.yml release/$(tag)/config.yml
+			$(MAKE) build os=$(os) arch=$(arch); \
+			cp bin/$(PRJ_NAME)-$(os)-$(arch) release/$(tag)/; \
+		) \
+	)
+	cp config.toml release/$(tag)/config.toml
 
 ##release-docker tag={tag [v1.0.0]}: release application
 .PHONY: release-docker
