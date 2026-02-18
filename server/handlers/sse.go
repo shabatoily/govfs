@@ -65,7 +65,7 @@ func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 			case <-ticker.C:
 				// Heartbeat
 				h.broker.Hearbeat(msg.ID)
-				log.Debug("heartbeat sent to client: %s", msg.ID)
+				log.Debugf("heartbeat sent to client: %s", msg.ID)
 			}
 		}
 	})

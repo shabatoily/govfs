@@ -70,11 +70,11 @@ func InitServer(fs vfs.VFS, cfg *config.ServerConfig) *fiber.App {
 	// on pre shutdown
 	app.Hooks().OnPreShutdown(func() error {
 		var err error
-		if vfsErr := fs.Close(); vfsErr != nil {
-			err = errors.Join(err, vfsErr)
+		if fs != nil {
+			err = fs.Close()
 		}
-		if closeLogErr := fiberLogFile.Close(); closeLogErr != nil {
-			err = errors.Join(err, closeLogErr)
+		if fiberLogFile != nil {
+			err = errors.Join(err, fiberLogFile.Close())
 		}
 		return err
 	})
