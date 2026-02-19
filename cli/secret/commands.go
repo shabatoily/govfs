@@ -1,8 +1,6 @@
 package secret
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -25,12 +23,12 @@ func NewHashCmd() *cobra.Command {
 		Use:   "hash <secret>",
 		Short: "Hash a secret",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			hashed, err := bcrypt.GenerateFromPassword([]byte(args[0]), bcrypt.DefaultCost)
 			if err != nil {
 				return err
 			}
-			fmt.Println(string(hashed))
+			cmd.Println(string(hashed))
 			return nil
 		},
 	}
@@ -41,12 +39,12 @@ func NewCompareCmd() *cobra.Command {
 		Use:   "compare <hashed> <secret>",
 		Short: "Compare a secret with a hashed secret",
 		Args:  cobra.ExactArgs(2),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			err := bcrypt.CompareHashAndPassword([]byte(args[0]), []byte(args[1]))
 			if err != nil {
 				return err
 			}
-			fmt.Println("Password matches")
+			cmd.Println("Password matches")
 			return nil
 		},
 	}

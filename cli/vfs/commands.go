@@ -9,8 +9,6 @@ import (
 	"github.com/jedib0t/go-pretty/v6/list"
 	"github.com/jedib0t/go-pretty/v6/table"
 	vfs "github.com/meteormin/govfs"
-	"github.com/meteormin/govfs/client"
-	"github.com/meteormin/govfs/config"
 	"github.com/spf13/cobra"
 )
 
@@ -20,16 +18,6 @@ func RegisterCommands(target *cobra.Command) {
 		NewMkdirCommand(), NewRemoveCommand())
 }
 
-func getClient(cmd *cobra.Command) *client.Client {
-	cfg := cmd.Context().Value(config.ContextKeyConfig{}).(*config.Config)
-	host := cfg.Server.Host
-	if host == "" {
-		host = "localhost"
-	}
-	url := fmt.Sprintf("http://%s:%d", host, cfg.Server.Port)
-	return client.NewClient(url)
-}
-
 func NewBackupCommand() *cobra.Command {
 	var backupFile string
 
@@ -37,8 +25,11 @@ func NewBackupCommand() *cobra.Command {
 		Use:   "backup",
 		Short: "Backup govfs database",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			c := getClient(cmd)
-			return Backup(c, backupFile)
+			h, err := NewHandler(cmd)
+			if err != nil {
+				return err
+			}
+			return h.Backup(backupFile)
 		},
 	}
 
@@ -54,8 +45,11 @@ func NewRestoreCommand() *cobra.Command {
 		Use:   "restore",
 		Short: "Restore govfs database",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			c := getClient(cmd)
-			return Restore(c, restoreFile)
+			h, err := NewHandler(cmd)
+			if err != nil {
+				return err
+			}
+			return h.Restore(restoreFile)
 		},
 	}
 
@@ -85,7 +79,11 @@ func NewRotateCommand() *cobra.Command {
 				return fmt.Errorf("new key path is required")
 			}
 
-			return Rotate(getClient(cmd), string(keyContent))
+			h, err := NewHandler(cmd)
+			if err != nil {
+				return err
+			}
+			return h.Rotate(string(keyContent))
 		},
 	}
 
@@ -99,13 +97,16 @@ func NewListCommand() *cobra.Command {
 		Use:   "ls <path>",
 		Short: "Show file list",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c := getClient(cmd)
+			h, err := NewHandler(cmd)
+			if err != nil {
+				return err
+			}
 			p := vfs.Root
 			if len(args) > 0 {
 				p = args[0]
 			}
 
-			metas, err := c.List(p)
+			metas, err := h.client.List(p)
 			if err != nil {
 				return err
 			}
@@ -128,13 +129,16 @@ func NewTreeCommand() *cobra.Command {
 		Use:   "tree <path>",
 		Short: "Show file tree",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c := getClient(cmd)
+			h, err := NewHandler(cmd)
+			if err != nil {
+				return err
+			}
 			p := vfs.Root
 			if len(args) > 0 {
 				p = args[0]
 			}
 
-			tree, err := c.Tree(p)
+			tree, err := h.client.Tree(p)
 			if err != nil {
 				return err
 			}
@@ -154,9 +158,12 @@ func NewStatCommand() *cobra.Command {
 		Short: "Show file metadata",
 		Args:  cobra.MatchAll(cobra.RangeArgs(1, 1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c := getClient(cmd)
+			h, err := NewHandler(cmd)
+			if err != nil {
+				return err
+			}
+
 			var id uuid.UUID
-			var err error
 			if len(args) > 0 {
 				id, err = uuid.Parse(args[0])
 				if err != nil {
@@ -164,7 +171,7 @@ func NewStatCommand() *cobra.Command {
 				}
 			}
 
-			stat, err := c.Stat(id)
+			stat, err := h.client.Stat(id)
 			if err != nil {
 				return err
 			}
@@ -188,9 +195,12 @@ func NewCopyCommand() *cobra.Command {
 		Long:  `Use 'vfs:' prefix for VFS paths (e.g., vfs:/etc/config.yaml)`,
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c := getClient(cmd)
+			h, err := NewHandler(cmd)
+			if err != nil {
+				return err
+			}
 			src, dst := args[0], args[1]
-			return Copy(c, src, dst, recursive)
+			return h.Copy(src, dst, recursive)
 		},
 	}
 
@@ -207,8 +217,11 @@ func NewMkdirCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := strings.TrimSpace(args[0])
-			c := getClient(cmd)
-			return Mkdir(c, path, mkdirParentsFlag)
+			h, err := NewHandler(cmd)
+			if err != nil {
+				return err
+			}
+			return h.Mkdir(path, mkdirParentsFlag)
 		},
 	}
 
@@ -224,8 +237,11 @@ func NewRemoveCommand() *cobra.Command {
 		Short: "Remove a file or directory",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c := getClient(cmd)
-			return Remove(c, args[0], recursive)
+			h, err := NewHandler(cmd)
+			if err != nil {
+				return err
+			}
+			return h.Remove(args[0], recursive)
 		},
 	}
 

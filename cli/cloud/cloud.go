@@ -3,7 +3,6 @@ package cloud
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -13,20 +12,43 @@ import (
 	"github.com/meteormin/govfs/bootstrap"
 	"github.com/meteormin/govfs/cloud"
 	"github.com/meteormin/govfs/config"
+	"github.com/spf13/cobra"
 )
+
+type Handler struct {
+	cmd     *cobra.Command
+	storage cloud.Storage
+}
+
+func NewHandler(cmd *cobra.Command) (*Handler, error) {
+	cfg, ok := cmd.Context().Value(config.ContextKeyConfig{}).(*config.Config)
+	if !ok {
+		return nil, errors.New("config not found")
+	}
+
+	storage, err := NewStorage(cmd.Context(), &cfg.Cloud)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Handler{
+		cmd:     cmd,
+		storage: storage,
+	}, nil
+}
 
 func NewStorage(ctx context.Context, cfg *config.CloudConfig) (cloud.Storage, error) {
 	return bootstrap.InitCloud(ctx, cfg)
 }
 
-func List(s cloud.Storage, p string) error {
-	files, err := s.List(p)
+func (h *Handler) List(p string) error {
+	files, err := h.storage.List(p)
 	if err != nil {
 		return err
 	}
 
 	if len(files) == 0 {
-		fmt.Println("empty directory")
+		h.cmd.Println("empty directory")
 		return nil
 	}
 
@@ -40,12 +62,12 @@ func List(s cloud.Storage, p string) error {
 
 	w.AppendItems(items)
 
-	fmt.Println(w.Render())
+	h.cmd.Println(w.Render())
 
 	return nil
 }
 
-func Upload(s cloud.Storage, uploadFilePath string) error {
+func (h *Handler) Upload(uploadFilePath string) error {
 	abs, err := filepath.Abs(uploadFilePath)
 	if err != nil {
 		return err
@@ -58,23 +80,23 @@ func Upload(s cloud.Storage, uploadFilePath string) error {
 	defer f.Close()
 
 	p := filepath.Base(uploadFilePath)
-	err = s.Upload(p, f)
+	err = h.storage.Upload(p, f)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("file uploaded: %s\n", uploadFilePath)
+	h.cmd.Printf("file uploaded: %s\n", uploadFilePath)
 
 	return nil
 }
 
-func Download(s cloud.Storage, src, dst string) error {
+func (h *Handler) Download(src, dst string) error {
 	p, err := filepath.Abs(dst)
 	if err != nil {
 		return err
 	}
 
-	r, err := s.Download(src)
+	r, err := h.storage.Download(src)
 	defer func() {
 		_ = r.Close()
 	}()
@@ -99,7 +121,7 @@ func Download(s cloud.Storage, src, dst string) error {
 		return err
 	}
 
-	fmt.Printf("file downloaded: %s\n", p)
+	h.cmd.Printf("file downloaded: %s\n", p)
 
 	return nil
 }

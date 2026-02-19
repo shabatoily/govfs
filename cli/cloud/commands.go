@@ -1,7 +1,6 @@
 package cloud
 
 import (
-	"github.com/meteormin/govfs/config"
 	"github.com/spf13/cobra"
 )
 
@@ -22,13 +21,12 @@ func NewListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use: "list",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg := cmd.Context().Value(config.ContextKeyConfig{}).(*config.Config)
-			s, err := NewStorage(cmd.Context(), &cfg.Cloud)
+			h, err := NewHandler(cmd)
 			if err != nil {
 				return err
 			}
 
-			return List(s, "")
+			return h.List("")
 		},
 	}
 }
@@ -40,13 +38,12 @@ func NewUploadCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			uploadFilePath := args[0]
-			cfg := cmd.Context().Value(config.ContextKeyConfig{}).(*config.Config)
-			s, err := NewStorage(cmd.Context(), &cfg.Cloud)
+			h, err := NewHandler(cmd)
 			if err != nil {
 				return err
 			}
 
-			return Upload(s, uploadFilePath)
+			return h.Upload(uploadFilePath)
 		},
 	}
 }
@@ -66,13 +63,12 @@ func NewDownloadCmd() *cobra.Command {
 				downloadFilePath = "./"
 			}
 
-			cfg := cmd.Context().Value(config.ContextKeyConfig{}).(*config.Config)
-			s, err := NewStorage(cmd.Context(), &cfg.Cloud)
+			h, err := NewHandler(cmd)
 			if err != nil {
 				return err
 			}
 
-			return Download(s, driveFilePath, downloadFilePath)
+			return h.Download(driveFilePath, downloadFilePath)
 		},
 	}
 }
