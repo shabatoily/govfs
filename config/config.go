@@ -14,51 +14,52 @@ import (
 )
 
 type AppInfo struct {
-	Name        string           `json:"name"`
-	Version     string           `json:"version"`
-	BuildTime   string           `json:"buildTime"`
-	Description string           `json:"description"`
-	BuildInfo   *debug.BuildInfo `json:"buildInfo"`
+	Name        string           `json:"name" toml:"name" yaml:"name"`
+	Version     string           `json:"version" toml:"version" yaml:"version"`
+	BuildTime   string           `json:"buildTime" toml:"buildTime" yaml:"buildTime"`
+	Description string           `json:"description" toml:"description" yaml:"description"`
+	BuildInfo   *debug.BuildInfo `json:"buildInfo" toml:"buildInfo" yaml:"buildInfo"`
 }
 
 type ServerConfig struct {
-	fiber.Config `json:"-"`
-	Host         string            `json:"host"`
-	Port         int               `json:"port"`
-	Logger       FiberLoggerConfig `json:"logger"`
-	BasicAuth    BasicAuth         `json:"basicAuth"`
+	fiber.Config `json:"-" toml:"-" yaml:"-"`
+	Host         string            `json:"host" toml:"host" yaml:"host"`
+	Port         int               `json:"port" toml:"port" yaml:"port"`
+	Logger       FiberLoggerConfig `json:"logger" toml:"logger" yaml:"logger"`
+	BasicAuth    BasicAuth         `json:"basicAuth" toml:"basicAuth" yaml:"basicAuth"`
 }
 type FiberLoggerConfig struct {
-	Path          string    `json:"path"`
-	Level         log.Level `json:"level"`
-	AccessLogPath string    `json:"accessLogPath"`
+	Path          string    `json:"path" toml:"path" yaml:"path"`
+	Level         log.Level `json:"level" toml:"level" yaml:"level"`
+	AccessLogPath string    `json:"accessLogPath" toml:"accessLogPath" yaml:"accessLogPath"`
 }
 
 type BasicAuth struct {
-	Enabled  bool   `json:"enabled"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Enabled  bool   `json:"enabled" toml:"enabled" yaml:"enabled"`
+	Username string `json:"username" toml:"username" yaml:"username"`
+	Password string `json:"-" toml:"-" yaml:"-"`
 }
+
 type VfsConfig struct {
-	Driver drivers.Config   `json:"driver"`
-	Logger vfs.LoggerConfig `json:"logger"`
+	Driver drivers.Config   `json:"driver" toml:"driver" yaml:"driver"`
+	Logger vfs.LoggerConfig `json:"logger" toml:"logger" yaml:"logger"`
 }
 
 type CloudConfig struct {
-	GoogleDrive GoogleDrive `json:"googleDrive"`
+	GoogleDrive GoogleDrive `json:"googleDrive" toml:"googleDrive" yaml:"googleDrive"`
 }
 
 type GoogleDrive struct {
-	ClientID       string `json:"-"`
-	ClientSecret   string `json:"-"`
-	ParentFolderID string `json:"parentFolderID"`
+	ClientID       string `json:"-" toml:"-" yaml:"-"`
+	ClientSecret   string `json:"-" toml:"-" yaml:"-"`
+	ParentFolderID string `json:"parentFolderID" toml:"parentFolderID" yaml:"parentFolderID"`
 }
 
 type Config struct {
-	App    AppInfo      `json:"app"`
-	Server ServerConfig `json:"server"`
-	VFS    VfsConfig    `json:"vfs"`
-	Cloud  CloudConfig  `json:"cloud"`
+	App    AppInfo      `json:"app" toml:"app" yaml:"app"`
+	Server ServerConfig `json:"server" toml:"server" yaml:"server"`
+	VFS    VfsConfig    `json:"vfs" toml:"vfs" yaml:"vfs"`
+	Cloud  CloudConfig  `json:"cloud" toml:"cloud" yaml:"cloud"`
 }
 
 var DefaultConfig = &Config{

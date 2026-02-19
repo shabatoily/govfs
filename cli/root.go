@@ -16,13 +16,13 @@ func newInfoCommand() *cobra.Command {
 
 	info := &cobra.Command{
 		Use:   "info",
-		Short: "Print the version number",
+		Short: "Print system information",
 		Run: func(c *cobra.Command, _ []string) {
 			cfg := c.Context().Value(config.ContextKeyConfig{}).(*config.Config)
 			fmt.Printf("%s %s - %s\n", cfg.App.Name, cfg.App.Version, cfg.App.BuildTime)
 			if verbose {
-				if build, err := toml.Marshal(cfg.App.BuildInfo); err == nil {
-					fmt.Printf("\n[Build Info]\n%s\n", string(build))
+				if b, err := toml.Marshal(cfg); err == nil {
+					fmt.Printf("\n[Config]\n%s\n", string(b))
 				}
 			}
 		},
