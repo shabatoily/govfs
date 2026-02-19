@@ -24,6 +24,5 @@ func BasicAuthMiddleware(cfg config.BasicAuth) fiber.Handler {
 		Users: map[string]string{
 			cfg.Username: cfg.Password,
 		},
-		Realm: "VFS Private Server",
 	})
 }
