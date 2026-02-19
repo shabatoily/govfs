@@ -38,7 +38,7 @@ func NewHashCmd() *cobra.Command {
 
 func NewCompareCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "compare <secret> <hashed>",
+		Use:   "compare <hashed> <secret>",
 		Short: "Compare a secret with a hashed secret",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
