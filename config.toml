@@ -11,8 +11,8 @@ accessLogPath = "./logs/access-log.log"
 level = 0
 [server.basicAuth]
 enabled = false
-username = "${SERVER_BASIC_AUTH_USERNAME}"
-password = "${SERVER_BASIC_AUTH_PASSWORD}"
+username = "${SERVER_BASICAUTH_USERNAME}"
+password = "${SERVER_BASICAUTH_PASSWORD}"
 [vfs.badger]
 path = "./data"
 encryptKeyRotateDuration = "24h"
