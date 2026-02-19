@@ -9,15 +9,13 @@ import (
 	"github.com/jedib0t/go-pretty/v6/list"
 	"github.com/jedib0t/go-pretty/v6/table"
 	vfs "github.com/meteormin/govfs"
-	"github.com/meteormin/govfs/cli"
 	"github.com/meteormin/govfs/client"
 	"github.com/meteormin/govfs/config"
 	"github.com/spf13/cobra"
 )
 
-func RegisterCommands(target *cobra.Command) *cobra.Command {
-	c := cli.NewCommands(target)
-	return c.Append(NewBackupCommand(), NewRestoreCommand(), NewRotateCommand(),
+func RegisterCommands(target *cobra.Command) {
+	target.AddCommand(NewBackupCommand(), NewRestoreCommand(), NewRotateCommand(),
 		NewListCommand(), NewTreeCommand(), NewStatCommand(), NewCopyCommand(),
 		NewMkdirCommand(), NewRemoveCommand())
 }

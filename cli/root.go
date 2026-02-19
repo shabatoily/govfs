@@ -11,22 +11,26 @@ import (
 	"github.com/spf13/viper"
 )
 
-type Commands struct {
-	cmd *cobra.Command
-}
+func newInfoCommand() *cobra.Command {
+	var verbose bool
 
-func NewCommands(cmd *cobra.Command) Commands {
-	return Commands{
-		cmd: cmd,
+	info := &cobra.Command{
+		Use:   "info",
+		Short: "Print the version number",
+		Run: func(c *cobra.Command, _ []string) {
+			cfg := c.Context().Value(config.ContextKeyConfig{}).(*config.Config)
+			fmt.Printf("%s %s - %s\n", cfg.App.Name, cfg.App.Version, cfg.App.BuildTime)
+			if verbose {
+				if build, err := toml.Marshal(cfg.App.BuildInfo); err == nil {
+					fmt.Printf("\n[Build Info]\n%s\n", string(build))
+				}
+			}
+		},
 	}
-}
 
-func (c Commands) Append(cmd ...*cobra.Command) *cobra.Command {
-	for _, v := range cmd {
-		c.cmd.AddCommand(v)
-	}
+	info.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
 
-	return c.cmd
+	return info
 }
 
 func NewRootCommand(appInfo config.AppInfo) *cobra.Command {
@@ -52,23 +56,7 @@ func NewRootCommand(appInfo config.AppInfo) *cobra.Command {
 
 	root.PersistentFlags().StringVarP(&configPath, "config", "c", "", configFlagUsage)
 
-	var verbose bool
-	info := &cobra.Command{
-		Use:   "info",
-		Short: "Print the version number",
-		Run: func(c *cobra.Command, _ []string) {
-			cfg := c.Context().Value(config.ContextKeyConfig{}).(*config.Config)
-			fmt.Printf("%s %s - %s\n", cfg.App.Name, cfg.App.Version, cfg.App.BuildTime)
-			if verbose {
-				if build, err := toml.Marshal(cfg.App.BuildInfo); err == nil {
-					fmt.Printf("\n[Build Info]\n%s\n", string(build))
-				}
-			}
-		},
-	}
-	info.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
-
-	root.AddCommand(info)
+	root.AddCommand(newInfoCommand())
 
 	return root
 }

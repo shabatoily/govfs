@@ -224,7 +224,7 @@ func handleDownload(c *client.Client, srcVfs, dstLocal string) error {
 		return err
 	}
 
-	return os.WriteFile(metaFilePath, metaFileJson, 0o600)
+	return os.WriteFile(metaFilePath, metaFileJson, vfs.DefaultFileMode)
 }
 
 func handleRecursiveDownload(c *client.Client, srcVfs, dstLocal string) error {
@@ -253,7 +253,7 @@ func handleRecursiveDownload(c *client.Client, srcVfs, dstLocal string) error {
 		// actually walker is called with full path for THIS node.
 
 		if node.Meta.IsDir {
-			if mkdirErr := os.MkdirAll(fullLocalPath, 0o755); mkdirErr != nil {
+			if mkdirErr := os.MkdirAll(fullLocalPath, vfs.DefaultDirMode); mkdirErr != nil {
 				return mkdirErr
 			}
 			for _, child := range node.Children {
@@ -289,7 +289,7 @@ func handleRecursiveDownload(c *client.Client, srcVfs, dstLocal string) error {
 			return marshalErr
 		}
 
-		return os.WriteFile(metaFilePath, metaFileJson, 0o600)
+		return os.WriteFile(metaFilePath, metaFileJson, vfs.DefaultFileMode)
 	}
 
 	err = walker(tree, targetRoot)

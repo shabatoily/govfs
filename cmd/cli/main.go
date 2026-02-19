@@ -9,6 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/meteormin/govfs/cli"
 	"github.com/meteormin/govfs/cli/cloud"
+	"github.com/meteormin/govfs/cli/secret"
 	"github.com/meteormin/govfs/cli/vfs"
 	"github.com/meteormin/govfs/config"
 )
@@ -37,6 +38,9 @@ func main() {
 
 	// vfs commands
 	vfs.RegisterCommands(root)
+
+	// secret commands
+	secret.RegisterCommands(root)
 
 	ctx := context.Background()
 
