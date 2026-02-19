@@ -42,7 +42,7 @@ func NewCompareCmd() *cobra.Command {
 		Short: "Compare a secret with a hashed secret",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
-			err := bcrypt.CompareHashAndPassword([]byte(args[1]), []byte(args[0]))
+			err := bcrypt.CompareHashAndPassword([]byte(args[0]), []byte(args[1]))
 			if err != nil {
 				return err
 			}
