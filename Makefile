@@ -124,8 +124,16 @@ clean-docker:
 	./scripts/docker-clean
 	@echo "[clean-docker] complete clean-docker"
 
+##test-webui: test webui
+.PHONY: test-webui
+test-webui:
+	@echo "[test-webui] starting test webui"
+	cd webui && yarn test run
+	@echo "[test-webui] complete test webui"
+
 ##test report={[0=inactive, 1=active]}: test
 .PHONY: test
+test: test-webui
 test:
 	@echo "[test] starting test"
 ifeq ($(report), 1)
