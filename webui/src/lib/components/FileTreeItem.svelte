@@ -34,6 +34,34 @@
     // Derived state for padding based on depth
     const paddingLeft = $derived(`${depth * 12 + 8}px`);
 
+    // Derived states for styling
+    const isSelectedFile = $derived(appState.currentFile?.id === file.id);
+    const isCurrentFolder = $derived(
+        file.isDir && appState.currentPath === file.path,
+    );
+
+    const itemClass = $derived(
+        `
+        w-full flex items-center gap-1 py-1 text-sm rounded text-left cursor-pointer group relative
+        ${
+            isSelectedFile
+                ? "bg-blue-600/50 text-white font-medium"
+                : isCurrentFolder
+                  ? "bg-gray-800 ring-1 ring-gray-600 text-white"
+                  : "text-gray-300 hover:bg-gray-800"
+        }
+    `
+            .trim()
+            .replace(/\s+/g, " "),
+    ); // Normalize spaces
+
+    const folderIconClass = $derived(
+        `flex-shrink-0 mr-1 ${isCurrentFolder ? "text-yellow-400" : "text-yellow-500"}`,
+    );
+    const fileIconClass = $derived(
+        `flex-shrink-0 mr-1 ${isSelectedFile ? "text-blue-300" : "text-blue-400"}`,
+    );
+
     async function toggleExpand(e: Event) {
         e.stopPropagation();
         if (!file.isDir) return;
@@ -183,10 +211,7 @@
 
 <li>
     <div
-        class={`w-full flex items-center gap-1 py-1 text-sm rounded text-left cursor-pointer group hover:bg-gray-800 relative
-        ${appState.currentFile?.id === file.id ? "bg-blue-900 text-white" : "text-gray-300"}
-        ${appState.currentPath === file.path && file.isDir ? "bg-gray-800 ring-1 ring-gray-700" : ""}
-        `}
+        class={itemClass}
         style="padding-left: {paddingLeft}; padding-right: 8px;"
         role="button"
         tabindex="0"
@@ -194,7 +219,7 @@
         onkeydown={(e) => e.key === "Enter" && handleClick(e)}
     >
         <!-- Icon / Expand Toggle -->
-        <span class="flex-shrink-0 w-4 flex justify-center text-gray-500">
+        <span class="flex-shrink-0 w-4 flex justify-center text-gray-400">
             {#if file.isDir}
                 {#if loading}
                     <LoaderCircle size={12} class="animate-spin" />
@@ -208,9 +233,9 @@
 
         <!-- Type Icon -->
         {#if file.isDir}
-            <Folder size={16} class="text-yellow-500 flex-shrink-0 mr-1" />
+            <Folder size={16} class={folderIconClass} />
         {:else}
-            <FileIcon size={16} class="text-blue-400 flex-shrink-0 mr-1" />
+            <FileIcon size={16} class={fileIconClass} />
         {/if}
 
         <!-- Name -->
@@ -221,14 +246,14 @@
             class="hidden group-hover:flex items-center gap-1 bg-gray-900/90 rounded px-1 absolute right-1"
         >
             <button
-                class="p-1 hover:text-blue-400"
+                class="p-1 hover:text-blue-400 transition-colors"
                 onclick={handleRename}
                 title="Rename"
             >
                 <Pencil size={12} />
             </button>
             <button
-                class="p-1 hover:text-red-400"
+                class="p-1 hover:text-red-400 transition-colors"
                 onclick={handleDelete}
                 title="Delete"
             >

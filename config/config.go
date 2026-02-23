@@ -2,7 +2,6 @@ package config
 
 import (
 	"runtime/debug"
-	"strconv"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/log"
@@ -85,5 +84,5 @@ func SetSwaggerInfo(cfg *Config) {
 	docs.SwaggerInfo.Title = cfg.App.Name
 	docs.SwaggerInfo.Description = cfg.App.Description
 	docs.SwaggerInfo.Version = cfg.App.Version
-	docs.SwaggerInfo.Host = cfg.Server.Host + ":" + strconv.Itoa(cfg.Server.Port)
+	docs.SwaggerInfo.Host = cfg.Server.Host
 }

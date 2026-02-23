@@ -119,6 +119,17 @@
         window.removeEventListener("keydown", handleKeydown);
         appState.saveHandler = null;
     });
+    const headerText = $derived(
+        appState.currentFile?.name ?? "No file selected",
+    );
+    const canSave = $derived(isDirty && !!activeFileId);
+    const saveBtnClass = $derived(
+        `px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+            isDirty
+                ? "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+                : "bg-neutral-200 text-neutral-400 dark:bg-neutral-700 cursor-not-allowed"
+        }`,
+    );
 </script>
 
 <div class="h-full flex flex-col font-mono">
@@ -127,18 +138,11 @@
         class="flex items-center justify-between px-4 py-2 bg-neutral-100 border-b border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700 shrink-0"
     >
         <div class="text-sm truncate text-neutral-600 dark:text-neutral-400">
-            {appState.currentFile?.name ?? "No file selected"}
+            {headerText}
             {#if isDirty}<span class="text-amber-500 font-bold ml-1">*</span
                 >{/if}
         </div>
-        <button
-            onclick={saveContent}
-            disabled={!isDirty || !activeFileId}
-            class="px-3 py-1 text-xs font-medium rounded-md transition-colors
-                   {isDirty
-                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
-                : 'bg-neutral-200 text-neutral-400 dark:bg-neutral-700 cursor-not-allowed'}"
-        >
+        <button onclick={saveContent} disabled={!canSave} class={saveBtnClass}>
             저장 (Cmd+S)
         </button>
     </div>

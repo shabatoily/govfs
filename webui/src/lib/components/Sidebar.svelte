@@ -108,6 +108,7 @@
             }
         }
     });
+    const refreshIconClass = $derived(loading ? "animate-spin" : "");
 </script>
 
 <div
@@ -145,7 +146,7 @@
                 class="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
                 title="Refresh"
             >
-                <RefreshCw size={16} class={loading ? "animate-spin" : ""} />
+                <RefreshCw size={16} class={refreshIconClass} />
             </button>
         </div>
     </div>

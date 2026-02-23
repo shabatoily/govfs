@@ -20,7 +20,7 @@ import (
 
 var (
 	name        = "govfs"
-	version     = "0.0.1"
+	version     = "0.0.0"
 	buildTime   = time.Now().UTC().Format(time.RFC3339)
 	description = "govfs is a virtual file system server"
 )
@@ -30,7 +30,7 @@ var (
 // @description govfs is a virtual file system server
 // @contact.name meteormin
 // @contact.email miniyu97@gmail.com
-// @servers.url localhost:3000
+// @servers.url http://localhost:3000
 // @servers.description Localhost
 func main() {
 	var configPath string

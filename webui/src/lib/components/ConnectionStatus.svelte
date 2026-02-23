@@ -21,11 +21,17 @@
             sseClient.off("error", updateStatus);
         };
     });
+    const indicatorClass = $derived(
+        `w-2 h-2 rounded-full transition-colors duration-300 ${
+            isConnected
+                ? "bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]"
+                : "bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]"
+        }`,
+    );
+    const statusText = $derived(isConnected ? "Online" : "Offline");
 </script>
 
 <div class="flex items-center gap-2 text-xs">
-    <div
-        class={`w-2 h-2 rounded-full transition-colors duration-300 ${isConnected ? "bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]" : "bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]"}`}
-    ></div>
-    <span class="text-gray-400">{isConnected ? "Online" : "Offline"}</span>
+    <div class={indicatorClass}></div>
+    <span class="text-gray-400">{statusText}</span>
 </div>

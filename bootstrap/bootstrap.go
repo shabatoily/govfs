@@ -11,7 +11,6 @@ import (
 
 	"github.com/goccy/go-json"
 
-	"github.com/gofiber/contrib/v3/swaggo"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/log"
 	vfs "github.com/meteormin/govfs"
@@ -20,6 +19,7 @@ import (
 	"github.com/meteormin/govfs/config"
 	"github.com/meteormin/govfs/drivers"
 	"github.com/meteormin/govfs/server/middlewares"
+	"github.com/meteormin/govfs/server/middlewares/swaggo"
 	"github.com/meteormin/govfs/server/routes"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
