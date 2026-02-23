@@ -152,12 +152,12 @@ func (c *Client) CreateFile(name string, r io.ReadCloser) (types.MetaRes, error)
 	if err != nil {
 		return types.MetaRes{}, err
 	}
-	if _, err := io.Copy(part, r); err != nil {
-		return types.MetaRes{}, err
+	if _, copyErr := io.Copy(part, r); copyErr != nil {
+		return types.MetaRes{}, copyErr
 	}
 
-	if err := writer.Close(); err != nil {
-		return types.MetaRes{}, err
+	if closeErr := writer.Close(); closeErr != nil {
+		return types.MetaRes{}, closeErr
 	}
 
 	resp, err := c.c.R().

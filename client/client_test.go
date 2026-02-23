@@ -17,25 +17,27 @@ import (
 	"github.com/meteormin/govfs/client"
 	"github.com/meteormin/govfs/server/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func newRandomMetaRes() types.MetaRes {
+func newRandomMetaRes(isDir bool) types.MetaRes {
 	id, _ := uuid.NewRandom()
+	randPath, _ := uuid.NewRandom()
 	return types.MetaRes{
 		Meta: vfs.Meta{
 			ID:       id,
 			Name:     id.String(),
-			Path:     "/test",
+			Path:     "/" + randPath.String(),
 			Size:     0,
-			IsDir:    true,
+			IsDir:    isDir,
 			Modified: time.Now(),
 		},
-		URL: "/test",
+		URL: "/vfs/" + id.String(),
 	}
 }
 
 func TestClient_List(t *testing.T) {
-	meta := newRandomMetaRes()
+	meta := newRandomMetaRes(true)
 	expectedRes := types.VfsRes[[]types.MetaRes]{
 		ViewType: types.ViewTypeList,
 		Path:     "/",
@@ -47,14 +49,15 @@ func TestClient_List(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/vfs", r.URL.Path)
 		assert.Equal(t, "/", r.URL.Query().Get("q"))
-		json.NewEncoder(w).Encode(expectedRes)
+		encErr := json.NewEncoder(w).Encode(expectedRes)
+		assert.NoError(t, encErr)
 	}))
 	defer server.Close()
 
 	c := client.NewClient(server.URL)
 	res, err := c.List("/")
-	assert.NoError(t, err)
-	assert.NotEmpty(t, res)
+	require.NoError(t, err)
+	require.NotEmpty(t, res)
 }
 
 func TestClient_Read(t *testing.T) {
@@ -62,26 +65,37 @@ func TestClient_Read(t *testing.T) {
 	content := "hello world"
 	expectedMeta := types.MetaRes{
 		// Fill minimal fields
+		Meta: vfs.Meta{
+			ID:       id,
+			Path:     "/test.txt",
+			Name:     "test.txt",
+			Size:     0,
+			IsDir:    false,
+			Modified: time.Now(),
+		},
+		URL: "/vfs/" + id.String(),
 	}
-	expectedMeta.Name = "test.txt"
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/stat") {
-			json.NewEncoder(w).Encode(expectedMeta)
+			err := json.NewEncoder(w).Encode(expectedMeta)
+			assert.NoError(t, err)
 			return
 		}
 		assert.Equal(t, "/vfs/"+id.String(), r.URL.Path)
-		w.Write([]byte(content))
+		_, err := w.Write([]byte(content))
+		assert.NoError(t, err)
 	}))
 	defer server.Close()
 
 	c := client.NewClient(server.URL)
 	rc, meta, err := c.Read(id)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedMeta.Name, meta.Name) // Check a field
 
 	buf := new(bytes.Buffer)
-	io.Copy(buf, rc)
+	_, err = io.Copy(buf, rc)
+	require.NoError(t, err)
 	assert.Equal(t, content, buf.String())
 }
 
@@ -99,7 +113,8 @@ func TestClient_CreateDir(t *testing.T) {
 		assert.Equal(t, dirName, r.FormValue("name"))
 
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(expectedMeta)
+		err = json.NewEncoder(w).Encode(expectedMeta)
+		assert.NoError(t, err)
 	}))
 	defer server.Close()
 
@@ -114,12 +129,12 @@ func TestClient_CreateFile(t *testing.T) {
 
 	tempDir := t.TempDir()
 	filePath := filepath.Join(tempDir, fileName)
-	err := os.WriteFile(filePath, []byte(fileContent), 0o644)
-	assert.NoError(t, err)
+	err := os.WriteFile(filePath, []byte(fileContent), 0o600)
+	require.NoError(t, err)
 	defer os.Remove(filePath)
 
 	file, err := os.Open(filePath)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer file.Close()
 
 	expectedMeta := types.MetaRes{}
@@ -127,21 +142,23 @@ func TestClient_CreateFile(t *testing.T) {
 		assert.Equal(t, "/vfs", r.URL.Path)
 		assert.Equal(t, http.MethodPost, r.Method)
 
-		err := r.ParseMultipartForm(32 << 20)
-		assert.NoError(t, err)
+		parseErr := r.ParseMultipartForm(32 << 20)
+		assert.NoError(t, parseErr)
 		assert.Equal(t, "false", r.FormValue("isDir"))
 		assert.Equal(t, fileName, r.FormValue("name"))
 
-		file, header, err := r.FormFile("file")
-		assert.NoError(t, err)
+		file, header, fileErr := r.FormFile("file")
+		assert.NoError(t, fileErr)
 		assert.Equal(t, fileName, header.Filename)
 
 		buf := new(bytes.Buffer)
-		io.Copy(buf, file)
+		_, copyErr := io.Copy(buf, file)
+		assert.NoError(t, copyErr)
 		assert.Equal(t, fileContent, buf.String())
 
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(expectedMeta)
+		encErr := json.NewEncoder(w).Encode(expectedMeta)
+		assert.NoError(t, encErr)
 	}))
 	defer server.Close()
 
@@ -160,11 +177,13 @@ func TestClient_Write(t *testing.T) {
 		assert.Equal(t, http.MethodPut, r.Method)
 
 		var req types.WriteReq
-		json.NewDecoder(r.Body).Decode(&req)
+		decErr := json.NewDecoder(r.Body).Decode(&req)
+		assert.NoError(t, decErr)
 		assert.Equal(t, content, req.Content)
 
 		w.WriteHeader(http.StatusAccepted)
-		json.NewEncoder(w).Encode(expectedMeta)
+		encErr := json.NewEncoder(w).Encode(expectedMeta)
+		assert.NoError(t, encErr)
 	}))
 	defer server.Close()
 
@@ -188,7 +207,8 @@ func TestClient_Move(t *testing.T) {
 		assert.Equal(t, dst, req.Name)
 
 		w.WriteHeader(http.StatusAccepted)
-		json.NewEncoder(w).Encode(expectedMeta)
+		encErr := json.NewEncoder(w).Encode(expectedMeta)
+		assert.NoError(t, encErr)
 	}))
 	defer server.Close()
 
@@ -219,26 +239,27 @@ func TestClient_Restore(t *testing.T) {
 	// Create a dummy backup file
 	tempDir := t.TempDir()
 	filePath := filepath.Join(tempDir, fileName)
-	err := os.WriteFile(filePath, []byte(fileContent), 0o644)
-	assert.NoError(t, err)
+	err := os.WriteFile(filePath, []byte(fileContent), 0o600)
+	require.NoError(t, err)
 
 	file, err := os.Open(filePath)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer file.Close()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/vfs/restore", r.URL.Path)
 		assert.Equal(t, http.MethodPost, r.Method)
 
-		err := r.ParseMultipartForm(32 << 20)
-		assert.NoError(t, err)
+		parseErr := r.ParseMultipartForm(32 << 20)
+		assert.NoError(t, parseErr)
 
-		file, header, err := r.FormFile("file")
-		assert.NoError(t, err)
+		file, header, fileErr := r.FormFile("file")
+		assert.NoError(t, fileErr)
 		assert.Equal(t, "backup", header.Filename)
 
 		buf := new(bytes.Buffer)
-		io.Copy(buf, file)
+		_, copyErr := io.Copy(buf, file)
+		assert.NoError(t, copyErr)
 		assert.Equal(t, fileContent, buf.String())
 
 		w.WriteHeader(http.StatusOK)
