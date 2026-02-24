@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/drivers/badger"
 	"github.com/meteormin/govfs/server/types"
 )
 
@@ -131,7 +132,11 @@ func (s *VfsService) Restore(r io.Reader) error {
 }
 
 func (s *VfsService) Rotate(key string) error {
-	return s.vfs.Rotate([]byte(key))
+	badgerVFS, ok := s.vfs.(*badger.BadgerVFS)
+	if !ok {
+		return vfs.ErrNotSupported
+	}
+	return badgerVFS.Rotate([]byte(key))
 }
 
 func NewVfsService(fs vfs.VFS, prefix string) *VfsService {

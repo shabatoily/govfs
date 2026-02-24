@@ -34,12 +34,16 @@ type LocalStorage struct {
 }
 
 func New(cfg Config) (*LocalStorage, error) {
-	if err := os.MkdirAll(cfg.Path, 0o755); err != nil {
+	// 1. basePath를 미리 깔끔하게 정리하고 구분자를 붙여 경계를 명확히 합니다.
+	basePath := filepath.Clean(cfg.Path)
+	// 유닉스/윈도우 공통으로 안전하게 접두사를 확인하기 위해 구분자를 추가합니다.
+	basePrefix := basePath + string(os.PathSeparator)
+	if err := os.MkdirAll(basePrefix, vfs.DefaultDirMode); err != nil {
 		return nil, err
 	}
 
 	ls := &LocalStorage{
-		basePath: cfg.Path,
+		basePath: basePrefix,
 		idMap:    make(map[uuid.UUID]vfs.Meta),
 		pathMap:  make(map[string]vfs.Meta),
 		logger:   cfg.Logger,
@@ -137,7 +141,7 @@ func (ls *LocalStorage) Open(id uuid.UUID) (*vfs.File, error) {
 	}
 
 	if meta.IsDir {
-		return vfs.NewFile(meta, nil), nil
+		return vfs.NewFile(&meta, nil), nil
 	}
 
 	f, err := os.Open(ls.toLocalPath(meta.Path))
@@ -145,7 +149,7 @@ func (ls *LocalStorage) Open(id uuid.UUID) (*vfs.File, error) {
 		return nil, err
 	}
 	// Note: updating access time could be done here if needed
-	return vfs.NewFile(meta, f), nil
+	return vfs.NewFile(&meta, f), nil
 }
 
 func (ls *LocalStorage) Create(path string, r io.Reader) (vfs.Meta, error) {
@@ -436,8 +440,8 @@ func (ls *LocalStorage) Copy(id uuid.UUID, dst string) (vfs.Meta, error) {
 	}
 	defer dFile.Close()
 
-	if _, err := io.Copy(dFile, sFile); err != nil {
-		return vfs.Meta{}, err
+	if _, copyErr := io.Copy(dFile, sFile); copyErr != nil {
+		return vfs.Meta{}, copyErr
 	}
 
 	newID, err := uuid.NewRandom()
@@ -465,10 +469,6 @@ func (ls *LocalStorage) Close() error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 	return ls.saveIndex()
-}
-
-func (ls *LocalStorage) Rotate(_ []byte) error {
-	return vfs.ErrNotSupported
 }
 
 func (ls *LocalStorage) Backup(w io.Writer, _ uint64) (uint64, error) {
@@ -594,30 +594,18 @@ func (ls *LocalStorage) Load(r io.Reader, maxPendingWrites int) error {
 		}
 
 		if header.Name == IndexFileName {
-			// Read index
-			data, readErr := io.ReadAll(tr)
-			if readErr != nil {
-				return readErr
-			}
-			var metas []vfs.Meta
-			if unmarshalErr := json.Unmarshal(data, &metas); unmarshalErr != nil {
-				return unmarshalErr
-			}
-			for i := range metas {
-				m := metas[i]
-				ls.idMap[m.ID] = m
-				ls.pathMap[m.Path] = m
-			}
 			// Write index back to disk too
-			if writeErr := os.WriteFile(filepath.Join(ls.basePath, IndexFileName), data, vfs.DefaultFileMode); writeErr != nil {
+			if writeErr := ls.writeIndexFile(tr); writeErr != nil {
 				return writeErr
 			}
 			continue
 		}
 
 		// Security: prevent path traversal
+		// #nosec G305
 		targetPath := filepath.Join(ls.basePath, header.Name)
-		if !strings.HasPrefix(targetPath, filepath.Clean(ls.basePath)+string(os.PathSeparator)) {
+		rel, err := filepath.Rel(ls.basePath, targetPath)
+		if err != nil || strings.HasPrefix(rel, "..") {
 			return fmt.Errorf("security: illegal path traversal in tar file: %s", header.Name)
 		}
 
@@ -689,10 +677,28 @@ func (ls *LocalStorage) Tree(path string) (*vfs.TreeNode, error) {
 		childrenMap[parent] = append(childrenMap[parent], m)
 	}
 
-	return ls.buildTree(rootNode, childrenMap), nil
+	return buildTree(rootNode, childrenMap), nil
 }
 
-func (ls *LocalStorage) buildTree(root *vfs.TreeNode, childrenMap map[string][]vfs.Meta) *vfs.TreeNode {
+func (ls *LocalStorage) writeIndexFile(r io.Reader) error {
+	data, readErr := io.ReadAll(r)
+	if readErr != nil {
+		return readErr
+	}
+	var metas []vfs.Meta
+	if unmarshalErr := json.Unmarshal(data, &metas); unmarshalErr != nil {
+		return unmarshalErr
+	}
+	for i := range metas {
+		m := metas[i]
+		ls.idMap[m.ID] = m
+		ls.pathMap[m.Path] = m
+	}
+	// Write index back to disk too
+	return os.WriteFile(filepath.Join(ls.basePath, IndexFileName), data, vfs.DefaultFileMode)
+}
+
+func buildTree(root *vfs.TreeNode, childrenMap map[string][]vfs.Meta) *vfs.TreeNode {
 	prefix := root.Meta.Path
 	if !strings.HasSuffix(prefix, "/") {
 		prefix += "/"
@@ -705,7 +711,7 @@ func (ls *LocalStorage) buildTree(root *vfs.TreeNode, childrenMap map[string][]v
 			Children: nil,
 		}
 		if m.IsDir {
-			childNode = ls.buildTree(childNode, childrenMap)
+			childNode = buildTree(childNode, childrenMap)
 		}
 		root.Children = append(root.Children, childNode)
 	}

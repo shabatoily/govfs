@@ -74,7 +74,7 @@ func (m *Meta) MIME() string {
 }
 
 type File struct {
-	Meta Meta
+	Meta *Meta
 	r    io.ReadCloser
 }
 
@@ -99,7 +99,7 @@ func (f *File) Close() error {
 	return f.r.Close()
 }
 
-func NewFile(meta Meta, r io.ReadCloser) *File {
+func NewFile(meta *Meta, r io.ReadCloser) *File {
 	return &File{
 		Meta: meta,
 		r:    r,
@@ -113,27 +113,30 @@ type TreeNode struct {
 
 func (node *TreeNode) Walk() iter.Seq[*TreeNode] {
 	return func(yield func(*TreeNode) bool) {
-		// 헬퍼 함수 정의 (재귀 순회)
-		var traverse func(*TreeNode) bool
-		traverse = func(node *TreeNode) bool {
-			if node == nil {
-				return true
-			}
-			// 현재 노드를 yield (반복문 바디 실행)
-			// yield가 false를 반환하면 순회 중단을 의미
-			if !yield(node) {
-				return false
-			}
-			// 자식 노드 순회
-			for _, child := range node.Children {
-				if !traverse(child) {
-					return false
-				}
-			}
-			return true
+		if node == nil {
+			return
 		}
-		traverse(node)
+		traverseNodes(node, yield)
 	}
+}
+
+// 헬퍼 함수 정의 (재귀 순회)
+func traverseNodes(node *TreeNode, yield func(*TreeNode) bool) bool {
+	if node == nil {
+		return true
+	}
+	// 현재 노드를 yield (반복문 바디 실행)
+	// yield가 false를 반환하면 순회 중단을 의미
+	if !yield(node) {
+		return false
+	}
+	// 자식 노드 순회
+	for _, child := range node.Children {
+		if !traverseNodes(child, yield) {
+			return false
+		}
+	}
+	return true
 }
 
 type VFS interface {
@@ -152,5 +155,4 @@ type VFS interface {
 	Backup(w io.Writer, since uint64) (uint64, error)
 	Load(r io.Reader, maxPendingWrites int) error
 	Tree(path string) (*TreeNode, error)
-	Rotate(key []byte) error
 }

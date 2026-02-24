@@ -223,7 +223,7 @@ func (bvfs *BadgerVFS) Open(id uuid.UUID) (*vfs.File, error) {
 
 	bvfs.logger.Debug().Str("ID", im.ID.String()).Str("Path", im.Path).Msg("Open")
 
-	return vfs.NewFile(im.Meta, reader), nil
+	return vfs.NewFile(&im.Meta, reader), nil
 }
 
 func (bvfs *BadgerVFS) Create(path string, r io.Reader) (vfs.Meta, error) {
