@@ -18,7 +18,7 @@ func JWTAuthMiddleware(cfg config.AuthConfig) fiber.Handler {
 	}
 
 	return jwtware.New(jwtware.Config{
-		SigningKey: jwtware.SigningKey{Key: []byte(cfg.JWTSecret)},
+		SigningKey: jwtware.SigningKey{Key: []byte(cfg.JWT.Secret)},
 		Extractor: extractors.Chain(
 			extractors.FromAuthHeader("Bearer"),
 			extractors.FromQuery("token"),

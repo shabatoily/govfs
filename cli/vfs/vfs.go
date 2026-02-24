@@ -39,6 +39,12 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 	url := fmt.Sprintf("http://%s:%d", host, cfg.Server.Port)
 	c := client.NewClient(url)
 
+	if cfg.Server.Auth.Enabled {
+		if err := c.Login(cfg.Server.Auth.Username, cfg.Server.Auth.Password); err != nil {
+			return nil, fmt.Errorf("failed to authenticate: %w", err)
+		}
+	}
+
 	return &Handler{
 		cmd:    cmd,
 		client: c,

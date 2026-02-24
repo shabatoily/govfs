@@ -114,7 +114,7 @@
     });
 </script>
 
-{#if !appState.token}
+{#if appState.requireLogin}
     <Login />
 {/if}
 

@@ -59,12 +59,12 @@ func resolveConfigPath(in string) string {
 }
 
 func resolveConfig(cfg *Config) error {
-	if cfg.Server.Auth.Enabled && cfg.Server.Auth.JWTSecret == "" {
+	if cfg.Server.Auth.Enabled && cfg.Server.Auth.JWT.Secret == "" {
 		b := make([]byte, 32)
 		if _, err := rand.Read(b); err != nil {
 			return err
 		}
-		cfg.Server.Auth.JWTSecret = hex.EncodeToString(b)
+		cfg.Server.Auth.JWT.Secret = hex.EncodeToString(b)
 	}
 
 	if cfg.VFS.Driver.Type == "" {

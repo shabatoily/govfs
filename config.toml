@@ -9,10 +9,13 @@ path = "./logs/server.log"
 accessLogPath = "./logs/access-log.log"
 # log-level: debug=-4, info=0, warn=4, error=8
 level = 0
-[server.basicAuth]
+[server.auth]
 enabled = false
-username = "${SERVER_BASICAUTH_USERNAME}"
-password = "${SERVER_BASICAUTH_PASSWORD}"
+username = "${SERVER_AUTH_USERNAME}"
+password = "${SERVER_AUTH_PASSWORD}"
+[server.auth.jwt]
+secret = "${SERVER_AUTH_JWT_SECRET}"
+exp = "24h"
 [vfs.badger]
 path = "./data"
 encryptKeyRotateDuration = "24h"

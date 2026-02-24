@@ -1,5 +1,6 @@
 <script lang="ts">
     import { appState } from "../state.svelte";
+    import sseClient from "../sse";
 
     let username = $state("");
     let password = $state("");
@@ -23,11 +24,19 @@
             const data = await res.json();
             if (data.token) {
                 appState.setToken(data.token);
+                appState.setRequireLogin(false);
                 appState.addToast("Logged in successfully", "success");
+                sseClient.disconnect();
+                sseClient.connect();
+                appState.refresh();
             } else if (data.message === "Auth is disabled, no need to login") {
                 // If auth is disabled, the backend might just return a message without token
                 // Let's set a dummy token so the UI proceeds
                 appState.setToken("disabled");
+                appState.setRequireLogin(false);
+                sseClient.disconnect();
+                sseClient.connect();
+                appState.refresh();
             }
         } catch (e: any) {
             errorMsg = e.message;
@@ -57,8 +66,11 @@
             class="space-y-4"
         >
             <div>
-                <label class="block text-gray-400 text-sm mb-1">Username</label>
+                <label for="username" class="block text-gray-400 text-sm mb-1"
+                    >Username</label
+                >
                 <input
+                    id="username"
                     type="text"
                     bind:value={username}
                     class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
@@ -66,8 +78,11 @@
                 />
             </div>
             <div>
-                <label class="block text-gray-400 text-sm mb-1">Password</label>
+                <label for="password" class="block text-gray-400 text-sm mb-1"
+                    >Password</label
+                >
                 <input
+                    id="password"
                     type="password"
                     bind:value={password}
                     class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"

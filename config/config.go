@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"runtime/debug"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/log"
@@ -35,10 +36,15 @@ type FiberLoggerConfig struct {
 }
 
 type AuthConfig struct {
-	Enabled   bool   `json:"enabled" toml:"enabled" yaml:"enabled"`
-	Username  string `json:"username" toml:"username" yaml:"username"`
-	Password  string `json:"-" toml:"-" yaml:"-"`
-	JWTSecret string `json:"-" toml:"-" yaml:"-"` // If empty, a random secret will be used
+	Enabled  bool      `json:"enabled" toml:"enabled" yaml:"enabled"`
+	Username string    `json:"username" toml:"username" yaml:"username"`
+	Password string    `json:"-" toml:"-" yaml:"-"`
+	JWT      JWTConfig `json:"jwt" toml:"jwt" yaml:"jwt"`
+}
+
+type JWTConfig struct {
+	Secret string        `json:"secret" toml:"secret" yaml:"secret"`
+	Exp    time.Duration `json:"exp" toml:"exp" yaml:"exp"`
 }
 
 type VfsConfig struct {

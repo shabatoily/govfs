@@ -1,5 +1,6 @@
 import vfs, { type FileInfo } from './vfs';
 import { getParentPath } from './utils';
+import sseClient from './sse';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -15,6 +16,7 @@ export class AppState {
     fileList = $state<FileInfo[]>([]);
     clientId = $state<string | null>(null);
     token = $state<string | null>(localStorage.getItem('jwt-token'));
+    requireLogin = $state<boolean>(false);
     toasts = $state<ToastItem[]>([]); // We hold toast data here
     refreshSignal = $state<{ type: 'PATH' | 'ID'; value: string; timestamp: number } | null>(null);
 
@@ -31,8 +33,14 @@ export class AppState {
         }
     }
 
+    setRequireLogin(required: boolean) {
+        this.requireLogin = required;
+    }
+
     logout() {
         this.setToken(null);
+        this.setRequireLogin(true);
+        sseClient.disconnect();
     }
 
     triggerRefreshPath(path: string) {

@@ -272,3 +272,42 @@ func NewClient(url string) *Client {
 	c.SetBaseURL(url)
 	return &Client{c: c}
 }
+
+// SetToken manually sets the authorization token
+func (c *Client) SetToken(token string) {
+	if token != "" && token != "disabled" {
+		c.c.AddHeader(fiber.HeaderAuthorization, "Bearer "+token)
+	}
+}
+
+// Login authenticates with the server and configures the client to use the received token
+func (c *Client) Login(username, password string) error {
+	req := types.LoginRequest{
+		Username: username,
+		Password: password,
+	}
+
+	cfg, err := createJSONConfig(req)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.c.Post("/auth/login", cfg)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode() == fiber.StatusOK {
+		var res map[string]string
+		if err := resp.JSON(&res); err != nil {
+			return err
+		}
+		if token, ok := res["token"]; ok {
+			c.SetToken(token)
+		}
+		// If no token but OK, it could be "Auth is disabled"
+		return nil
+	}
+
+	return fmt.Errorf("login failed: %v", resp.StatusCode())
+}
