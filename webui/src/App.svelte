@@ -6,6 +6,7 @@
     import Terminal from "./lib/components/Terminal.svelte";
     import Toast from "./lib/components/Toast.svelte";
     import ConnectionStatus from "./lib/components/ConnectionStatus.svelte";
+    import Login from "./lib/components/Login.svelte";
     import { appState } from "./lib/state.svelte";
     import vfs from "./lib/vfs";
     import sseClient, { type SSEMessage } from "./lib/sse";
@@ -112,6 +113,10 @@
         };
     });
 </script>
+
+{#if !appState.token}
+    <Login />
+{/if}
 
 <div class="bg-gray-900 text-gray-300 h-screen w-screen flex overflow-hidden">
     <!-- SideBar -->

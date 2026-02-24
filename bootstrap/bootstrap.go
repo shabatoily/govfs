@@ -60,7 +60,10 @@ func InitServer(fs vfs.VFS, cfg *config.ServerConfig) *fiber.App {
 	}))
 
 	// web routes
-	routes.Web(app, routes.DepsWeb{VFS: fs})
+	routes.Web(app, routes.DepsWeb{
+		VFS:  fs,
+		Auth: cfg.Auth,
+	})
 
 	app.Hooks().OnPreStartupMessage(func(preMsgData *fiber.PreStartupMessageData) error {
 		preMsgData.BannerHeader = banner

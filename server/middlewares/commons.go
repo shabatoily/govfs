@@ -47,13 +47,15 @@ func CommonMiddlewares(app *fiber.App, cfg *config.ServerConfig) {
 			},
 		},
 	))
-	app.Use(BasicAuthMiddleware(cfg.BasicAuth))
 	app.Use(etag.New(etag.Config{
 		Next: func(c fiber.Ctx) bool {
 			// skip sse
 			return strings.HasPrefix(c.Path(), "/sse")
 		},
 	}))
+
+	jwtAuth := JWTAuthMiddleware(cfg.Auth)
+	app.Use(jwtAuth)
 
 	// debug/vars
 	app.Use(expvar.New())

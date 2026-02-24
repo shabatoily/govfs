@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/static"
 	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/config"
 	"github.com/meteormin/govfs/server/handlers"
 	"github.com/meteormin/govfs/server/services"
 	"github.com/meteormin/govfs/webui"
@@ -17,7 +18,8 @@ var (
 )
 
 type DepsWeb struct {
-	VFS vfs.VFS
+	VFS  vfs.VFS
+	Auth config.AuthConfig
 }
 
 func Web(app *fiber.App, deps DepsWeb) {
@@ -31,6 +33,10 @@ func Web(app *fiber.App, deps DepsWeb) {
 	vfsService := services.NewVfsService(deps.VFS, PrefixVFS)
 
 	vfsHandler := handlers.NewVfsHandler(vfsService, sseBroker)
+
+	authHandler := handlers.NewAuthHandler(deps.Auth)
+
+	app.Post("/auth/login", authHandler.Login).Name("auth.login")
 
 	// VFS Group with SSE Notification Middleware
 	// We want to notify AFTER the handler executes, and the middleware logic does exactly that (Next() called first).

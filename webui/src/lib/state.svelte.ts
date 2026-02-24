@@ -14,11 +14,25 @@ export class AppState {
     currentFile = $state<FileInfo | null>(null);
     fileList = $state<FileInfo[]>([]);
     clientId = $state<string | null>(null);
+    token = $state<string | null>(localStorage.getItem('jwt-token'));
     toasts = $state<ToastItem[]>([]); // We hold toast data here
     refreshSignal = $state<{ type: 'PATH' | 'ID'; value: string; timestamp: number } | null>(null);
 
     setClientId(id: string) {
         this.clientId = id;
+    }
+
+    setToken(token: string | null) {
+        this.token = token;
+        if (token) {
+            localStorage.setItem('jwt-token', token);
+        } else {
+            localStorage.removeItem('jwt-token');
+        }
+    }
+
+    logout() {
+        this.setToken(null);
     }
 
     triggerRefreshPath(path: string) {

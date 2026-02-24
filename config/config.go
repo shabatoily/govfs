@@ -26,7 +26,7 @@ type ServerConfig struct {
 	Host         string            `json:"host" toml:"host" yaml:"host"`
 	Port         int               `json:"port" toml:"port" yaml:"port"`
 	Logger       FiberLoggerConfig `json:"logger" toml:"logger" yaml:"logger"`
-	BasicAuth    BasicAuth         `json:"basicAuth" toml:"basicAuth" yaml:"basicAuth"`
+	Auth         AuthConfig        `json:"auth" toml:"auth" yaml:"auth"`
 }
 type FiberLoggerConfig struct {
 	Path          string    `json:"path" toml:"path" yaml:"path"`
@@ -34,10 +34,11 @@ type FiberLoggerConfig struct {
 	AccessLogPath string    `json:"accessLogPath" toml:"accessLogPath" yaml:"accessLogPath"`
 }
 
-type BasicAuth struct {
-	Enabled  bool   `json:"enabled" toml:"enabled" yaml:"enabled"`
-	Username string `json:"username" toml:"username" yaml:"username"`
-	Password string `json:"-" toml:"-" yaml:"-"`
+type AuthConfig struct {
+	Enabled   bool   `json:"enabled" toml:"enabled" yaml:"enabled"`
+	Username  string `json:"username" toml:"username" yaml:"username"`
+	Password  string `json:"-" toml:"-" yaml:"-"`
+	JWTSecret string `json:"-" toml:"-" yaml:"-"` // If empty, a random secret will be used
 }
 
 type VfsConfig struct {

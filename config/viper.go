@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"os"
 	"path/filepath"
@@ -57,6 +59,14 @@ func resolveConfigPath(in string) string {
 }
 
 func resolveConfig(cfg *Config) error {
+	if cfg.Server.Auth.Enabled && cfg.Server.Auth.JWTSecret == "" {
+		b := make([]byte, 32)
+		if _, err := rand.Read(b); err != nil {
+			return err
+		}
+		cfg.Server.Auth.JWTSecret = hex.EncodeToString(b)
+	}
+
 	if cfg.VFS.Driver.Type == "" {
 		cfg.VFS.Driver = DefaultConfig.VFS.Driver
 	}

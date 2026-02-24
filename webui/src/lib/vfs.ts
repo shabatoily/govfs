@@ -31,7 +31,6 @@ export interface VFS {
 /// ----------- VFS API (Server is generic, client decides type) -----------------
 import { appState } from "./state.svelte";
 
-// Helper to get headers with Client ID
 function getHeaders(contentType?: string): HeadersInit {
     const headers: HeadersInit = {};
     if (contentType) {
@@ -41,14 +40,26 @@ function getHeaders(contentType?: string): HeadersInit {
     if (clientId) {
         headers['X-Client-ID'] = clientId;
     }
+    const token = appState.token;
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
     return headers;
+}
+
+async function vfsFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const res = await vfsFetch(input, init);
+    if (res.status === 401) {
+        appState.logout();
+    }
+    return res;
 }
 
 /// ----------- VFS API (Server is generic, client decides type) -----------------
 const vfs: VFS = {
     // 파일 목록
     async list(path: string = '/'): Promise<FileInfo[]> {
-        const res = await fetch(`/vfs?q=${path}`, {
+        const res = await vfsFetch(`/vfs?q=${path}`, {
             headers: getHeaders()
         });
         if (!res.ok) throw new Error(await res.text());
@@ -56,7 +67,7 @@ const vfs: VFS = {
     },
 
     async tree(path: string = '/'): Promise<TreeNode> {
-        const res = await fetch(`vfs?q=${path}&viewType=tree`, {
+        const res = await vfsFetch(`vfs?q=${path}&viewType=tree`, {
             headers: getHeaders()
         });
         if (!res.ok) throw new Error(await res.text());
@@ -65,7 +76,7 @@ const vfs: VFS = {
 
     // 파일 메타 정보
     async stat(id: string): Promise<FileInfo | null> {
-        const res = await fetch(`/vfs/${encodeURIComponent(id)}/stat`, {
+        const res = await vfsFetch(`/vfs/${encodeURIComponent(id)}/stat`, {
             headers: getHeaders()
         });
         if (res.status === 404) return null;
@@ -75,7 +86,7 @@ const vfs: VFS = {
 
     // 파일 읽기 (텍스트/바이너리 구분은 클라이언트가 확장자 기반으로 처리)
     async read(id: string) {
-        const res = await fetch(`/vfs/${encodeURIComponent(id)}`, {
+        const res = await vfsFetch(`/vfs/${encodeURIComponent(id)}`, {
             headers: getHeaders()
         });
         if (!res.ok) {
@@ -104,7 +115,7 @@ const vfs: VFS = {
             form.append("file", new Blob([fileOrText], { type: "text/plain" }), path);
         }
 
-        const res = await fetch(`/vfs`, {
+        const res = await vfsFetch(`/vfs`, {
             method: "POST",
             headers: getHeaders(), // Note: fetch automatically adds Content-Type for FormData, we assume getHeaders doesn't override if not passed
             body: form,
@@ -120,7 +131,7 @@ const vfs: VFS = {
         form.append("name", path);
         form.append("isDir", "true");
 
-        const res = await fetch(`/vfs`, {
+        const res = await vfsFetch(`/vfs`, {
             method: "POST",
             headers: getHeaders(),
             body: form,
@@ -133,7 +144,7 @@ const vfs: VFS = {
 
     // 파일 쓰기
     async write(id: string, content: string): Promise<boolean> {
-        const res = await fetch(`/vfs/${encodeURIComponent(id)}`, {
+        const res = await vfsFetch(`/vfs/${encodeURIComponent(id)}`, {
             method: 'PUT',
             headers: getHeaders('application/json'),
             body: JSON.stringify({ content: content }),
@@ -146,7 +157,7 @@ const vfs: VFS = {
 
     // 파일 삭제
     async delete(id: string) {
-        const res = await fetch(`/vfs/${encodeURIComponent(id)}`, {
+        const res = await vfsFetch(`/vfs/${encodeURIComponent(id)}`, {
             method: 'DELETE',
             headers: getHeaders()
         });
@@ -157,7 +168,7 @@ const vfs: VFS = {
 
     // 🔹 파일 이름/경로 변경
     async move(id: string, destPath: string): Promise<boolean> {
-        const res = await fetch(`/vfs/${encodeURIComponent(id)}`, {
+        const res = await vfsFetch(`/vfs/${encodeURIComponent(id)}`, {
             method: "PATCH",
             headers: getHeaders('application/json'),
             body: JSON.stringify({ name: destPath }),
@@ -168,7 +179,7 @@ const vfs: VFS = {
 
     // 🔹 파일 이름 변경
     async writeComments(id: string, comment: string): Promise<boolean> {
-        const res = await fetch(`/vfs/${encodeURIComponent(id)}/comments`, {
+        const res = await vfsFetch(`/vfs/${encodeURIComponent(id)}/comments`, {
             method: "PATCH",
             headers: getHeaders('application/json'),
             body: JSON.stringify({ comment: comment }),
@@ -179,7 +190,7 @@ const vfs: VFS = {
 
     // 파일 복사
     async copy(id: string, destPath: string): Promise<boolean> {
-        const res = await fetch(`/vfs/${encodeURIComponent(id)}/copy`, {
+        const res = await vfsFetch(`/vfs/${encodeURIComponent(id)}/copy`, {
             method: 'POST',
             headers: getHeaders('application/json'),
             body: JSON.stringify({ name: destPath })
