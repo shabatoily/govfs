@@ -38,7 +38,6 @@ export class AppState {
     }
 
     logout() {
-        this.setToken(null);
         this.setRequireLogin(true);
         sseClient.disconnect();
     }

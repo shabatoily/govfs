@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"mime/multipart"
@@ -139,8 +140,13 @@ func TestVfsHandler_List(t *testing.T) {
 	mockVFS.On("List", "/").Return(mockMeta, nil)
 
 	// Test Request
-	req, _ := http.NewRequest("GET", "/vfs?q=/", nil)
-	resp, err := app.Test(req)
+	reqp, err := http.NewRequestWithContext(context.Background(), "GET", "/vfs?q=/", http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := app.Test(reqp)
+	defer func(res *http.Response) {
+		_ = res.Body.Close()
+	}(resp)
 
 	// Assertions
 	require.NoError(t, err)
@@ -186,11 +192,15 @@ func TestVfsHandler_Stat(t *testing.T) {
 	mockVFS.On("Stat", id).Return(mockMeta, nil)
 
 	// Test Request
-	req, _ := http.NewRequest("GET", "/vfs/"+id.String()+"/stat", nil)
-	resp, err := app.Test(req)
-
-	// Assertions
+	reqp, err := http.NewRequestWithContext(context.Background(), "GET", "/vfs/"+id.String()+"/stat", http.NoBody)
 	require.NoError(t, err)
+
+	resp, err := app.Test(reqp)
+	defer func(res *http.Response) {
+		_ = res.Body.Close()
+	}(resp)
+	require.NoError(t, err)
+	// Assertions
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var metaRes types.MetaRes
@@ -233,24 +243,30 @@ func TestVfsHandler_Create(t *testing.T) {
 	// Create Multipart Request
 	body := new(bytes.Buffer)
 	writer := multipart.NewWriter(body)
-	part, _ := writer.CreateFormFile("file", "new.txt")
-	part.Write([]byte("Hello World!"))
+	part, err := writer.CreateFormFile("file", "new.txt")
+	require.NoError(t, err)
+	_, err = part.Write([]byte("Hello World!"))
+	require.NoError(t, err)
 	writer.Close()
 
-	req, _ := http.NewRequest("POST", "/vfs", body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.Header.Set("X-Client-ID", uuid.NewString())
+	reqp, err := http.NewRequestWithContext(context.Background(), "POST", "/vfs", body)
+	require.NoError(t, err)
+	reqp.Header.Set("Content-Type", writer.FormDataContentType())
+	reqp.Header.Set("X-Client-ID", uuid.NewString())
 
-	resp, err := app.Test(req)
+	resp, err := app.Test(reqp)
+	defer func(res *http.Response) {
+		_ = res.Body.Close()
+	}(resp)
 
 	// Assertions
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
 	var metaRes types.MetaRes
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
 	err = json.Unmarshal(respBody, &metaRes)
-
 	require.NoError(t, err)
 	assert.Equal(t, "new.txt", metaRes.Name)
 
@@ -277,11 +293,16 @@ func TestVfsHandler_Delete(t *testing.T) {
 	// The mock call happens in a goroutine.
 	mockVFS.On("Delete", id).Return(nil)
 
-	req, _ := http.NewRequest("DELETE", "/vfs/"+id.String(), nil)
-	req.Header.Set("X-Client-ID", uuid.NewString())
-	resp, err := app.Test(req)
+	reqp, err := http.NewRequestWithContext(context.Background(), "DELETE", "/vfs/"+id.String(), http.NoBody)
+	require.NoError(t, err)
+	reqp.Header.Set("X-Client-ID", uuid.NewString())
+	resp, err := app.Test(reqp)
+	defer func(res *http.Response) {
+		_ = res.Body.Close()
+	}(resp)
 
-	assert.NoError(t, err)
+	// Assertions
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 
 	// Wait for async execution
@@ -317,13 +338,18 @@ func TestVfsHandler_Move(t *testing.T) {
 
 	// Request Body
 	dstReq := types.DstReq{Name: "moved.txt"}
-	body, _ := json.Marshal(dstReq)
+	body, err := json.Marshal(dstReq)
+	require.NoError(t, err)
 
-	req, _ := http.NewRequest("PATCH", "/vfs/"+id.String(), bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Client-ID", uuid.NewString())
+	reqp, err := http.NewRequestWithContext(context.Background(), "PATCH", "/vfs/"+id.String(), bytes.NewBuffer(body))
+	require.NoError(t, err)
+	reqp.Header.Set("Content-Type", "application/json")
+	reqp.Header.Set("X-Client-ID", uuid.NewString())
 
-	resp, err := app.Test(req)
+	resp, err := app.Test(reqp)
+	defer func(res *http.Response) {
+		_ = res.Body.Close()
+	}(resp)
 
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusAccepted, resp.StatusCode)

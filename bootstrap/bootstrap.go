@@ -60,7 +60,7 @@ func InitServer(fs vfs.VFS, cfg *config.ServerConfig) *fiber.App {
 	}))
 
 	// web routes
-	routes.Web(app, routes.DepsWeb{
+	routes.Web(app, &routes.DepsWeb{
 		VFS:  fs,
 		Auth: cfg.Auth,
 	})

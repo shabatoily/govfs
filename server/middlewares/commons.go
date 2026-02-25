@@ -25,10 +25,16 @@ import (
 // It returns a function that closes the access log file.
 func CommonMiddlewares(app *fiber.App, cfg *config.ServerConfig) {
 	// common middlewares
+
+	// recover middleware
 	app.Use(recover.New(recover.Config{
 		EnableStackTrace: true,
 	}))
+
+	// request id middleware
 	app.Use(requestid.New())
+
+	// response time middleware
 	app.Use(responsetime.New(responsetime.Config{
 		Next: func(c fiber.Ctx) bool {
 			// skip sse
@@ -47,6 +53,8 @@ func CommonMiddlewares(app *fiber.App, cfg *config.ServerConfig) {
 			},
 		},
 	))
+
+	// etag middleware
 	app.Use(etag.New(etag.Config{
 		Next: func(c fiber.Ctx) bool {
 			// skip sse
@@ -54,16 +62,20 @@ func CommonMiddlewares(app *fiber.App, cfg *config.ServerConfig) {
 		},
 	}))
 
+	// jwt auth middleware
 	jwtAuth := JWTAuthMiddleware(cfg.Auth)
-	app.Use(jwtAuth)
+	app.All("/debug/*", jwtAuth)
+	app.All("/expose/*", jwtAuth)
+	app.All("/configs", jwtAuth)
+	app.All("/routes", jwtAuth)
 
 	// debug/vars
-	app.Use(expvar.New())
+	app.Use(expvar.New()).Name("debug.vars")
 	// debug/pprof
-	app.Use(pprof.New())
+	app.Use(pprof.New()).Name("debug.pprof")
 
 	// health check
-	app.Get("/healthz", healthcheck.New())
+	app.Get("/healthz", healthcheck.New()).Name("healthz")
 
 	// show environment variables
 	app.Use("/expose/envvars", envvar.New()).Name("envvars")
@@ -76,7 +88,7 @@ func CommonMiddlewares(app *fiber.App, cfg *config.ServerConfig) {
 	// show routes
 	app.Get("/routes", func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(app.GetRoutes())
-	}).Name("route")
+	}).Name("routes")
 
 	// on pre shutdown
 	app.Hooks().OnPreShutdown(func() error {

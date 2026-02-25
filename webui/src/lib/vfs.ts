@@ -40,10 +40,6 @@ function getHeaders(contentType?: string): HeadersInit {
     if (clientId) {
         headers['X-Client-ID'] = clientId;
     }
-    const token = appState.token;
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
     return headers;
 }
 

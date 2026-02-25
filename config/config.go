@@ -43,7 +43,7 @@ type AuthConfig struct {
 }
 
 type JWTConfig struct {
-	Secret string        `json:"secret" toml:"secret" yaml:"secret"`
+	Secret string        `json:"-" toml:"-" yaml:"-"`
 	Exp    time.Duration `json:"exp" toml:"exp" yaml:"exp"`
 }
 

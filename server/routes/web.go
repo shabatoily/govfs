@@ -6,6 +6,7 @@ import (
 	vfs "github.com/meteormin/govfs"
 	"github.com/meteormin/govfs/config"
 	"github.com/meteormin/govfs/server/handlers"
+	"github.com/meteormin/govfs/server/middlewares"
 	"github.com/meteormin/govfs/server/services"
 	"github.com/meteormin/govfs/webui"
 )
@@ -22,11 +23,13 @@ type DepsWeb struct {
 	Auth config.AuthConfig
 }
 
-func Web(app *fiber.App, deps DepsWeb) {
+func Web(app *fiber.App, deps *DepsWeb) {
 	sseBroker := services.NewSSEBroker(services.SSEConfig{
 		MaxClients:       10,
 		MaxMessageBuffer: 100,
 	})
+
+	jwtAuth := middlewares.JWTAuthMiddleware(deps.Auth)
 
 	sseHandler := handlers.NewSSEHandler(sseBroker)
 
@@ -40,26 +43,28 @@ func Web(app *fiber.App, deps DepsWeb) {
 
 	// VFS Group with SSE Notification Middleware
 	// We want to notify AFTER the handler executes, and the middleware logic does exactly that (Next() called first).
-	vfsGroup := app.Group(vfsHandler.Prefix()).Name("vfs.")
-
 	// Routing /vfs/*
-	vfsGroup.Post("/backup", vfsHandler.Backup).Name("backup")
-	vfsGroup.Post("/restore", vfsHandler.Restore).Name("restore")
-	vfsGroup.Post("/rotate", vfsHandler.Rotate).Name("rotate")
+	app.Route("/vfs", func(router fiber.Router) {
+		router.Use(jwtAuth)
+		router.Post("/backup", vfsHandler.Backup).Name("backup")
+		router.Post("/restore", vfsHandler.Restore).Name("restore")
+		router.Post("/rotate", vfsHandler.Rotate).Name("rotate")
+		router.Post("/", vfsHandler.Create).Name("create")
+		router.Get("/", vfsHandler.List).Name("list")
+		router.Get("/:id", vfsHandler.Read).Name("read")
+		router.Get("/:id/stat", vfsHandler.Stat).Name("stat")
+		router.Put("/:id", vfsHandler.Write).Name("write")
+		router.Patch("/:id", vfsHandler.Move).Name("move")
+		router.Delete("/:id", vfsHandler.Delete).Name("delete")
+		router.Post("/:id/copy", vfsHandler.Copy).Name("copy")
+		router.Patch("/:id/comments", vfsHandler.WriteComments).Name("write-comments")
+	}, "vfs.")
 
-	vfsGroup.Post("/", vfsHandler.Create).Name("create")
-	vfsGroup.Get("/", vfsHandler.List).Name("list")
-	vfsGroup.Get("/:id", vfsHandler.Read).Name("read")
-	vfsGroup.Get("/:id/stat", vfsHandler.Stat).Name("stat")
-	vfsGroup.Put("/:id", vfsHandler.Write).Name("write")
-	vfsGroup.Patch("/:id", vfsHandler.Move).Name("move")
-	vfsGroup.Delete("/:id", vfsHandler.Delete).Name("delete")
-	vfsGroup.Post("/:id/copy", vfsHandler.Copy).Name("copy")
-	vfsGroup.Patch("/:id/comments", vfsHandler.WriteComments).Name("write-comments")
-
-	app.Group(PrefixSSE).Name("sse.").
-		Get("/subscribe", sseHandler.Subscribe).Name("subscribe").
-		Post("/publish/:id?", sseHandler.Publish).Name("publish")
+	app.Route("/sse", func(router fiber.Router) {
+		router.Use(jwtAuth)
+		router.Get("/subscribe", sseHandler.Subscribe).Name("subscribe")
+		router.Post("/publish/:id?", sseHandler.Publish).Name("publish")
+	}, "sse.")
 
 	app.Use(PrefixWebui, static.New("", static.Config{
 		FS:     webui.FS,

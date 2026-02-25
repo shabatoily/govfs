@@ -40,14 +40,9 @@ export class SSEClient {
             return;
         }
 
-        let finalUrl = this.url;
-        const token = localStorage.getItem('jwt-token');
-        if (token) {
-            finalUrl += (finalUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(token)}`;
-        }
+        console.log(`Connecting to SSE at ${this.url}`);
 
-        console.log(`Connecting to SSE at ${finalUrl}`);
-        this.eventSource = new EventSource(finalUrl);
+        this.eventSource = new EventSource(this.url);
 
         this.eventSource.onopen = (event) => {
             console.log('SSE connection opened:', event);

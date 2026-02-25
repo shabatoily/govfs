@@ -22,22 +22,20 @@ func NewAuthHandler(cfg config.AuthConfig) *AuthHandler {
 
 func (h *AuthHandler) Login(c fiber.Ctx) error {
 	if !h.cfg.Enabled {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"message": "Auth is disabled, no need to login",
-		})
+		return c.SendStatus(fiber.StatusNoContent)
 	}
 
 	var req types.LoginRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
 	if req.Username != h.cfg.Username {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(h.cfg.Password), []byte(req.Password)); err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
 	// Create token
@@ -48,8 +46,34 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 
 	t, err := token.SignedString([]byte(h.cfg.JWT.Secret))
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	return c.JSON(fiber.Map{"token": t})
+	c.Cookie(&fiber.Cookie{
+		Name:     "ACCESS_TOKEN",
+		Value:    t,
+		Expires:  time.Now().Add(h.cfg.JWT.Exp),
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: fiber.CookieSameSiteStrictMode,
+	})
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
+func (h *AuthHandler) Logout(c fiber.Ctx) error {
+	if !h.cfg.Enabled {
+		return c.SendStatus(fiber.StatusNoContent)
+	}
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "ACCESS_TOKEN",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour),
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: fiber.CookieSameSiteStrictMode,
+	})
+
+	return c.SendStatus(fiber.StatusOK)
 }

@@ -16,30 +16,32 @@
             });
 
             if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                errorMsg = data.error || "Login failed Check your credentials.";
+                const data = await res.text();
+                errorMsg = data || "Login failed Check your credentials.";
                 return;
             }
 
-            const data = await res.json();
-            if (data.token) {
-                appState.setToken(data.token);
+            if (res.ok) {
                 appState.setRequireLogin(false);
                 appState.addToast("Logged in successfully", "success");
                 sseClient.disconnect();
                 sseClient.connect();
                 appState.refresh();
-            } else if (data.message === "Auth is disabled, no need to login") {
-                // If auth is disabled, the backend might just return a message without token
-                // Let's set a dummy token so the UI proceeds
-                appState.setToken("disabled");
+            } else if (res.status == 204) {
                 appState.setRequireLogin(false);
+                appState.addToast("Welcome to govfs!", "success");
+                sseClient.disconnect();
+                sseClient.connect();
+                appState.refresh();
+            } else {
+                appState.setRequireLogin(true);
                 sseClient.disconnect();
                 sseClient.connect();
                 appState.refresh();
             }
         } catch (e: any) {
             errorMsg = e.message;
+            appState.addToast(e.message, "error");
         }
     }
 </script>
