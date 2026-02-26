@@ -193,6 +193,24 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
+            "types.VfsRes-array_string": {
+                "properties": {
+                    "path": {
+                        "type": "string"
+                    },
+                    "payload": {
+                        "type": "object"
+                    },
+                    "viewType": {
+                        "enum": [
+                            "list",
+                            "tree"
+                        ],
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "types.WriteReq": {
                 "properties": {
                     "content": {
@@ -1022,6 +1040,47 @@ const docTemplate = `{
                     }
                 },
                 "summary": "Backup all file",
+                "tags": [
+                    "vfs"
+                ]
+            }
+        },
+        "/vfs/badger/keys": {
+            "get": {
+                "description": "all keys",
+                "parameters": [
+                    {
+                        "description": "prefix",
+                        "in": "query",
+                        "name": "prefix",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.VfsRes-array_string"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    }
+                },
+                "summary": "AllKeys",
                 "tags": [
                     "vfs"
                 ]

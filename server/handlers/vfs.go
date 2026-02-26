@@ -461,6 +461,39 @@ func (h *VfsHandler) Rotate(ctx fiber.Ctx) error {
 	return ctx.SendStatus(fiber.StatusAccepted)
 }
 
+// AllKeys returns all file keys
+// @Summary      AllKeys
+// @Description  all keys
+// @Tags         vfs
+// @Produce      json
+// @Param        prefix    query     string  false  "prefix"
+// @Success      200  {object}  types.VfsRes[[]string]
+// @Failure      500  {object}  fiber.Error
+// @Router       /vfs/badger/keys [get]
+func (h *VfsHandler) AllKeys(ctx fiber.Ctx) error {
+	var keys []string
+	var err error
+
+	prefix := ctx.Query("prefix", "")
+	if prefix != "" {
+		keys, err = h.srv.AllKeysByPrefix(prefix)
+		if err != nil {
+			return err
+		}
+	} else {
+		keys, err = h.srv.AllKeys()
+		if err != nil {
+			return err
+		}
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(types.VfsRes[[]string]{
+		ViewType: types.ViewTypeList,
+		Path:     prefix,
+		Payload:  keys,
+	})
+}
+
 func NewVfsHandler(srv *services.VfsService, broker *services.SSEBroker) *VfsHandler {
 	return &VfsHandler{srv: srv, broker: broker}
 }

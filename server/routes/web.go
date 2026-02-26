@@ -46,6 +46,7 @@ func Web(app *fiber.App, deps *DepsWeb) {
 	// Routing /vfs/*
 	app.Route("/vfs", func(router fiber.Router) {
 		router.Use(jwtAuth)
+		router.Get("/badger/keys", vfsHandler.AllKeys).Name("badger.keys")
 		router.Post("/backup", vfsHandler.Backup).Name("backup")
 		router.Post("/restore", vfsHandler.Restore).Name("restore")
 		router.Post("/rotate", vfsHandler.Rotate).Name("rotate")

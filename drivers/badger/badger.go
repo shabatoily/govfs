@@ -39,7 +39,7 @@ var bufPool = sync.Pool{
 var (
 	// prefixMeta key: `meta:{path}` value: `vfs.Meta`
 	prefixMeta = []byte("meta:")
-	// prefixBlob key: `blob:{content}` value: `[]byte`
+	// prefixBlob key: `blob:{ID}` value: `[]byte`
 	prefixBlob = []byte("blob:")
 	// prefixIndex key: `index:{ID}` value: `uuid.UUID`
 	prefixIndex = []byte("index:")
@@ -1009,7 +1009,6 @@ func (bvfs *BadgerVFS) AllKeys() ([]string, error) {
 	err := bvfs.db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
-
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
 			key := string(item.Key())
@@ -1026,7 +1025,6 @@ func (bvfs *BadgerVFS) AllKeysByPrefix(prefix string) ([]string, error) {
 	err := bvfs.db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
-
 		for it.Rewind(); it.ValidForPrefix([]byte(prefix)); it.Next() {
 			item := it.Item()
 			key := string(item.Key())

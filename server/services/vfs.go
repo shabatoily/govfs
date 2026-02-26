@@ -139,6 +139,22 @@ func (s *VfsService) Rotate(key string) error {
 	return badgerVFS.Rotate([]byte(key))
 }
 
+func (s VfsService) AllKeys() ([]string, error) {
+	badgerVFS, ok := s.vfs.(*badger.BadgerVFS)
+	if !ok {
+		return nil, vfs.ErrNotSupported
+	}
+	return badgerVFS.AllKeys()
+}
+
+func (s VfsService) AllKeysByPrefix(prefix string) ([]string, error) {
+	badgerVFS, ok := s.vfs.(*badger.BadgerVFS)
+	if !ok {
+		return nil, vfs.ErrNotSupported
+	}
+	return badgerVFS.AllKeysByPrefix(prefix)
+}
+
 func NewVfsService(fs vfs.VFS, prefix string) *VfsService {
 	return &VfsService{prefix: prefix, vfs: fs}
 }
