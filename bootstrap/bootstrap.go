@@ -98,7 +98,7 @@ func InitVFS(cfg *config.VfsConfig) (vfs.VFS, error) {
 		cfg.Driver.LocalStorage.Logger = vfsLogger
 	}
 
-	return drivers.New(cfg.Driver)
+	return drivers.New(&cfg.Driver)
 }
 
 func InitCloud(ctx context.Context, cfg *config.CloudConfig) (cloud.Storage, error) {

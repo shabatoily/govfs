@@ -20,8 +20,8 @@ import (
 const IndexFileName = "vfs_index.json"
 
 type Config struct {
-	Path   string `json:"path"`
-	Logger *vfs.Logger
+	Path   string      `json:"path"`
+	Logger *vfs.Logger `json:"-"`
 }
 
 // LocalStorage implements the VFS interface using the local file system.
@@ -33,7 +33,7 @@ type LocalStorage struct {
 	logger   *vfs.Logger
 }
 
-func New(cfg Config) (*LocalStorage, error) {
+func New(cfg *Config) (*LocalStorage, error) {
 	// 1. basePath를 미리 깔끔하게 정리하고 구분자를 붙여 경계를 명확히 합니다.
 	basePath := filepath.Clean(cfg.Path)
 	// 유닉스/윈도우 공통으로 안전하게 접두사를 확인하기 위해 구분자를 추가합니다.

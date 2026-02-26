@@ -23,24 +23,6 @@ const (
 	chunkSeqLen    = 4
 )
 
-func randomSecretKey(keySize int) ([]byte, error) {
-	key := make([]byte, keySize) // AES-256에 필요한 32바이트 키
-	_, err := rand.Read(key)
-	return key, err
-}
-
-func getEncryptionKey(secretFile string) ([]byte, error) {
-	if _, err := os.Stat(secretFile); err != nil {
-		return nil, err
-	}
-
-	key, err := os.ReadFile(secretFile)
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
-}
-
 // GenerateEncryptionKey 32바이트(256비트)의 랜덤 암호화 키를 생성합니다.
 func GenerateEncryptionKey(secretFile string, keySize int) ([]byte, error) {
 	key, err := randomSecretKey(keySize)
@@ -58,6 +40,24 @@ func GenerateEncryptionKey(secretFile string, keySize int) ([]byte, error) {
 		return nil, err
 	}
 
+	return key, nil
+}
+
+func randomSecretKey(keySize int) ([]byte, error) {
+	key := make([]byte, keySize) // AES-256에 필요한 32바이트 키
+	_, err := rand.Read(key)
+	return key, err
+}
+
+func getEncryptionKey(secretFile string) ([]byte, error) {
+	if _, err := os.Stat(secretFile); err != nil {
+		return nil, err
+	}
+
+	key, err := os.ReadFile(secretFile)
+	if err != nil {
+		return nil, err
+	}
 	return key, nil
 }
 

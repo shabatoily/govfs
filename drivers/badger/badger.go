@@ -1,6 +1,7 @@
 package badger
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"io"
@@ -36,22 +37,28 @@ var bufPool = sync.Pool{
 }
 
 var (
-	prefixMeta  = []byte("meta:")
-	prefixBlob  = []byte("blob:")
+	// prefixMeta key: `meta:{path}` value: `vfs.Meta`
+	prefixMeta = []byte("meta:")
+	// prefixBlob key: `blob:{content}` value: `[]byte`
+	prefixBlob = []byte("blob:")
+	// prefixIndex key: `index:{ID}` value: `uuid.UUID`
 	prefixIndex = []byte("index:")
 )
 
 // BadgerConfig Badger DB의 설정을 정의합니다.
 type Config struct {
-	Path                          string        `json:"path"`
-	CacheSize                     int64         `json:"cacheSize"`
-	EncryptKey                    []byte        `json:"-"`
-	EncryptionKeyRotationDuration time.Duration `json:"encryptionKeyRotationDuration"`
-	InMemory                      bool          `json:"inMemory"`
-	Logger                        *vfs.Logger   `json:"-"`
+	Context                       context.Context `json:"-"`
+	Path                          string          `json:"path"`
+	CacheSize                     int64           `json:"cacheSize"`
+	EncryptKey                    []byte          `json:"-"`
+	EncryptionKeyRotationDuration time.Duration   `json:"encryptionKeyRotationDuration"`
+	GCInterval                    time.Duration   `json:"gcInterval"`
+	GCDiscardRatio                float64         `json:"gcRatio"`
+	InMemory                      bool            `json:"inMemory"`
+	Logger                        *vfs.Logger     `json:"-"`
 }
 
-func (cfg Config) Options() badger.Options {
+func (cfg *Config) Options() badger.Options {
 	if cfg.Path == "" {
 		// 강제 In-memory 모드
 		cfg.InMemory = true
@@ -86,7 +93,27 @@ func (cfg Config) Options() badger.Options {
 		WithIndexCacheSize(cfg.CacheSize)
 }
 
+func runGC(db *badger.DB, cfg *Config) {
+	ticker := time.NewTicker(cfg.GCInterval)
+	defer ticker.Stop()
+
+	cfg.Logger.Debug().Msg("started GC ticker")
+	for {
+		select {
+		case <-cfg.Context.Done():
+			cfg.Logger.Debug().Msg("stopped GC ticker")
+			return
+		case <-ticker.C:
+			if err := db.RunValueLogGC(cfg.GCDiscardRatio); err != nil {
+				cfg.Logger.Error().Err(err).Msg("failed to run GC")
+			}
+			cfg.Logger.Debug().Msg("GC completed")
+		}
+	}
+}
+
 type BadgerVFS struct {
+	ctx                 context.Context
 	db                  *badger.DB
 	logger              *vfs.Logger
 	path                string
@@ -94,18 +121,30 @@ type BadgerVFS struct {
 	keyRotationDuration time.Duration
 }
 
-func New(cfg Config) (*BadgerVFS, error) {
+func New(cfg *Config) (*BadgerVFS, error) {
 	opts := cfg.Options()
 	db, err := badger.Open(opts)
 	if err != nil {
 		return nil, err
 	}
 
+	if cfg.Context == nil {
+		cfg.Context = context.Background()
+	}
+
 	if cfg.Logger == nil {
 		cfg.Logger = vfs.DefaultLogger
 	}
 
+	if cfg.GCInterval != 0 {
+		if cfg.GCDiscardRatio == 0 {
+			cfg.GCDiscardRatio = 0.7
+		}
+		go runGC(db, cfg)
+	}
+
 	return &BadgerVFS{
+		ctx:                 cfg.Context,
 		db:                  db,
 		logger:              cfg.Logger,
 		path:                cfg.Path,
@@ -960,6 +999,42 @@ func (bvfs *BadgerVFS) Rotate(newKey []byte) error {
 	// Update current key in struct
 	bvfs.key = newKey
 	return nil
+}
+
+// Badger manage
+
+// AllKeys returns all keys in the database
+func (bvfs *BadgerVFS) AllKeys() ([]string, error) {
+	keys := make([]string, 0)
+	err := bvfs.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			key := string(item.Key())
+			keys = append(keys, key)
+		}
+		return nil
+	})
+	return keys, err
+}
+
+// AllKeysByPrefix returns all keys with the given prefix
+func (bvfs *BadgerVFS) AllKeysByPrefix(prefix string) ([]string, error) {
+	keys := make([]string, 0)
+	err := bvfs.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+
+		for it.Rewind(); it.ValidForPrefix([]byte(prefix)); it.Next() {
+			item := it.Item()
+			key := string(item.Key())
+			keys = append(keys, key)
+		}
+		return nil
+	})
+	return keys, err
 }
 
 type internalMeta struct {

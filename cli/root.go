@@ -21,7 +21,10 @@ func newInfoCommand() *cobra.Command {
 			cfg := c.Context().Value(config.ContextKeyConfig{}).(*config.Config)
 			fmt.Printf("%s %s - %s\n", cfg.App.Name, cfg.App.Version, cfg.App.BuildTime)
 			if verbose {
-				if b, err := toml.Marshal(cfg); err == nil {
+				b, err := toml.Marshal(cfg)
+				if err != nil {
+					fmt.Printf("\n[Config]\n%s\n", err.Error())
+				} else {
 					fmt.Printf("\n[Config]\n%s\n", string(b))
 				}
 			}

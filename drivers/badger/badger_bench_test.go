@@ -14,7 +14,7 @@ func openBenchDB(b *testing.B) (*BadgerVFS, func()) {
 	dir, err := os.MkdirTemp("", "vfs-bench-badger-*")
 	require.NoError(b, err)
 
-	db, err := New(Config{
+	db, err := New(&Config{
 		Path:   dir,
 		Logger: logger,
 	})

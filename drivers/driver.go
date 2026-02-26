@@ -21,12 +21,12 @@ type Config struct {
 	LocalStorage driverLocalStorage.Config `json:"localstorage"`
 }
 
-func New(cfg Config) (vfs.VFS, error) {
+func New(cfg *Config) (vfs.VFS, error) {
 	switch cfg.Type {
 	case DriverTypeBadger:
-		return driverBadger.New(cfg.Badger)
+		return driverBadger.New(&cfg.Badger)
 	case DriverTypeLocalStorage:
-		return driverLocalStorage.New(cfg.LocalStorage)
+		return driverLocalStorage.New(&cfg.LocalStorage)
 	default:
 		return nil, fmt.Errorf("unknown driver type: %s", cfg.Type)
 	}

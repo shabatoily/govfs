@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/goccy/go-json"
+	vfs "github.com/meteormin/govfs"
 	"github.com/spf13/viper"
 )
 
@@ -66,7 +67,6 @@ func resolveConfig(cfg *Config) error {
 		}
 		cfg.Server.Auth.JWT.Secret = hex.EncodeToString(b)
 	}
-
 	if cfg.VFS.Driver.Type == "" {
 		cfg.VFS.Driver = DefaultConfig.VFS.Driver
 	}
@@ -96,7 +96,7 @@ func resolveConfig(cfg *Config) error {
 
 func mkdirAll(path string) error {
 	if _, err := os.Stat(filepath.Dir(path)); errors.Is(err, os.ErrNotExist) {
-		err = os.MkdirAll(filepath.Dir(path), 0o755)
+		err = os.MkdirAll(filepath.Dir(path), vfs.DefaultDirMode)
 		if err != nil {
 			return err
 		}
@@ -105,7 +105,7 @@ func mkdirAll(path string) error {
 }
 
 func setConfigFromViper(cfg *Config, appInfo AppInfo) error {
-	if err := viper.Unmarshal(&cfg); err != nil {
+	if err := viper.Unmarshal(cfg); err != nil {
 		return err
 	}
 

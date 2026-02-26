@@ -1,6 +1,7 @@
 [server]
 # fiber server port
 port = 3000
+
 [server.config]
 # for debugging, defualt: false
 enablePrintRoutes = false
@@ -9,6 +10,7 @@ path = "./logs/server.log"
 accessLogPath = "./logs/access-log.log"
 # log-level: debug=-4, info=0, warn=4, error=8
 level = 0
+
 [server.auth]
 enabled = false
 username = "${SERVER_AUTH_USERNAME}"
@@ -16,13 +18,21 @@ password = "${SERVER_AUTH_PASSWORD}"
 [server.auth.jwt]
 secret = "${SERVER_AUTH_JWT_SECRET}"
 exp = "24h"
-[vfs.badger]
+
+[vfs.driver]
+type = "badger"
+
+[vfs.driver.badger]
 path = "./data"
 encryptKeyRotateDuration = "24h"
+gcInterval = "5m"
+gcDiscardRatio = 0.7
+
 [vfs.logger]
 path = "./logs/vfs.log"
-# log-level: debug=-4, info=0, warn=4, error=8
-level = 0
+# log-level: trace=-1, debug=0, info=1, warn=2, error=3, fatal=4, panic=5, noLevel=6, disabled=7
+level = -1
+
 [cloud.googleDrive]
 clientID = "${CLOUD_GOOGLEDRIVE_CLIENT_ID}"
 clientSecret = "${CLOUD_GOOGLEDRIVE_CLIENT_SECRET}"

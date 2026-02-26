@@ -31,7 +31,7 @@ func Test_NewBadgerVFS(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -80,7 +80,7 @@ func Test_BadgerVFS_Mkdir(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -141,7 +141,7 @@ func Test_BadgerVFS_Create(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -205,7 +205,7 @@ func Test_BadgerVFS_List(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -254,7 +254,7 @@ func Test_BadgerVFS_Read(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -309,7 +309,7 @@ func Test_BadgerVFS_Write(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -359,7 +359,7 @@ func Test_BadgerVFS_Delete(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -404,7 +404,7 @@ func Test_BadgerVFS_Copy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -453,7 +453,7 @@ func Test_BadgerVFS_Move(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -495,7 +495,7 @@ func Test_BadgerVFS_Tree(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -540,7 +540,7 @@ func Test_BadgerVFS_WriteComments(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -579,7 +579,7 @@ func Test_BadgerVFS_Backup_And_Load(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -598,6 +598,7 @@ func Test_BadgerVFS_Backup_And_Load(t *testing.T) {
 			require.NoError(t, err)
 			defer func(f *os.File) {
 				_ = os.Remove(f.Name())
+				_ = f.Close()
 			}(f)
 
 			_, err = v.Backup(buf, 0)
@@ -606,7 +607,7 @@ func Test_BadgerVFS_Backup_And_Load(t *testing.T) {
 			}
 
 			// Test Load
-			cfg2 := Config{
+			cfg2 := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -685,7 +686,7 @@ func Test_BadgerVFS_StatByPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -738,7 +739,7 @@ func Test_BadgerVFS_WriteLargeFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup BadgerVFS
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -792,7 +793,7 @@ func Test_BadgerVFS_WriteLargeFile(t *testing.T) {
 }
 
 func Test_BadgerVFS_Seek(t *testing.T) {
-	cfg := Config{
+	cfg := &Config{
 		InMemory: true,
 		Logger:   logger,
 	}
@@ -901,7 +902,7 @@ func Test_BadgerVFS_AtomicWrite_Rotation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{
+			cfg := &Config{
 				InMemory: true,
 				Logger:   logger,
 			}
@@ -960,7 +961,7 @@ func Test_BadgerVFS_AtomicWrite_Rotation(t *testing.T) {
 }
 
 func Test_BadgerVFS_Move_Recursive(t *testing.T) {
-	cfg := Config{
+	cfg := &Config{
 		InMemory: true,
 		Logger:   logger,
 	}
