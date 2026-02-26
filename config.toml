@@ -2,9 +2,6 @@
 # fiber server port
 port = 3000
 
-[server.config]
-# for debugging, defualt: false
-enablePrintRoutes = false
 [server.logger]
 path = "./logs/server.log"
 accessLogPath = "./logs/access-log.log"
