@@ -23,8 +23,8 @@ export class AppState {
         this.clientId = id;
     }
 
-    setIsLoggedIn(required: boolean) {
-        this.isLoggedIn = required;
+    setIsLoggedIn(isLoggedIn: boolean) {
+        this.isLoggedIn = isLoggedIn;
     }
 
     logout() {
