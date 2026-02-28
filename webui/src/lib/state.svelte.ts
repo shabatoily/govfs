@@ -17,20 +17,28 @@ export class AppState {
     clientId = $state<string | null>(null);
     toasts = $state<ToastItem[]>([]); // We hold toast data here
     refreshSignal = $state<{ type: 'PATH' | 'ID'; value: string; timestamp: number } | null>(null);
+    isLoggedIn = $state<boolean>(false);
+    authInitialized = $state<boolean>(false);
 
     setClientId(id: string) {
         this.clientId = id;
     }
 
-    async isLoggedIn() {
-        const res = await fetch("/auth/me", {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
-
-        return res.status === 200;
+    async checkAuth() {
+        try {
+            const res = await fetch("/auth/me", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+            this.isLoggedIn = res.status === 200;
+        } catch (e) {
+            this.isLoggedIn = false;
+        } finally {
+            this.authInitialized = true;
+        }
+        return this.isLoggedIn;
     }
 
     async logout() {
@@ -40,6 +48,7 @@ export class AppState {
                 "Content-Type": "application/json",
             },
         });
+        this.isLoggedIn = false;
         sseClient.disconnect();
     }
 

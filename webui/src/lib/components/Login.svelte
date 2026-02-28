@@ -21,6 +21,7 @@
                 return;
             }
 
+            await appState.checkAuth();
             sseClient.disconnect();
             sseClient.connect();
             appState.addToast("Logged in successfully", "success");

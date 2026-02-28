@@ -53,7 +53,7 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	// Create token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": h.cfg.Username,
-		"exp": time.Now().Add(h.cfg.JWT.Exp).Unix(), // 24 hours expiry
+		"exp": float64(time.Now().Add(h.cfg.JWT.Exp).Unix()),
 	})
 
 	t, err := token.SignedString([]byte(h.cfg.JWT.Secret))
@@ -119,13 +119,18 @@ func (h *AuthHandler) IsLoggedIn(c fiber.Ctx) error {
 		return fiber.ErrUnauthorized
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return fiber.ErrUnauthorized
+	sub, err := token.Claims.GetSubject()
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	exp, err := token.Claims.GetExpirationTime()
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	return c.Status(fiber.StatusOK).JSON(types.TokenResponse{
-		Username:  claims["sub"].(string),
-		ExpiresAt: time.Unix(claims["exp"].(int64), 0),
+		Username:  sub,
+		ExpiresAt: exp.Time,
 	})
 }

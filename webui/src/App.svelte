@@ -12,8 +12,6 @@
     import sseClient, { type SSEMessage } from "./lib/sse";
     import { inferType, resolvePath } from "./lib/utils";
 
-    let isLoggedIn = $derived.by(async () => await appState.isLoggedIn());
-
     // Determine what to show in main area
     let showPreview = $derived.by(() => {
         if (!appState.currentFile) return false;
@@ -71,6 +69,7 @@
             }
         }
     }
+
     onMount(() => {
         sseClient.on("subscribe", (message: SSEMessage) => {
             const { id, data } = message;
@@ -107,8 +106,12 @@
             }
         });
 
-        // Start SSE connection
-        sseClient.connect();
+        // Start SSE connection if logged in
+        appState.checkAuth().then((loggedIn) => {
+            if (loggedIn) {
+                sseClient.connect();
+            }
+        });
 
         return () => {
             sseClient.disconnect();
@@ -116,7 +119,13 @@
     });
 </script>
 
-{#if !isLoggedIn}
+{#if !appState.authInitialized}
+    <div
+        class="h-screen w-screen flex items-center justify-center bg-gray-900 text-white z-[200]"
+    >
+        Loading...
+    </div>
+{:else if !appState.isLoggedIn}
     <Login />
 {/if}
 
