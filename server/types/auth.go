@@ -11,14 +11,14 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-type LoginResponse struct {
+type TokenResponse struct {
 	Username  string    `json:"username"`
 	ExpiresAt time.Time `json:"expiresAt"`
 }
 
-func (lr *LoginResponse) MarshalJSON() ([]byte, error) {
+func (tr *TokenResponse) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
-		"username":  lr.Username,
-		"expiresAt": lr.ExpiresAt.Format(time.RFC3339),
+		"username":  tr.Username,
+		"expiresAt": tr.ExpiresAt.Format(time.RFC3339),
 	})
 }

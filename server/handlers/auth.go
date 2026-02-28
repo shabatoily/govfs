@@ -3,6 +3,7 @@ package handlers
 import (
 	"time"
 
+	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/meteormin/govfs/config"
@@ -20,6 +21,17 @@ func NewAuthHandler(cfg config.AuthConfig) *AuthHandler {
 	}
 }
 
+// Login logs in the user
+// @Summary      Login
+// @Description  login
+// @Tags         auth
+// @Accept       json
+// @Param request body types.LoginRequest true "login request"
+// @Success      200  {object}  types.TokenResponse
+// @Failure      400  {object}  fiber.Error
+// @Failure      401  {object}  fiber.Error
+// @Failure      500  {object}  fiber.Error
+// @Router       /auth/login [post]
 func (h *AuthHandler) Login(c fiber.Ctx) error {
 	if !h.cfg.Enabled {
 		return c.SendStatus(fiber.StatusNoContent)
@@ -60,12 +72,19 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 		SameSite: fiber.CookieSameSiteStrictMode,
 	})
 
-	return c.Status(fiber.StatusOK).JSON(types.LoginResponse{
+	return c.Status(fiber.StatusOK).JSON(types.TokenResponse{
 		Username:  h.cfg.Username,
 		ExpiresAt: exp,
 	})
 }
 
+// Logout logs out the user
+// @Summary      Logout
+// @Description  logout
+// @Tags         auth
+// @Success      204  {object}  fiber.Error
+// @Failure      500  {object}  fiber.Error
+// @Router       /auth/logout [post]
 func (h *AuthHandler) Logout(c fiber.Ctx) error {
 	if !h.cfg.Enabled {
 		return c.SendStatus(fiber.StatusNoContent)
@@ -81,4 +100,32 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 	})
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// IsLoggedIn checks if the user is logged in
+// @Summary      IsLoggedIn
+// @Description  is logged in
+// @Tags         auth
+// @Success      200  {object}  types.TokenResponse
+// @Failure      500  {object}  fiber.Error
+// @Router       /auth/me [get]
+func (h *AuthHandler) IsLoggedIn(c fiber.Ctx) error {
+	if !h.cfg.Enabled {
+		return c.SendStatus(fiber.StatusNoContent)
+	}
+
+	token := jwtware.FromContext(c)
+	if token == nil {
+		return fiber.ErrUnauthorized
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return fiber.ErrUnauthorized
+	}
+
+	return c.Status(fiber.StatusOK).JSON(types.TokenResponse{
+		Username:  claims["sub"].(string),
+		ExpiresAt: time.Unix(claims["exp"].(int64), 0),
+	})
 }

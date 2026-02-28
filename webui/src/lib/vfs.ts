@@ -46,7 +46,6 @@ function getHeaders(contentType?: string): HeadersInit {
 async function vfsFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     const res = await fetch(input, init);
     if (res.status === 401) {
-        appState.setRequireLogin(true);
         appState.logout();
     }
     return res;

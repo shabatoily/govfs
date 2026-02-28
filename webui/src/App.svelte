@@ -12,6 +12,8 @@
     import sseClient, { type SSEMessage } from "./lib/sse";
     import { inferType, resolvePath } from "./lib/utils";
 
+    let isLoggedIn = $derived.by(async () => await appState.isLoggedIn());
+
     // Determine what to show in main area
     let showPreview = $derived.by(() => {
         if (!appState.currentFile) return false;
@@ -114,7 +116,7 @@
     });
 </script>
 
-{#if !appState.isLoggedIn}
+{#if !isLoggedIn}
     <Login />
 {/if}
 

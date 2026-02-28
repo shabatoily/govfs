@@ -23,7 +23,6 @@
 
             sseClient.disconnect();
             sseClient.connect();
-            appState.setIsLoggedIn(true);
             appState.addToast("Logged in successfully", "success");
             appState.refresh();
         } catch (e: any) {

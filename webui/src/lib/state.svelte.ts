@@ -15,7 +15,6 @@ export class AppState {
     currentFile = $state<FileInfo | null>(null);
     fileList = $state<FileInfo[]>([]);
     clientId = $state<string | null>(null);
-    isLoggedIn = $state<boolean>(true);
     toasts = $state<ToastItem[]>([]); // We hold toast data here
     refreshSignal = $state<{ type: 'PATH' | 'ID'; value: string; timestamp: number } | null>(null);
 
@@ -23,12 +22,24 @@ export class AppState {
         this.clientId = id;
     }
 
-    setIsLoggedIn(isLoggedIn: boolean) {
-        this.isLoggedIn = isLoggedIn;
+    async isLoggedIn() {
+        const res = await fetch("/auth/me", {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+
+        return res.status === 200;
     }
 
-    logout() {
-        this.setIsLoggedIn(false);
+    async logout() {
+        await fetch("/auth/logout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
         sseClient.disconnect();
     }
 

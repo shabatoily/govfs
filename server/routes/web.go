@@ -39,7 +39,11 @@ func Web(app *fiber.App, deps *DepsWeb) {
 
 	authHandler := handlers.NewAuthHandler(deps.Auth)
 
-	app.Post("/auth/login", authHandler.Login).Name("auth.login")
+	app.Route("/auth", func(router fiber.Router) {
+		router.Post("/login", authHandler.Login).Name("login")
+		router.Post("/logout", authHandler.Logout).Name("logout")
+		router.Get("/me", jwtAuth, authHandler.IsLoggedIn).Name("me")
+	}, "auth.")
 
 	// VFS Group with SSE Notification Middleware
 	// We want to notify AFTER the handler executes, and the middleware logic does exactly that (Next() called first).

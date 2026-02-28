@@ -58,6 +58,17 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
+            "types.LoginRequest": {
+                "properties": {
+                    "password": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "types.MetaRes": {
                 "properties": {
                     "comments": {
@@ -155,6 +166,17 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
+            "types.TokenResponse": {
+                "properties": {
+                    "expiresAt": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "types.TreeNodeRes": {
                 "properties": {
                     "children": {
@@ -235,6 +257,139 @@ const docTemplate = `{
         "url": ""
     },
     "paths": {
+        "/auth/login": {
+            "post": {
+                "description": "login",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "oneOf": [
+                                    {
+                                        "type": "object"
+                                    },
+                                    {
+                                        "$ref": "#/components/schemas/types.LoginRequest",
+                                        "summary": "request",
+                                        "description": "login request"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "description": "login request",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.TokenResponse"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    }
+                },
+                "summary": "Login",
+                "tags": [
+                    "auth"
+                ]
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "description": "logout",
+                "responses": {
+                    "204": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "No Content"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    }
+                },
+                "summary": "Logout",
+                "tags": [
+                    "auth"
+                ]
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "description": "is logged in",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.TokenResponse"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    }
+                },
+                "summary": "IsLoggedIn",
+                "tags": [
+                    "auth"
+                ]
+            }
+        },
         "/sse/:id/publish": {
             "post": {
                 "description": "Publish a Server-Sent Event message",
