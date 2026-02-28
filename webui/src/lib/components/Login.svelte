@@ -21,24 +21,11 @@
                 return;
             }
 
-            if (res.ok) {
-                appState.setRequireLogin(false);
-                appState.addToast("Logged in successfully", "success");
-                sseClient.disconnect();
-                sseClient.connect();
-                appState.refresh();
-            } else if (res.status == 204) {
-                appState.setRequireLogin(false);
-                appState.addToast("Welcome to govfs!", "success");
-                sseClient.disconnect();
-                sseClient.connect();
-                appState.refresh();
-            } else {
-                appState.setRequireLogin(true);
-                sseClient.disconnect();
-                sseClient.connect();
-                appState.refresh();
-            }
+            sseClient.disconnect();
+            sseClient.connect();
+            appState.setIsLoggedIn(true);
+            appState.addToast("Logged in successfully", "success");
+            appState.refresh();
         } catch (e: any) {
             errorMsg = e.message;
             appState.addToast(e.message, "error");

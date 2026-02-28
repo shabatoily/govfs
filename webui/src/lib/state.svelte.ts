@@ -15,8 +15,7 @@ export class AppState {
     currentFile = $state<FileInfo | null>(null);
     fileList = $state<FileInfo[]>([]);
     clientId = $state<string | null>(null);
-    token = $state<string | null>(localStorage.getItem('jwt-token'));
-    requireLogin = $state<boolean>(false);
+    isLoggedIn = $state<boolean>(true);
     toasts = $state<ToastItem[]>([]); // We hold toast data here
     refreshSignal = $state<{ type: 'PATH' | 'ID'; value: string; timestamp: number } | null>(null);
 
@@ -24,21 +23,12 @@ export class AppState {
         this.clientId = id;
     }
 
-    setToken(token: string | null) {
-        this.token = token;
-        if (token) {
-            localStorage.setItem('jwt-token', token);
-        } else {
-            localStorage.removeItem('jwt-token');
-        }
-    }
-
-    setRequireLogin(required: boolean) {
-        this.requireLogin = required;
+    setIsLoggedIn(required: boolean) {
+        this.isLoggedIn = required;
     }
 
     logout() {
-        this.setRequireLogin(true);
+        this.setIsLoggedIn(false);
         sseClient.disconnect();
     }
 

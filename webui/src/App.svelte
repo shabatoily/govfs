@@ -114,7 +114,7 @@
     });
 </script>
 
-{#if appState.requireLogin}
+{#if !appState.isLoggedIn}
     <Login />
 {/if}
 

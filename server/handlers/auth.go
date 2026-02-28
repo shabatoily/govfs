@@ -49,16 +49,21 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
+	exp := time.Now().Add(h.cfg.JWT.Exp)
+
 	c.Cookie(&fiber.Cookie{
 		Name:     "ACCESS_TOKEN",
 		Value:    t,
-		Expires:  time.Now().Add(h.cfg.JWT.Exp),
+		Expires:  exp,
 		HTTPOnly: true,
 		Secure:   true,
 		SameSite: fiber.CookieSameSiteStrictMode,
 	})
 
-	return c.SendStatus(fiber.StatusOK)
+	return c.Status(fiber.StatusOK).JSON(types.LoginResponse{
+		Username:  h.cfg.Username,
+		ExpiresAt: exp,
+	})
 }
 
 func (h *AuthHandler) Logout(c fiber.Ctx) error {
@@ -75,5 +80,5 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 		SameSite: fiber.CookieSameSiteStrictMode,
 	})
 
-	return c.SendStatus(fiber.StatusOK)
+	return c.SendStatus(fiber.StatusNoContent)
 }
