@@ -23,11 +23,11 @@ type AppInfo struct {
 }
 
 type ServerConfig struct {
-	fiber.Config `json:"-" toml:"-" yaml:"-"`
-	Host         string            `json:"host"`
-	Port         int               `json:"port"`
-	Logger       FiberLoggerConfig `json:"logger"`
-	Auth         AuthConfig        `json:"auth"`
+	Fiber  fiber.Config      `json:"-" toml:"-" yaml:"-"`
+	Host   string            `json:"host"`
+	Port   int               `json:"port"`
+	Logger FiberLoggerConfig `json:"logger"`
+	Auth   AuthConfig        `json:"auth"`
 }
 type FiberLoggerConfig struct {
 	Path          string    `json:"path"`

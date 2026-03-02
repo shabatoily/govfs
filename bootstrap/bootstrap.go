@@ -36,10 +36,10 @@ const banner = `
 
 func InitServer(fs vfs.VFS, cfg *config.ServerConfig) *fiber.App {
 	// Set error handler
-	cfg.ErrorHandler = middlewares.ErrorHandler
+	cfg.Fiber.ErrorHandler = middlewares.ErrorHandler
 	// Set JSON encoder and decoder
-	cfg.JSONEncoder = json.Marshal
-	cfg.JSONDecoder = json.Unmarshal
+	cfg.Fiber.JSONEncoder = json.Marshal
+	cfg.Fiber.JSONDecoder = json.Unmarshal
 
 	// Set fiber logger
 	log.SetLevel(cfg.Logger.Level)
@@ -51,7 +51,7 @@ func InitServer(fs vfs.VFS, cfg *config.ServerConfig) *fiber.App {
 		log.SetOutput(w)
 	}
 
-	app := fiber.New(cfg.Config)
+	app := fiber.New(cfg.Fiber)
 
 	middlewares.CommonMiddlewares(app, cfg)
 

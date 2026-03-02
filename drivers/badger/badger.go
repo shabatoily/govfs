@@ -114,6 +114,7 @@ func runGC(db *badger.DB, cfg *Config) {
 
 type BadgerVFS struct {
 	ctx                 context.Context
+	cancel              context.CancelFunc
 	db                  *badger.DB
 	logger              *vfs.Logger
 	path                string
@@ -128,8 +129,12 @@ func New(cfg *Config) (*BadgerVFS, error) {
 		return nil, err
 	}
 
+	var ctx context.Context
+	var cancel context.CancelFunc
 	if cfg.Context == nil {
-		cfg.Context = context.Background()
+		ctx, cancel = context.WithCancel(context.Background())
+	} else {
+		ctx, cancel = context.WithCancel(cfg.Context)
 	}
 
 	if cfg.Logger == nil {
@@ -144,7 +149,8 @@ func New(cfg *Config) (*BadgerVFS, error) {
 	}
 
 	return &BadgerVFS{
-		ctx:                 cfg.Context,
+		ctx:                 ctx,
+		cancel:              cancel,
 		db:                  db,
 		logger:              cfg.Logger,
 		path:                cfg.Path,
@@ -877,7 +883,10 @@ func (bvfs *BadgerVFS) Copy(id uuid.UUID, dst string) (vfs.Meta, error) {
 }
 
 func (bvfs *BadgerVFS) Close() error {
-	bvfs.logger.Info().Msg("Close Badger VFS")
+	bvfs.logger.Info().Msg("Closing Badger VFS")
+
+	// Cancel the context to stop background GC goroutines
+	bvfs.cancel()
 
 	var err error
 	badgerErr := bvfs.db.Close()

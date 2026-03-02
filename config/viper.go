@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/goccy/go-json"
 	vfs "github.com/meteormin/govfs"
 	"github.com/spf13/viper"
 )
@@ -70,12 +69,6 @@ func resolveConfig(cfg *Config) error {
 	if cfg.VFS.Driver.Type == "" {
 		cfg.VFS.Driver = DefaultConfig.VFS.Driver
 	}
-	if cfg.Server.JSONEncoder == nil {
-		cfg.Server.JSONEncoder = json.Marshal
-	}
-	if cfg.Server.JSONDecoder == nil {
-		cfg.Server.JSONDecoder = json.Unmarshal
-	}
 	if cfg.Server.Port < 0 {
 		cfg.Server.Port = DefaultConfig.Server.Port
 	}
@@ -110,7 +103,7 @@ func setConfigFromViper(cfg *Config, appInfo AppInfo) error {
 	}
 
 	cfg.App = appInfo
-	cfg.Server.AppName = appInfo.Name + " v" + appInfo.Version
+	cfg.Server.Fiber.AppName = appInfo.Name + " v" + appInfo.Version
 
 	return nil
 }
