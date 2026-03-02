@@ -93,25 +93,6 @@ func (cfg *Config) Options() badger.Options {
 		WithIndexCacheSize(cfg.CacheSize)
 }
 
-func runGC(db *badger.DB, cfg *Config) {
-	ticker := time.NewTicker(cfg.GCInterval)
-	defer ticker.Stop()
-
-	cfg.Logger.Debug().Msg("started GC ticker")
-	for {
-		select {
-		case <-cfg.Context.Done():
-			cfg.Logger.Debug().Msg("stopped GC ticker")
-			return
-		case <-ticker.C:
-			if err := db.RunValueLogGC(cfg.GCDiscardRatio); err != nil {
-				cfg.Logger.Error().Err(err).Msg("failed to run GC")
-			}
-			cfg.Logger.Debug().Msg("GC completed")
-		}
-	}
-}
-
 type BadgerVFS struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
@@ -145,10 +126,9 @@ func New(cfg *Config) (*BadgerVFS, error) {
 		if cfg.GCDiscardRatio == 0 {
 			cfg.GCDiscardRatio = 0.7
 		}
-		go runGC(db, cfg)
 	}
 
-	return &BadgerVFS{
+	bvfs := &BadgerVFS{
 		ctx:                 ctx,
 		cancel:              cancel,
 		db:                  db,
@@ -156,7 +136,11 @@ func New(cfg *Config) (*BadgerVFS, error) {
 		path:                cfg.Path,
 		key:                 cfg.EncryptKey,
 		keyRotationDuration: cfg.EncryptionKeyRotationDuration,
-	}, nil
+	}
+
+	go bvfs.runGC(cfg.GCInterval, cfg.GCDiscardRatio)
+
+	return bvfs, nil
 }
 
 func (bvfs *BadgerVFS) List(path string) ([]vfs.Meta, error) {
@@ -1042,6 +1026,26 @@ func (bvfs *BadgerVFS) AllKeysByPrefix(prefix string) ([]string, error) {
 		return nil
 	})
 	return keys, err
+}
+
+func (bvfs *BadgerVFS) runGC(gcInterval time.Duration, gcRatio float64) {
+	ticker := time.NewTicker(gcInterval)
+	defer ticker.Stop()
+
+	bvfs.logger.Debug().Msg("started GC ticker")
+
+	for {
+		select {
+		case <-bvfs.ctx.Done():
+			bvfs.logger.Debug().Msg("stopped GC ticker")
+			return
+		case <-ticker.C:
+			if err := bvfs.db.RunValueLogGC(gcRatio); err != nil {
+				bvfs.logger.Error().Err(err).Msg("failed to run GC")
+			}
+			bvfs.logger.Debug().Msg("GC completed")
+		}
+	}
 }
 
 type internalMeta struct {
