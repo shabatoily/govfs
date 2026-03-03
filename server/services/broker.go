@@ -16,6 +16,7 @@ const (
 )
 
 type SSEConfig struct {
+	Context          context.Context
 	MaxClients       int
 	MaxMessageBuffer int
 }
@@ -155,7 +156,10 @@ func (b *SSEBroker) AsyncExcute(id uuid.UUID, do func() (types.SSEMeta, error)) 
 }
 
 func NewSSEBroker(config SSEConfig) *SSEBroker {
-	ctx, cancel := context.WithCancel(context.Background())
+	if config.Context == nil {
+		config.Context = context.Background()
+	}
+	ctx, cancel := context.WithCancel(config.Context)
 
 	b := &SSEBroker{
 		newClients:     make(chan clientInfo, config.MaxClients),

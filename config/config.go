@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"runtime/debug"
 	"time"
@@ -23,11 +24,12 @@ type AppInfo struct {
 }
 
 type ServerConfig struct {
-	Fiber  fiber.Config      `json:"-" toml:"-" yaml:"-"`
-	Host   string            `json:"host"`
-	Port   int               `json:"port"`
-	Logger FiberLoggerConfig `json:"logger"`
-	Auth   AuthConfig        `json:"auth"`
+	Context context.Context   `json:"-"`
+	Fiber   fiber.Config      `json:"-" toml:"-" yaml:"-"`
+	Host    string            `json:"host"`
+	Port    int               `json:"port"`
+	Logger  FiberLoggerConfig `json:"logger"`
+	Auth    AuthConfig        `json:"auth"`
 }
 type FiberLoggerConfig struct {
 	Path          string    `json:"path"`
@@ -53,7 +55,8 @@ type VfsConfig struct {
 }
 
 type CloudConfig struct {
-	GoogleDrive GoogleDrive `json:"googleDrive"`
+	Context     context.Context `json:"-"`
+	GoogleDrive GoogleDrive     `json:"googleDrive"`
 }
 
 type GoogleDrive struct {

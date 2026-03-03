@@ -60,13 +60,13 @@ func main() {
 
 	// set context to badger config
 	cfg.VFS.Driver.Badger.Context = ctx
-
 	// init vfs
 	vfs, err := bootstrap.InitVFS(&cfg.VFS)
 	if err != nil {
 		log.Panic(err)
 	}
 
+	cfg.Server.Context = ctx
 	// init server
 	app := bootstrap.InitServer(vfs, &cfg.Server)
 	// set host to config and set swagger info on listen

@@ -109,17 +109,15 @@ func New(cfg *Config) (*BadgerVFS, error) {
 		return nil, err
 	}
 
-	var ctx context.Context
-	var cancel context.CancelFunc
-	if cfg.Context == nil {
-		ctx, cancel = context.WithCancel(context.Background())
-	} else {
-		ctx, cancel = context.WithCancel(cfg.Context)
-	}
-
 	if cfg.Logger == nil {
 		cfg.Logger = vfs.DefaultLogger
 	}
+
+	if cfg.Context == nil {
+		cfg.Context = context.Background()
+	}
+
+	ctx, cancel := context.WithCancel(cfg.Context)
 
 	bvfs := &BadgerVFS{
 		ctx:                 ctx,

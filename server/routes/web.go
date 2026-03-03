@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/static"
 	vfs "github.com/meteormin/govfs"
@@ -20,12 +22,14 @@ var (
 )
 
 type DepsWeb struct {
-	VFS  vfs.VFS
-	Auth config.AuthConfig
+	Context context.Context
+	VFS     vfs.VFS
+	Auth    config.AuthConfig
 }
 
 func Web(app *fiber.App, deps *DepsWeb) {
 	sseBroker := services.NewSSEBroker(services.SSEConfig{
+		Context:          deps.Context,
 		MaxClients:       10,
 		MaxMessageBuffer: 100,
 	})

@@ -1,7 +1,6 @@
 package cloud
 
 import (
-	"context"
 	"errors"
 	"io"
 	"os"
@@ -26,7 +25,9 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 		return nil, errors.New("config not found")
 	}
 
-	storage, err := NewStorage(cmd.Context(), &cfg.Cloud)
+	cfg.Cloud.Context = cmd.Context()
+
+	storage, err := NewStorage(&cfg.Cloud)
 	if err != nil {
 		return nil, err
 	}
@@ -37,8 +38,8 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 	}, nil
 }
 
-func NewStorage(ctx context.Context, cfg *config.CloudConfig) (cloud.Storage, error) {
-	return bootstrap.InitCloud(ctx, cfg)
+func NewStorage(cfg *config.CloudConfig) (cloud.Storage, error) {
+	return bootstrap.InitCloud(cfg)
 }
 
 func (h *Handler) List(p string) error {

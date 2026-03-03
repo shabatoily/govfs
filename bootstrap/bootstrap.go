@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"context"
 	"errors"
 	"io"
 	"net"
@@ -61,8 +60,9 @@ func InitServer(fs vfs.VFS, cfg *config.ServerConfig) *fiber.App {
 
 	// web routes
 	routes.Web(app, &routes.DepsWeb{
-		VFS:  fs,
-		Auth: cfg.Auth,
+		Context: cfg.Context,
+		VFS:     fs,
+		Auth:    cfg.Auth,
 	})
 
 	app.Hooks().OnPreStartupMessage(func(preMsgData *fiber.PreStartupMessageData) error {
@@ -101,10 +101,10 @@ func InitVFS(cfg *config.VfsConfig) (vfs.VFS, error) {
 	return drivers.New(&cfg.Driver)
 }
 
-func InitCloud(ctx context.Context, cfg *config.CloudConfig) (cloud.Storage, error) {
+func InitCloud(cfg *config.CloudConfig) (cloud.Storage, error) {
 	callbackUrl := "/google-drive/callback"
 	lc := net.ListenConfig{}
-	ln, _ := lc.Listen(ctx, "tcp", "127.0.0.1:0")
+	ln, _ := lc.Listen(cfg.Context, "tcp", "127.0.0.1:0")
 	port := ln.Addr().(*net.TCPAddr).Port
 	svr := fiber.New(fiber.Config{})
 	svr.Get(callbackUrl, func(c fiber.Ctx) error {
@@ -151,7 +151,7 @@ func InitCloud(ctx context.Context, cfg *config.CloudConfig) (cloud.Storage, err
 		return nil, err
 	}
 
-	s, err := cloud.NewGoogleDriveStorage(ctx, client, googleCloudCfg.ParentFolderID)
+	s, err := cloud.NewGoogleDriveStorage(cfg.Context, client, googleCloudCfg.ParentFolderID)
 	if err != nil {
 		return nil, err
 	}
