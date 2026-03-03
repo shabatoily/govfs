@@ -50,6 +50,21 @@ const docTemplate = `{
                     "Hour"
                 ]
             },
+            "types.BadgerKeyRes": {
+                "properties": {
+                    "keys": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "prefix": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "types.DstReq": {
                 "properties": {
                     "name": {
@@ -198,24 +213,6 @@ const docTemplate = `{
                         "$ref": "#/components/schemas/payload"
                     }
                 ],
-                "properties": {
-                    "path": {
-                        "type": "string"
-                    },
-                    "payload": {
-                        "type": "object"
-                    },
-                    "viewType": {
-                        "enum": [
-                            "list",
-                            "tree"
-                        ],
-                        "type": "string"
-                    }
-                },
-                "type": "object"
-            },
-            "types.VfsRes-array_string": {
                 "properties": {
                     "path": {
                         "type": "string"
@@ -1218,7 +1215,7 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/types.VfsRes-array_string"
+                                    "$ref": "#/components/schemas/types.BadgerKeyRes"
                                 }
                             }
                         },

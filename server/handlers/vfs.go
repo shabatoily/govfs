@@ -467,7 +467,7 @@ func (h *VfsHandler) Rotate(ctx fiber.Ctx) error {
 // @Tags         vfs
 // @Produce      json
 // @Param        prefix    query     string  false  "prefix"
-// @Success      200  {object}  types.VfsRes[[]string]
+// @Success      200  {object}  types.BadgerKeyRes
 // @Failure      500  {object}  fiber.Error
 // @Router       /vfs/badger/keys [get]
 func (h *VfsHandler) AllKeys(ctx fiber.Ctx) error {
@@ -487,10 +487,9 @@ func (h *VfsHandler) AllKeys(ctx fiber.Ctx) error {
 		}
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(types.VfsRes[[]string]{
-		ViewType: types.ViewTypeList,
-		Path:     prefix,
-		Payload:  keys,
+	return ctx.Status(fiber.StatusOK).JSON(types.BadgerKeyRes{
+		Prefix: prefix,
+		Keys:   keys,
 	})
 }
 

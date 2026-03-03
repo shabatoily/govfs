@@ -2,7 +2,6 @@ package badger
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"io"
 	"math"
@@ -122,12 +121,6 @@ func New(cfg *Config) (*BadgerVFS, error) {
 		cfg.Logger = vfs.DefaultLogger
 	}
 
-	if cfg.GCInterval != 0 {
-		if cfg.GCDiscardRatio == 0 {
-			cfg.GCDiscardRatio = 0.7
-		}
-	}
-
 	bvfs := &BadgerVFS{
 		ctx:                 ctx,
 		cancel:              cancel,
@@ -138,7 +131,12 @@ func New(cfg *Config) (*BadgerVFS, error) {
 		keyRotationDuration: cfg.EncryptionKeyRotationDuration,
 	}
 
-	go bvfs.runGC(cfg.GCInterval, cfg.GCDiscardRatio)
+	if cfg.GCInterval > 0 {
+		if cfg.GCDiscardRatio == 0 {
+			cfg.GCDiscardRatio = 0.7
+		}
+		go bvfs.runGC(cfg.GCInterval, cfg.GCDiscardRatio)
+	}
 
 	return bvfs, nil
 }
@@ -445,12 +443,6 @@ func (bvfs *BadgerVFS) writeChunks(id []byte, r io.Reader) (int64, error) {
 	defer bufPool.Put(bufPtr)
 	buf := *bufPtr
 
-	// Pre-allocate key buffer to reuse
-	keyLen := len(prefixBlob) + len(id) + 4
-	keyBuf := make([]byte, keyLen)
-	copy(keyBuf, prefixBlob)
-	copy(keyBuf[len(prefixBlob):], id)
-
 	wb := bvfs.db.NewWriteBatch()
 	defer wb.Cancel()
 
@@ -459,9 +451,8 @@ func (bvfs *BadgerVFS) writeChunks(id []byte, r io.Reader) (int64, error) {
 		if n > 0 {
 			// Create a copy of the key to ensure it's not modified by subsequent iterations
 			// before Badger processes it. usage of the same buffer for key caused issues.
-			currentKey := make([]byte, len(keyBuf))
-			copy(currentKey, keyBuf)
-			binary.BigEndian.PutUint32(currentKey[len(prefixBlob)+len(id):], seq)
+			// makeChunkKey allocates a new byte slice for every chunk, ensuring safety.
+			currentKey := makeChunkKey(id, seq)
 
 			// Create a copy of the value buffer. Although WriteBatch.Set is supposed to copy,
 			// explicit copying guarantees safety against buffer reuse in the loop.
@@ -1018,7 +1009,7 @@ func (bvfs *BadgerVFS) AllKeysByPrefix(prefix string) ([]string, error) {
 	err := bvfs.db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
-		for it.Rewind(); it.ValidForPrefix([]byte(prefix)); it.Next() {
+		for it.Seek([]byte(prefix)); it.ValidForPrefix([]byte(prefix)); it.Next() {
 			item := it.Item()
 			key := string(item.Key())
 			keys = append(keys, key)

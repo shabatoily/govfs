@@ -120,7 +120,7 @@ func Benchmark_BadgerVFS_Seek(b *testing.B) {
 	b.SetBytes(1024) // 1회 Seek마다 읽을 데이터 양 (가정)
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		// 임의의 위치로 점프 (0 ~ size-1024)
 		// 벤치마크 안정성을 위해 단순한 패턴 사용: (i * 1024) % (size - 1024)
 		offset := int64((i * 102400) % (size - 1024))

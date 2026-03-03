@@ -32,6 +32,16 @@ components:
       - Second
       - Minute
       - Hour
+    types.BadgerKeyRes:
+      properties:
+        keys:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        prefix:
+          type: string
+      type: object
     types.DstReq:
       properties:
         name:
@@ -130,18 +140,6 @@ components:
     types.VfsRes:
       allOf:
       - $ref: '#/components/schemas/payload'
-      properties:
-        path:
-          type: string
-        payload:
-          type: object
-        viewType:
-          enum:
-          - list
-          - tree
-          type: string
-      type: object
-    types.VfsRes-array_string:
       properties:
         path:
           type: string
@@ -752,7 +750,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/types.VfsRes-array_string'
+                $ref: '#/components/schemas/types.BadgerKeyRes'
           description: OK
         "500":
           content:

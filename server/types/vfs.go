@@ -38,3 +38,8 @@ type VfsRes[T any] struct {
 	Path     string   `json:"path"`
 	Payload  T        `json:"payload" swaggertype:"object"`
 }
+
+type BadgerKeyRes struct {
+	Prefix string   `json:"prefix"`
+	Keys   []string `json:"keys"`
+}
