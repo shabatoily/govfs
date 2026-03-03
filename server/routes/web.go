@@ -5,6 +5,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/static"
 	vfs "github.com/meteormin/govfs"
 	"github.com/meteormin/govfs/config"
+	"github.com/meteormin/govfs/drivers/badger"
 	"github.com/meteormin/govfs/server/handlers"
 	"github.com/meteormin/govfs/server/middlewares"
 	"github.com/meteormin/govfs/server/services"
@@ -50,7 +51,6 @@ func Web(app *fiber.App, deps *DepsWeb) {
 	// Routing /vfs/*
 	app.Route("/vfs", func(router fiber.Router) {
 		router.Use(jwtAuth)
-		router.Get("/badger/keys", vfsHandler.AllKeys).Name("badger.keys")
 		router.Post("/backup", vfsHandler.Backup).Name("backup")
 		router.Post("/restore", vfsHandler.Restore).Name("restore")
 		router.Post("/rotate", vfsHandler.Rotate).Name("rotate")
@@ -70,6 +70,14 @@ func Web(app *fiber.App, deps *DepsWeb) {
 		router.Get("/subscribe", sseHandler.Subscribe).Name("subscribe")
 		router.Post("/publish/:id?", sseHandler.Publish).Name("publish")
 	}, "sse.")
+
+	if bvfs, ok := deps.VFS.(*badger.BadgerVFS); ok {
+		badgerHandler := handlers.NewBadgerHandler(bvfs)
+		app.Route("/badger", func(router fiber.Router) {
+			router.Use(jwtAuth)
+			router.Get("/keys", badgerHandler.AllKeys).Name("keys")
+		}, "badger.")
+	}
 
 	app.Use(PrefixWebui, static.New("", static.Config{
 		FS:     webui.FS,
