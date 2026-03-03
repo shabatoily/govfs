@@ -1031,10 +1031,14 @@ func (bvfs *BadgerVFS) runGC(gcInterval time.Duration, gcRatio float64) {
 			bvfs.logger.Debug().Msg("stopped GC ticker")
 			return
 		case <-ticker.C:
-			if err := bvfs.db.RunValueLogGC(gcRatio); err != nil {
+			err := bvfs.db.RunValueLogGC(gcRatio)
+			if errors.Is(err, badger.ErrNoRewrite) {
+				bvfs.logger.Debug().Msg("no need to run GC")
+			} else if err != nil {
 				bvfs.logger.Error().Err(err).Msg("failed to run GC")
+			} else {
+				bvfs.logger.Debug().Msg("completed run GC")
 			}
-			bvfs.logger.Debug().Msg("GC completed")
 		}
 	}
 }

@@ -23,6 +23,7 @@ var (
 	version     = "0.0.0"
 	buildTime   = time.Now().UTC().Format(time.RFC3339)
 	description = "govfs is a virtual file system server"
+	configPath  = "config.toml"
 )
 
 // @title govfs
@@ -33,13 +34,18 @@ var (
 // @servers.url http://localhost:3000
 // @servers.description Localhost
 func main() {
-	var configPath string
+	// signal context
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
+	// load .env
 	_ = godotenv.Load()
 
+	// parse flags
 	flag.StringVar(&configPath, "config", "config.toml", "config file path")
 	flag.Parse()
 
+	// load config
 	buildInfo, _ := debug.ReadBuildInfo()
 	cfg, err := config.LoadWithViper(configPath, config.AppInfo{
 		Name:        name,
@@ -49,24 +55,28 @@ func main() {
 		BuildInfo:   buildInfo,
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
+	// set context to badger config
+	cfg.VFS.Driver.Badger.Context = ctx
+
+	// init vfs
 	vfs, err := bootstrap.InitVFS(&cfg.VFS)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
+	// init server
 	app := bootstrap.InitServer(vfs, &cfg.Server)
+	// set host to config and set swagger info on listen
 	app.Hooks().OnListen(func(listenData fiber.ListenData) error {
 		cfg.Server.Host = listenData.Host
 		config.SetSwaggerInfo(cfg)
 		return nil
 	})
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
+	// listen
 	if err := app.Listen(":"+strconv.Itoa(cfg.Server.Port), fiber.ListenConfig{
 		GracefulContext: ctx,
 	}); err != nil {
