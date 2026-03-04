@@ -13,6 +13,7 @@ type LoginRequest struct {
 
 type TokenResponse struct {
 	Username  string    `json:"username"`
+	Token     string    `json:"token"`
 	ExpiresAt time.Time `json:"expiresAt"`
 }
 

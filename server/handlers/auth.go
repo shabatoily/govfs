@@ -74,6 +74,7 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(types.TokenResponse{
 		Username:  h.cfg.Username,
+		Token:     t,
 		ExpiresAt: exp,
 	})
 }
