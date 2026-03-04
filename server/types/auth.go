@@ -20,6 +20,7 @@ type TokenResponse struct {
 func (tr *TokenResponse) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
 		"username":  tr.Username,
+		"token":     tr.Token,
 		"expiresAt": tr.ExpiresAt.Format(time.RFC3339),
 	})
 }
