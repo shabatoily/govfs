@@ -3,10 +3,7 @@ package bootstrap
 import (
 	"errors"
 	"io"
-	"net"
 	"os"
-	"path/filepath"
-	"strconv"
 
 	"github.com/goccy/go-json"
 
@@ -14,15 +11,11 @@ import (
 	"github.com/gofiber/fiber/v3/log"
 	vfs "github.com/meteormin/govfs"
 	"github.com/meteormin/govfs/cloud"
-	"github.com/meteormin/govfs/cloud/googledrive"
 	"github.com/meteormin/govfs/config"
 	"github.com/meteormin/govfs/drivers"
 	"github.com/meteormin/govfs/server/middlewares"
 	"github.com/meteormin/govfs/server/middlewares/swaggo"
 	"github.com/meteormin/govfs/server/routes"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-	"google.golang.org/api/drive/v3"
 )
 
 const banner = `
@@ -102,59 +95,5 @@ func InitVFS(cfg *config.VfsConfig) (vfs.VFS, error) {
 }
 
 func InitCloud(cfg *config.CloudConfig) (cloud.Storage, error) {
-	callbackUrl := "/google-drive/callback"
-	lc := net.ListenConfig{}
-	ln, _ := lc.Listen(cfg.Context, "tcp", "127.0.0.1:0")
-	port := ln.Addr().(*net.TCPAddr).Port
-	svr := fiber.New(fiber.Config{})
-	svr.Get(callbackUrl, func(c fiber.Ctx) error {
-		q := c.Queries()
-		return c.Status(fiber.StatusOK).JSON(q)
-	})
-	go func() {
-		if svrErr := svr.Listener(ln, fiber.ListenConfig{DisableStartupMessage: true}); svrErr != nil {
-			panic(svrErr)
-		}
-	}()
-
-	googleCloudCfg := cfg.GoogleDrive
-	if googleCloudCfg.ClientID == "" || googleCloudCfg.ClientSecret == "" {
-		return nil, errors.New("need to set env GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET")
-	}
-
-	oauthConfig := &oauth2.Config{
-		ClientID:     googleCloudCfg.ClientID,
-		ClientSecret: googleCloudCfg.ClientSecret,
-		Scopes:       []string{drive.DriveScope},
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  google.Endpoint.AuthURL,
-			TokenURL: google.Endpoint.TokenURL,
-		},
-		RedirectURL: "http://localhost:" + strconv.Itoa(port) + callbackUrl,
-	}
-
-	dir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
-
-	tokenPath := filepath.Join(dir, ".govfs")
-	if _, err = os.Stat(tokenPath); errors.Is(err, os.ErrNotExist) {
-		err = os.Mkdir(tokenPath, vfs.DefaultDirMode)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	client, err := googledrive.GetClient(tokenPath, oauthConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	s, err := cloud.NewGoogleDriveStorage(cfg.Context, client, googleCloudCfg.ParentFolderID)
-	if err != nil {
-		return nil, err
-	}
-
-	return s, nil
+	return cloud.New(&cfg.Config)
 }

@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -9,14 +10,15 @@ import (
 	"github.com/jedib0t/go-pretty/v6/list"
 	vfs "github.com/meteormin/govfs"
 	"github.com/meteormin/govfs/bootstrap"
+	"github.com/meteormin/govfs/client"
 	"github.com/meteormin/govfs/cloud"
 	"github.com/meteormin/govfs/config"
 	"github.com/spf13/cobra"
 )
 
 type Handler struct {
-	cmd     *cobra.Command
-	storage cloud.Storage
+	cmd    *cobra.Command
+	client *client.Client
 }
 
 func NewHandler(cmd *cobra.Command) (*Handler, error) {
@@ -25,16 +27,17 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 		return nil, errors.New("config not found")
 	}
 
-	cfg.Cloud.Context = cmd.Context()
-
-	storage, err := NewStorage(&cfg.Cloud)
-	if err != nil {
-		return nil, err
+	host := cfg.Server.Host
+	if host == "" {
+		host = "localhost"
 	}
 
+	url := fmt.Sprintf("http://%s:%d", host, cfg.Server.Port)
+	c := client.NewClient(url)
+
 	return &Handler{
-		cmd:     cmd,
-		storage: storage,
+		cmd:    cmd,
+		client: c,
 	}, nil
 }
 
@@ -43,7 +46,7 @@ func NewStorage(cfg *config.CloudConfig) (cloud.Storage, error) {
 }
 
 func (h *Handler) List(p string) error {
-	files, err := h.storage.List(p)
+	files, err := h.client.CloudList(p)
 	if err != nil {
 		return err
 	}
@@ -81,7 +84,7 @@ func (h *Handler) Upload(uploadFilePath string) error {
 	defer f.Close()
 
 	p := filepath.Base(uploadFilePath)
-	err = h.storage.Upload(p, f)
+	err = h.client.CloudUpload(p, f)
 	if err != nil {
 		return err
 	}
@@ -97,11 +100,7 @@ func (h *Handler) Download(src, dst string) error {
 		return err
 	}
 
-	r, err := h.storage.Download(src)
-	defer func() {
-		_ = r.Close()
-	}()
-
+	r, err := h.client.CloudDownload(src)
 	if err != nil {
 		return err
 	}

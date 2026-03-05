@@ -2,9 +2,9 @@ package googledrive
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -12,39 +12,116 @@ import (
 	"strings"
 
 	"github.com/goccy/go-json"
+	vfs "github.com/meteormin/govfs"
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
+	"google.golang.org/api/option"
 )
 
-type DriveStorage struct {
-	service        *drive.Service
-	parentFolderID string
+var ErrUnauthorized = errors.New("unauthorized")
+
+type ClientConfig struct {
+	Context      context.Context `json:"-"`
+	TokenPath    string          `json:"tokenPath"`
+	ParentFolder string          `json:"parentFolder"`
+	ClientID     string          `json:"-"`
+	ClientSecret string          `json:"-"`
+	OAuth2Config oauth2.Config   `json:"-"`
+}
+
+type Adapter struct {
+	cfg     *ClientConfig
+	service *drive.Service
 }
 
 // New creates a new Google Drive Storage adapter.
 // If a parentFolderName is provided, it will find that folder in the root of the drive or create it if it doesn't exist.
 // All operations will then be scoped to that folder. If the name is empty, it will use the root of the drive.
-func New(service *drive.Service, parentFolderName string) (*DriveStorage, error) {
-	d := &DriveStorage{
-		service: service,
+func New(cfg *ClientConfig) (*Adapter, error) {
+	d := &Adapter{cfg: cfg}
+
+	if cfg.ClientID == "" || cfg.ClientSecret == "" {
+		return nil, errors.New("need to set env GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET")
 	}
 
-	if parentFolderName != "" {
-		folderID, err := d.findOrCreateFolder(parentFolderName)
+	cfg.OAuth2Config = oauth2.Config{
+		ClientID:     cfg.ClientID,
+		ClientSecret: cfg.ClientSecret,
+		Scopes:       []string{drive.DriveScope},
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  google.Endpoint.AuthURL,
+			TokenURL: google.Endpoint.TokenURL,
+		},
+	}
+
+	if cfg.TokenPath == "" {
+		dir, err := os.UserHomeDir()
 		if err != nil {
-			return nil, fmt.Errorf("could not find or create parent folder '%s': %w", parentFolderName, err)
+			return nil, err
 		}
-		d.parentFolderID = folderID
-	} else {
-		d.parentFolderID = "root"
+
+		tokenPath := filepath.Join(dir, ".govfs")
+		if _, err = os.Stat(tokenPath); errors.Is(err, os.ErrNotExist) {
+			err = os.Mkdir(tokenPath, vfs.DefaultDirMode)
+			if err != nil {
+				return nil, err
+			}
+		}
+		cfg.TokenPath = tokenPath
+	}
+
+	t, err := d.getTokenFromFile()
+	if err != nil {
+		return d, ErrUnauthorized
+	}
+
+	if err := d.Init(t); err != nil {
+		return nil, err
 	}
 
 	return d, nil
 }
 
+func (d *Adapter) Init(token *oauth2.Token) error {
+	client := option.WithHTTPClient(d.cfg.OAuth2Config.Client(d.cfg.Context, token))
+	service, err := drive.NewService(d.cfg.Context, client)
+	if err != nil {
+		return err
+	}
+
+	d.service = service
+	if d.cfg.ParentFolder != "" {
+		folderID, err := d.findOrCreateFolder(d.cfg.ParentFolder)
+		if err != nil {
+			return fmt.Errorf("could not find or create parent folder '%s': %w", d.cfg.ParentFolder, err)
+		}
+		d.cfg.ParentFolder = folderID
+	} else {
+		d.cfg.ParentFolder = "root"
+	}
+
+	return d.saveToken(token)
+}
+
+func (d *Adapter) AuthCodeURL(redirectURL string) string {
+	oauth2Config := d.cfg.OAuth2Config
+	oauth2Config.RedirectURL = redirectURL
+	return oauth2Config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+}
+
+func (d *Adapter) IssueToken(code string) (*oauth2.Token, error) {
+	oauth2Config := d.cfg.OAuth2Config
+	token, err := oauth2Config.Exchange(context.TODO(), code)
+	if err != nil {
+		return nil, err
+	}
+	return token, nil
+}
+
 // findOrCreateFolder finds a folder by name in the root of the drive, or creates it if it doesn't exist.
 // It returns the ID of the folder.
-func (d *DriveStorage) findOrCreateFolder(name string) (string, error) {
+func (d *Adapter) findOrCreateFolder(name string) (string, error) {
 	query := fmt.Sprintf("name = '%s' and 'root' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
 		escape(name))
 	resp, err := d.service.Files.List().Q(query).Fields("files(id)").PageSize(1).Do()
@@ -70,14 +147,14 @@ func (d *DriveStorage) findOrCreateFolder(name string) (string, error) {
 
 // findOrCreatePath ensures the folder structure for a given path exists, creating it if necessary.
 // It returns the ID of the immediate parent folder for the given path.
-func (d *DriveStorage) findOrCreatePath(filePath string) (string, error) {
+func (d *Adapter) findOrCreatePath(filePath string) (string, error) {
 	dir := path.Dir(filePath)
 	if dir == "." || dir == "" {
-		return d.parentFolderID, nil
+		return d.cfg.ParentFolder, nil
 	}
 
 	parts := strings.Split(dir, "/")
-	currentParentID := d.parentFolderID
+	currentParentID := d.cfg.ParentFolder
 
 	for _, part := range parts {
 		if part == "" {
@@ -108,7 +185,7 @@ func (d *DriveStorage) findOrCreatePath(filePath string) (string, error) {
 	return currentParentID, nil
 }
 
-func (d *DriveStorage) Upload(p string, r io.Reader) error {
+func (d *Adapter) Upload(p string, r io.Reader) error {
 	parentID, err := d.findOrCreatePath(p)
 	if err != nil {
 		return fmt.Errorf("could not establish path for '%s': %w", p, err)
@@ -134,7 +211,7 @@ func (d *DriveStorage) Upload(p string, r io.Reader) error {
 	return err
 }
 
-func (d *DriveStorage) Download(p string) (io.ReadCloser, error) {
+func (d *Adapter) Download(p string) (io.ReadCloser, error) {
 	fileID, err := d.findFileIDByPath(p)
 	if err != nil {
 		return nil, err
@@ -147,7 +224,7 @@ func (d *DriveStorage) Download(p string) (io.ReadCloser, error) {
 	return resp.Body, nil
 }
 
-func (d *DriveStorage) Delete(p string) error {
+func (d *Adapter) Delete(p string) error {
 	fileID, err := d.findFileIDByPath(p)
 	if err != nil {
 		// If the file doesn't exist, it's not an error for a delete operation.
@@ -160,8 +237,8 @@ func (d *DriveStorage) Delete(p string) error {
 }
 
 // List returns a recursive listing of all files under the given prefix.
-func (d *DriveStorage) List(prefix string) ([]string, error) {
-	startFolderID := d.parentFolderID
+func (d *Adapter) List(prefix string) ([]string, error) {
+	startFolderID := d.cfg.ParentFolder
 	if prefix != "" {
 		folderID, err := d.findFolderIDByPath(prefix)
 		if err != nil {
@@ -181,7 +258,7 @@ func (d *DriveStorage) List(prefix string) ([]string, error) {
 	return allFiles, nil
 }
 
-func (d *DriveStorage) recursiveList(folderID, currentPath string, allFiles *[]string) error {
+func (d *Adapter) recursiveList(folderID, currentPath string, allFiles *[]string) error {
 	var pageToken string
 	var pageSize int64 = 1000
 
@@ -211,14 +288,14 @@ func (d *DriveStorage) recursiveList(folderID, currentPath string, allFiles *[]s
 	return nil
 }
 
-func (d *DriveStorage) findFolderIDByPath(p string) (string, error) {
+func (d *Adapter) findFolderIDByPath(p string) (string, error) {
 	p = strings.Trim(p, "/")
 	if p == "" {
-		return d.parentFolderID, nil
+		return d.cfg.ParentFolder, nil
 	}
 
 	parts := strings.Split(p, "/")
-	currentParentID := d.parentFolderID
+	currentParentID := d.cfg.ParentFolder
 
 	for _, part := range parts {
 		q := fmt.Sprintf("name = '%s' and '%s' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
@@ -235,9 +312,9 @@ func (d *DriveStorage) findFolderIDByPath(p string) (string, error) {
 	return currentParentID, nil
 }
 
-func (d *DriveStorage) findFileIDByPath(p string) (string, error) {
+func (d *Adapter) findFileIDByPath(p string) (string, error) {
 	dir, name := path.Split(p)
-	parentFolderID := d.parentFolderID
+	parentFolderID := d.cfg.ParentFolder
 	if dir != "" {
 		var err error
 		parentFolderID, err = d.findFolderIDByPath(dir)
@@ -262,21 +339,16 @@ func escape(s string) string {
 	return strings.ReplaceAll(s, "'", "\\'")
 }
 
-func GetClient(tokenPath string, cfg *oauth2.Config) (*http.Client, error) {
-	tokFile := filepath.Join(tokenPath, "token.json")
-	tok, err := tokenFromFile(tokFile)
-	if err != nil {
-		tok = getTokenFromWeb(cfg)
-		err = saveToken(tokFile, tok)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return cfg.Client(context.Background(), tok), nil
+func GetClient(token *oauth2.Token, cfg *oauth2.Config) (*http.Client, error) {
+	return cfg.Client(context.Background(), token), nil
 }
 
-func tokenFromFile(file string) (*oauth2.Token, error) {
-	f, err := os.Open(file)
+func (d *Adapter) getTokenFromFile() (*oauth2.Token, error) {
+	if _, err := os.Stat(d.cfg.TokenPath); os.IsNotExist(err) {
+		return nil, err
+	}
+
+	f, err := os.Open(d.cfg.TokenPath)
 	if err != nil {
 		return nil, err
 	}
@@ -286,26 +358,8 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 	return tok, err
 }
 
-func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
-	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-	fmt.Printf("Go to the following link in your browser then type the "+
-		"authorization code: \n%v\n", authURL)
-
-	var authCode string
-	if _, err := fmt.Scan(&authCode); err != nil {
-		log.Fatalf("Unable to read authorization code %v", err)
-	}
-
-	tok, err := config.Exchange(context.TODO(), authCode)
-	if err != nil {
-		log.Fatalf("Unable to retrieve token from web %v", err)
-	}
-	return tok
-}
-
-func saveToken(p string, token *oauth2.Token) error {
-	fmt.Printf("Saving credential file to: %s\n", p)
-	f, err := os.OpenFile(p, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
+func (d *Adapter) saveToken(token *oauth2.Token) error {
+	f, err := os.OpenFile(d.cfg.TokenPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}

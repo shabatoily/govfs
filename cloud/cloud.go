@@ -1,13 +1,10 @@
 package cloud
 
 import (
-	"context"
+	"fmt"
 	"io"
-	"net/http"
 
 	"github.com/meteormin/govfs/cloud/googledrive"
-	"google.golang.org/api/drive/v3"
-	"google.golang.org/api/option"
 )
 
 type Storage interface {
@@ -17,11 +14,16 @@ type Storage interface {
 	List(path string) ([]string, error)
 }
 
-func NewGoogleDriveStorage(ctx context.Context, client *http.Client, parentFolderID string) (*googledrive.DriveStorage, error) {
-	svc, err := drive.NewService(ctx, option.WithHTTPClient(client))
-	if err != nil {
-		return nil, err
-	}
+type Config struct {
+	ClientType  string                   `json:"clientType"`
+	GoogleDrive googledrive.ClientConfig `json:"googleDrive"`
+}
 
-	return googledrive.New(svc, parentFolderID)
+func New(cfg *Config) (Storage, error) {
+	switch cfg.ClientType {
+	case "googleDrive":
+		return googledrive.New(&cfg.GoogleDrive)
+	default:
+		return nil, fmt.Errorf("unknown client type: %s", cfg.ClientType)
+	}
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/static"
 	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/cloud"
 	"github.com/meteormin/govfs/config"
 	"github.com/meteormin/govfs/drivers/badger"
 	"github.com/meteormin/govfs/server/handlers"
@@ -25,6 +26,7 @@ type DepsWeb struct {
 	Context context.Context
 	VFS     vfs.VFS
 	Auth    config.AuthConfig
+	Cloud   cloud.Storage
 }
 
 func Web(app *fiber.App, deps *DepsWeb) {
@@ -82,6 +84,17 @@ func Web(app *fiber.App, deps *DepsWeb) {
 			router.Get("/keys", badgerHandler.AllKeys).Name("keys")
 		}, "badger.")
 	}
+
+	cloudHandler := handlers.NewCloudHandler(deps.Cloud)
+	app.Route("/cloud", func(router fiber.Router) {
+		router.Use(jwtAuth)
+		router.Get(handlers.GoogleAuthCodeCallbackURL, cloudHandler.GoogleDriveCallback).Name("googledrive-callback")
+		router.Post("/googledrive/auth", cloudHandler.GoogleDriveAuthCodeURL).Name("googledrive-auth")
+		router.Get("/", cloudHandler.List).Name("list")
+		router.Post("/", cloudHandler.Upload).Name("upload")
+		router.Post("/download", cloudHandler.Download).Name("download")
+		router.Delete("/", cloudHandler.Delete).Name("delete")
+	}, "cloud.")
 
 	app.Use(PrefixWebui, static.New("", static.Config{
 		FS:     webui.FS,

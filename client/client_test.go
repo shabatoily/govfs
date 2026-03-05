@@ -578,3 +578,109 @@ func TestClient_Login(t *testing.T) {
 		assert.Contains(t, err.Error(), "login failed: 401")
 	})
 }
+
+func TestClient_Cloud(t *testing.T) {
+	t.Run("GoogleDriveAuthCodeURL", func(t *testing.T) {
+		expectedURL := "https://accounts.google.com/o/oauth2/auth"
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/cloud/googledrive/auth", r.URL.Path)
+			assert.Equal(t, http.MethodPost, r.Method)
+
+			w.WriteHeader(http.StatusOK)
+			err := json.NewEncoder(w).Encode(map[string]string{"url": expectedURL})
+			assert.NoError(t, err)
+		}))
+		defer server.Close()
+
+		c := client.NewClient(server.URL)
+		url, err := c.CloudGoogleDriveAuthCodeURL()
+		assert.NoError(t, err)
+		assert.Equal(t, expectedURL, url)
+	})
+
+	t.Run("List", func(t *testing.T) {
+		expectedFiles := []string{"file1.txt", "file2.txt"}
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/cloud", r.URL.Path)
+			assert.Equal(t, "/some/path", r.URL.Query().Get("path"))
+			assert.Equal(t, http.MethodGet, r.Method)
+
+			w.WriteHeader(http.StatusOK)
+			err := json.NewEncoder(w).Encode(expectedFiles)
+			assert.NoError(t, err)
+		}))
+		defer server.Close()
+
+		c := client.NewClient(server.URL)
+		files, err := c.CloudList("/some/path")
+		assert.NoError(t, err)
+		assert.Equal(t, expectedFiles, files)
+	})
+
+	t.Run("Upload", func(t *testing.T) {
+		fileName := "upload.txt"
+		fileContent := "hello cloud"
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/cloud", r.URL.Path)
+			assert.Equal(t, http.MethodPost, r.Method)
+
+			err := r.ParseMultipartForm(32 << 20)
+			assert.NoError(t, err)
+
+			file, header, err := r.FormFile("file")
+			assert.NoError(t, err)
+			assert.Equal(t, fileName, header.Filename)
+
+			buf := new(bytes.Buffer)
+			_, err = io.Copy(buf, file)
+			assert.NoError(t, err)
+			assert.Equal(t, fileContent, buf.String())
+
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		defer server.Close()
+
+		c := client.NewClient(server.URL)
+		err := c.CloudUpload(fileName, strings.NewReader(fileContent))
+		assert.NoError(t, err)
+	})
+
+	t.Run("Download", func(t *testing.T) {
+		fileContent := "downloaded content"
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/cloud/download", r.URL.Path)
+			assert.Equal(t, "/some/file.txt", r.URL.Query().Get("path"))
+			assert.Equal(t, http.MethodPost, r.Method)
+
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte(fileContent))
+			assert.NoError(t, err)
+		}))
+		defer server.Close()
+
+		c := client.NewClient(server.URL)
+		r, err := c.CloudDownload("/some/file.txt")
+		assert.NoError(t, err)
+
+		buf := new(bytes.Buffer)
+		_, err = io.Copy(buf, r)
+		assert.NoError(t, err)
+		assert.Equal(t, fileContent, buf.String())
+	})
+
+	t.Run("Delete", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/cloud", r.URL.Path)
+			assert.Equal(t, "/some/file.txt", r.URL.Query().Get("path"))
+			assert.Equal(t, http.MethodDelete, r.Method)
+
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		defer server.Close()
+
+		c := client.NewClient(server.URL)
+		err := c.CloudDelete("/some/file.txt")
+		assert.NoError(t, err)
+	})
+}

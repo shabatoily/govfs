@@ -42,6 +42,21 @@ components:
         prefix:
           type: string
       type: object
+    types.CloudAuthResponse:
+      properties:
+        url:
+          type: string
+      type: object
+    types.CloudListResponse:
+      properties:
+        items:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        path:
+          type: string
+      type: object
     types.DstReq:
       properties:
         name:
@@ -123,6 +138,8 @@ components:
     types.TokenResponse:
       properties:
         expiresAt:
+          type: string
+        token:
           type: string
         username:
           type: string
@@ -248,6 +265,145 @@ paths:
       summary: IsLoggedIn
       tags:
       - auth
+  /cloud/delete:
+    delete:
+      description: Deletes a file from the cloud storage.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "204":
+          content:
+            application/json: {}
+          description: No Content
+        "400":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Bad Request
+      summary: Delete file
+      tags:
+      - cloud
+  /cloud/download:
+    post:
+      description: Downloads a file from the cloud storage.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/octet-stream:
+              schema: {}
+          description: OK
+        "400":
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+          description: Bad Request
+      summary: Download file
+      tags:
+      - cloud
+  /cloud/googledrive/auth-code-url:
+    get:
+      description: Returns the authentication URL for Google Drive.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.CloudAuthResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Bad Request
+      summary: Google Drive Auth Code URL
+      tags:
+      - cloud
+  /cloud/googledrive/callback:
+    get:
+      description: Handles the callback from the Google Drive authentication.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Bad Request
+      summary: Google Drive Callback
+      tags:
+      - cloud
+  /cloud/list:
+    get:
+      description: Lists the files in the cloud storage.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.CloudListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Bad Request
+      summary: List files
+      tags:
+      - cloud
+  /cloud/upload:
+    post:
+      description: Uploads a file to the cloud storage.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+      responses:
+        "204":
+          content:
+            application/json: {}
+          description: No Content
+        "400":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Bad Request
+      summary: Upload file
+      tags:
+      - cloud
   /sse/:id/publish:
     post:
       description: Publish a Server-Sent Event message

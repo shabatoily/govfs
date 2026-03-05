@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/log"
 	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/cloud"
 	"github.com/meteormin/govfs/docs"
 	"github.com/meteormin/govfs/drivers"
 	"github.com/meteormin/govfs/drivers/badger"
@@ -55,14 +56,7 @@ type VfsConfig struct {
 }
 
 type CloudConfig struct {
-	Context     context.Context `json:"-"`
-	GoogleDrive GoogleDrive     `json:"googleDrive"`
-}
-
-type GoogleDrive struct {
-	ClientID       string `json:"-"`
-	ClientSecret   string `json:"-"`
-	ParentFolderID string `json:"parentFolderID"`
+	cloud.Config
 }
 
 type Config struct {
