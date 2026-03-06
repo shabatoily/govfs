@@ -195,6 +195,7 @@ func (b *SSEBroker) listen() {
 		select {
 		case <-b.ctx.Done():
 			log.Info("SSE Broker shutting down...")
+			b.isRunning.Store(false)
 			return
 		case client := <-b.newClients:
 			b.clients[client.ID] = client.Ch

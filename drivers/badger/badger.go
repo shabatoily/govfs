@@ -95,6 +95,7 @@ func (cfg *Config) Options() badger.Options {
 type BadgerVFS struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
+	once                sync.Once
 	db                  *badger.DB
 	logger              *vfs.Logger
 	path                string
@@ -856,22 +857,10 @@ func (bvfs *BadgerVFS) Copy(id uuid.UUID, dst string) (vfs.Meta, error) {
 }
 
 func (bvfs *BadgerVFS) Close() error {
-	bvfs.logger.Info().Msg("Closing Badger VFS")
-
 	// Cancel the context to stop background GC goroutines
 	bvfs.cancel()
-
-	var err error
-	badgerErr := bvfs.db.Close()
-	if badgerErr != nil {
-		bvfs.logger.Error().Err(badgerErr).Msg("Close Badger VFS error")
-		err = errors.Join(err, badgerErr)
-	}
-	closeLogErr := bvfs.logger.Close()
-	if closeLogErr != nil {
-		err = errors.Join(err, closeLogErr)
-	}
-	return err
+	// Close BadgerDB and Logger
+	return bvfs.close()
 }
 
 func (bvfs *BadgerVFS) Backup(w io.Writer, since uint64) (uint64, error) {
@@ -1017,8 +1006,30 @@ func (bvfs *BadgerVFS) AllKeysByPrefix(prefix string) ([]string, error) {
 	return keys, err
 }
 
+func (bvfs *BadgerVFS) close() error {
+	var err error
+
+	bvfs.once.Do(func() {
+		bvfs.logger.Info().Msg("Closing Badger VFS")
+
+		badgerErr := bvfs.db.Close()
+		if badgerErr != nil {
+			bvfs.logger.Error().Err(badgerErr).Msg("Close Badger VFS error")
+			err = errors.Join(err, badgerErr)
+		}
+
+		closeLogErr := bvfs.logger.Close()
+		if closeLogErr != nil {
+			err = errors.Join(err, closeLogErr)
+		}
+	})
+
+	return err
+}
+
 func (bvfs *BadgerVFS) runGC(gcInterval time.Duration, gcRatio float64) {
 	ticker := time.NewTicker(gcInterval)
+
 	defer ticker.Stop()
 
 	bvfs.logger.Debug().Msg("started GC ticker")
@@ -1027,6 +1038,8 @@ func (bvfs *BadgerVFS) runGC(gcInterval time.Duration, gcRatio float64) {
 		select {
 		case <-bvfs.ctx.Done():
 			bvfs.logger.Debug().Msg("stopped GC ticker")
+			// 상위 컨텍스트가 종료될 경우, BadgerVFS도 종료
+			bvfs.close()
 			return
 		case <-ticker.C:
 			err := bvfs.db.RunValueLogGC(gcRatio)
