@@ -1045,9 +1045,9 @@ func (bvfs *BadgerVFS) runGC(gcInterval time.Duration, gcRatio float64) {
 		case <-ticker.C:
 			err := bvfs.db.RunValueLogGC(gcRatio)
 			if errors.Is(err, badger.ErrNoRewrite) {
-				bvfs.logger.Debug().Msg("no need to run GC")
+				bvfs.logger.Debug().Msg("skip run GC")
 			} else if err != nil {
-				bvfs.logger.Error().Err(err).Msg("failed to run GC")
+				bvfs.logger.Error().Err(err).Msg("run GC error")
 			} else {
 				bvfs.logger.Debug().Msg("completed run GC")
 			}
