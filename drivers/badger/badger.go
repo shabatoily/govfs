@@ -23,9 +23,10 @@ const (
 )
 
 var (
-	DefaultSecretFilename = ".secret"
-	DefaultSecretKeySize  = 32
-	ChunkSize             = 256 * KiB
+	DefaultSecretFilename       = ".secret"
+	DefaultSecretKeySize        = 32
+	DefaultIndexCacheSize int64 = 100
+	ChunkSize                   = 256 * KiB
 )
 
 var bufPool = sync.Pool{
@@ -79,7 +80,7 @@ func (cfg *Config) Options() badger.Options {
 		}
 	}
 	if cfg.CacheSize == 0 {
-		cfg.CacheSize = 100
+		cfg.CacheSize = DefaultIndexCacheSize
 	}
 	if cfg.EncryptionKeyRotationDuration == 0 {
 		cfg.EncryptionKeyRotationDuration = time.Hour * 24
@@ -220,9 +221,6 @@ func (bvfs *BadgerVFS) Open(id uuid.UUID) (*vfs.File, error) {
 	err := bvfs.db.View(func(txn *badger.Txn) error {
 		metaItem, internalErr := findMetaItemByID(txn, id)
 		if internalErr != nil {
-			if errors.Is(internalErr, badger.ErrKeyNotFound) {
-				return vfs.ErrNotFound
-			}
 			return internalErr
 		}
 
@@ -230,6 +228,9 @@ func (bvfs *BadgerVFS) Open(id uuid.UUID) (*vfs.File, error) {
 		return internalErr
 	})
 	if err != nil {
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return nil, vfs.ErrNotFound
+		}
 		return nil, err
 	}
 
@@ -1056,7 +1057,7 @@ func (bvfs *BadgerVFS) runGC(gcInterval time.Duration, gcRatio float64) {
 
 type internalMeta struct {
 	vfs.Meta
-	InternalID uuid.UUID
+	InternalID uuid.UUID `json:"internalId,omitempty"`
 }
 
 type blobReader struct {
