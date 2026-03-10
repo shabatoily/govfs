@@ -31,6 +31,7 @@ path = "./logs/vfs.log"
 level = -1
 
 [cloud.googleDrive]
+tokenPath = ".googledrive"
 clientID = "${CLOUD_GOOGLEDRIVE_CLIENT_ID}"
 clientSecret = "${CLOUD_GOOGLEDRIVE_CLIENT_SECRET}"
 parentFolderID = "govfs"

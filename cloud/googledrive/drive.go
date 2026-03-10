@@ -12,14 +12,17 @@ import (
 	"strings"
 
 	"github.com/goccy/go-json"
-	vfs "github.com/meteormin/govfs"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
 )
 
-const tokenFileMode = 0o600
+const (
+	tokenDirMode         = 0o600
+	tokenFileMode        = 0o600
+	defaultTokenFilename = "token.json"
+)
 
 var ErrUnauthorized = errors.New("unauthorized")
 
@@ -58,14 +61,9 @@ func New(cfg *ClientConfig) (*Adapter, error) {
 	}
 
 	if cfg.TokenPath == "" {
-		dir, err := os.UserHomeDir()
-		if err != nil {
-			return nil, err
-		}
-
-		tokenPath := filepath.Join(dir, ".govfs")
-		if _, err = os.Stat(tokenPath); errors.Is(err, os.ErrNotExist) {
-			err = os.Mkdir(tokenPath, vfs.DefaultDirMode)
+		tokenPath := ".googledrive"
+		if _, err := os.Stat(tokenPath); errors.Is(err, os.ErrNotExist) {
+			err = os.Mkdir(tokenPath, tokenDirMode)
 			if err != nil {
 				return nil, err
 			}
@@ -361,7 +359,8 @@ func (d *Adapter) getTokenFromFile() (*oauth2.Token, error) {
 }
 
 func (d *Adapter) saveToken(token *oauth2.Token) error {
-	f, err := os.OpenFile(d.cfg.TokenPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, tokenFileMode)
+	tokenFileName := filepath.Join(d.cfg.TokenPath, defaultTokenFilename)
+	f, err := os.OpenFile(tokenFileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, tokenFileMode)
 	if err != nil {
 		return err
 	}
