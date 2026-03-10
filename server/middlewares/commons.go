@@ -68,17 +68,19 @@ func CommonMiddlewares(app *fiber.App, cfg *config.ServerConfig) {
 
 	// debug/vars
 	if cfg.Middlewares.Expvar {
-		app.Use(jwtAuth, expvar.New()).Name("debug.vars")
+		app.All("/debug/vars", jwtAuth)
+		app.Use(expvar.New()).Name("debug.vars")
 	}
 
 	// debug/pprof
 	if cfg.Middlewares.Pprof {
-		app.Use(jwtAuth, pprof.New()).Name("debug.pprof")
+		app.All("/debug/pprof/*", jwtAuth)
+		app.Use(pprof.New()).Name("debug.pprof")
 	}
 
 	// show environment variables
 	if cfg.Middlewares.Envvar {
-		app.Use("/expose/envvars", jwtAuth, envvar.New()).Name("envvars")
+		app.Get("/expose/envvars", jwtAuth, envvar.New()).Name("envvars")
 	}
 
 	// show configs
@@ -97,7 +99,7 @@ func CommonMiddlewares(app *fiber.App, cfg *config.ServerConfig) {
 
 	// swagger ui
 	if cfg.Middlewares.Swagger {
-		app.Get("/swagger/*", swaggo.New(swaggo.Config{
+		app.Get("/swagger/*", jwtAuth, swaggo.New(swaggo.Config{
 			Title: cfg.Fiber.AppName,
 		}))
 	}
