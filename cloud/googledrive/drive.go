@@ -19,6 +19,8 @@ import (
 	"google.golang.org/api/option"
 )
 
+const tokenFileMode = 0o600
+
 var ErrUnauthorized = errors.New("unauthorized")
 
 type ClientConfig struct {
@@ -104,10 +106,10 @@ func (d *Adapter) Init(token *oauth2.Token) error {
 	return d.saveToken(token)
 }
 
-func (d *Adapter) AuthCodeURL(redirectURL string) string {
+func (d *Adapter) AuthCodeURL(redirectURL string, state string) string {
 	oauth2Config := d.cfg.OAuth2Config
 	oauth2Config.RedirectURL = redirectURL
-	return oauth2Config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+	return oauth2Config.AuthCodeURL(state, oauth2.AccessTypeOffline)
 }
 
 func (d *Adapter) IssueToken(code string) (*oauth2.Token, error) {
@@ -359,7 +361,7 @@ func (d *Adapter) getTokenFromFile() (*oauth2.Token, error) {
 }
 
 func (d *Adapter) saveToken(token *oauth2.Token) error {
-	f, err := os.OpenFile(d.cfg.TokenPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
+	f, err := os.OpenFile(d.cfg.TokenPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, tokenFileMode)
 	if err != nil {
 		return err
 	}

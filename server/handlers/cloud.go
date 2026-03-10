@@ -33,7 +33,7 @@ func (h *CloudHandler) GoogleDriveAuthCodeURL(c fiber.Ctx) error {
 	}
 
 	return c.JSON(types.CloudAuthResponse{
-		URL: googledriveAdaper.AuthCodeURL(GoogleAuthCodeCallbackURL),
+		URL: googledriveAdaper.AuthCodeURL(GoogleAuthCodeCallbackURL, "state-token"),
 	})
 }
 
