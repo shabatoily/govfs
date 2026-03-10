@@ -19,6 +19,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/responsetime"
 	vfs "github.com/meteormin/govfs"
 	"github.com/meteormin/govfs/config"
+	"github.com/meteormin/govfs/server/middlewares/swaggo"
 )
 
 // CommonMiddlewares returns a middleware that applies common middlewares to the app.
@@ -64,31 +65,45 @@ func CommonMiddlewares(app *fiber.App, cfg *config.ServerConfig) {
 
 	// jwt auth middleware
 	jwtAuth := JWTAuthMiddleware(cfg.Auth)
-	app.All("/debug/*", jwtAuth)
-	app.All("/expose/*", jwtAuth)
-	app.All("/configs", jwtAuth)
-	app.All("/routes", jwtAuth)
 
 	// debug/vars
-	app.Use(expvar.New()).Name("debug.vars")
+	if cfg.Middlewares.Expvar {
+		app.Use(jwtAuth, expvar.New()).Name("debug.vars")
+	}
+
 	// debug/pprof
-	app.Use(pprof.New()).Name("debug.pprof")
+	if cfg.Middlewares.Pprof {
+		app.Use(jwtAuth, pprof.New()).Name("debug.pprof")
+	}
+
+	// show environment variables
+	if cfg.Middlewares.Envvar {
+		app.Use("/expose/envvars", jwtAuth, envvar.New()).Name("envvars")
+	}
+
+	// show configs
+	if cfg.Middlewares.Config {
+		app.Get("/configs", jwtAuth, func(c fiber.Ctx) error {
+			return c.Status(fiber.StatusOK).JSON(cfg)
+		}).Name("configs")
+	}
+
+	// show routes
+	if cfg.Middlewares.Route {
+		app.Get("/routes", jwtAuth, func(c fiber.Ctx) error {
+			return c.Status(fiber.StatusOK).JSON(app.GetRoutes())
+		}).Name("routes")
+	}
+
+	// swagger ui
+	if cfg.Middlewares.Swagger {
+		app.Get("/swagger/*", swaggo.New(swaggo.Config{
+			Title: cfg.Fiber.AppName,
+		}))
+	}
 
 	// health check
 	app.Get("/healthz", healthcheck.New()).Name("healthz")
-
-	// show environment variables
-	app.Use("/expose/envvars", envvar.New()).Name("envvars")
-
-	// show configs
-	app.Get("/configs", func(c fiber.Ctx) error {
-		return c.Status(fiber.StatusOK).JSON(cfg)
-	}).Name("configs")
-
-	// show routes
-	app.Get("/routes", func(c fiber.Ctx) error {
-		return c.Status(fiber.StatusOK).JSON(app.GetRoutes())
-	}).Name("routes")
 
 	// on pre shutdown
 	app.Hooks().OnPreShutdown(func() error {

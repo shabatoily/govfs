@@ -24,9 +24,11 @@ var (
 
 type DepsWeb struct {
 	Context context.Context
-	VFS     vfs.VFS
-	Auth    config.AuthConfig
-	Cloud   cloud.Storage
+
+	Auth         config.AuthConfig
+	Cloud        cloud.Storage
+	VFS          vfs.VFS
+	WebUIEnabled bool
 }
 
 func Web(app *fiber.App, deps *DepsWeb) {
@@ -96,10 +98,12 @@ func Web(app *fiber.App, deps *DepsWeb) {
 		router.Delete("/", cloudHandler.Delete).Name("delete")
 	}, "cloud.")
 
-	app.Use(PrefixWebui, static.New("", static.Config{
-		FS:     webui.FS,
-		Browse: true,
-	})).Name("webui")
+	if deps.WebUIEnabled {
+		app.Use(PrefixWebui, static.New("", static.Config{
+			FS:     webui.FS,
+			Browse: true,
+		})).Name("webui")
+	}
 
 	app.Hooks().OnPreShutdown(func() error {
 		sseBroker.Shutdown()

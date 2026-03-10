@@ -25,13 +25,16 @@ type AppInfo struct {
 }
 
 type ServerConfig struct {
-	Context context.Context   `json:"-"`
-	Fiber   fiber.Config      `json:"-" toml:"-" yaml:"-"`
-	Host    string            `json:"host"`
-	Port    int               `json:"port"`
-	Logger  FiberLoggerConfig `json:"logger"`
-	Auth    AuthConfig        `json:"auth"`
+	Context     context.Context   `json:"-"`
+	Fiber       fiber.Config      `json:"-" toml:"-" yaml:"-"`
+	Host        string            `json:"host"`
+	Port        int               `json:"port"`
+	Logger      FiberLoggerConfig `json:"logger"`
+	Auth        AuthConfig        `json:"auth"`
+	Middlewares MiddlewareConfig  `json:"middlewares"`
+	WebUI       WebUIConfig       `json:"webui"`
 }
+
 type FiberLoggerConfig struct {
 	Path          string    `json:"path"`
 	Level         log.Level `json:"level"`
@@ -43,6 +46,19 @@ type AuthConfig struct {
 	Username string    `json:"username"`
 	Password string    `json:"-"`
 	JWT      JWTConfig `json:"jwt"`
+}
+
+type MiddlewareConfig struct {
+	Config  bool `json:"config"`
+	Envvar  bool `json:"envvar"`
+	Expvar  bool `json:"expvar"`
+	Pprof   bool `json:"pprof"`
+	Route   bool `json:"route"`
+	Swagger bool `json:"swagger"`
+}
+
+type WebUIConfig struct {
+	Enabled bool `json:"enabled"`
 }
 
 type JWTConfig struct {

@@ -14,7 +14,6 @@ import (
 	"github.com/meteormin/govfs/config"
 	"github.com/meteormin/govfs/drivers"
 	"github.com/meteormin/govfs/server/middlewares"
-	"github.com/meteormin/govfs/server/middlewares/swaggo"
 	"github.com/meteormin/govfs/server/routes"
 )
 
@@ -47,15 +46,12 @@ func InitServer(fs vfs.VFS, cfg *config.ServerConfig) *fiber.App {
 
 	middlewares.CommonMiddlewares(app, cfg)
 
-	app.Get("/swagger/*", swaggo.New(swaggo.Config{
-		Title: "Go VFS - Swagger UI",
-	}))
-
 	// web routes
 	routes.Web(app, &routes.DepsWeb{
-		Context: cfg.Context,
-		VFS:     fs,
-		Auth:    cfg.Auth,
+		Context:      cfg.Context,
+		VFS:          fs,
+		Auth:         cfg.Auth,
+		WebUIEnabled: cfg.WebUI.Enabled,
 	})
 
 	app.Hooks().OnPreStartupMessage(func(preMsgData *fiber.PreStartupMessageData) error {

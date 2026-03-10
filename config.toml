@@ -16,6 +16,17 @@ password = "${SERVER_AUTH_PASSWORD}"
 secret = "${SERVER_AUTH_JWT_SECRET}"
 exp = "24h"
 
+[server.middlewares]
+config = true
+envvar = true
+expvar = true
+pprof = true
+route = true
+swagger = true
+
+[server.webui]
+enabled = true
+
 [vfs.driver]
 type = "badger"
 
