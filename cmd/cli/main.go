@@ -25,7 +25,7 @@ func main() {
 	_ = godotenv.Load()
 
 	buildInfo, _ := debug.ReadBuildInfo()
-	root := cli.NewRootCommand(config.AppInfo{
+	root := cli.NewRootCommand(&config.AppInfo{
 		Name:        name,
 		Version:     version,
 		BuildTime:   buildTime,

@@ -26,7 +26,7 @@ type Handler struct {
 }
 
 func NewHandler(cmd *cobra.Command) (*Handler, error) {
-	u, ok := cmd.Context().Value(cli.ContextKeyUserConfig{}).(cli.UserConfig)
+	u, ok := cmd.Context().Value(cli.ContextKeyUserConfig{}).(*cli.UserConfig)
 	if !ok {
 		return nil, errors.New("config not found")
 	}

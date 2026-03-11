@@ -398,6 +398,8 @@ func (c *Client) Login(username, password string) (types.TokenResponse, error) {
 	status := resp.StatusCode()
 	if status != fiber.StatusOK && status != fiber.StatusNoContent {
 		return res, fmt.Errorf("login failed: %v", resp.StatusCode())
+	} else if status == fiber.StatusNoContent {
+		return res, nil
 	}
 
 	if err := resp.JSON(&res); err != nil {
@@ -420,6 +422,8 @@ func (c *Client) Me() (types.TokenResponse, error) {
 	status := resp.StatusCode()
 	if status != fiber.StatusOK && status != fiber.StatusNoContent {
 		return res, fmt.Errorf("not logged in: %v", resp.StatusCode())
+	} else if status == fiber.StatusNoContent {
+		return res, nil
 	}
 
 	if err := resp.JSON(&res); err != nil {

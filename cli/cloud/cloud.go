@@ -42,7 +42,7 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 		c.SetToken(t.Token)
 
 		u.TokenInfo = cli.TokenInfo{TokenResponse: t}
-		err = cli.SetUserConfig(u)
+		err = cli.SetUserConfig(&u)
 		if err != nil {
 			return nil, err
 		}
