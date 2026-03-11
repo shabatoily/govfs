@@ -133,12 +133,16 @@ func New(cfg *Config) (*BadgerVFS, error) {
 
 	if cfg.GCInterval > 0 {
 		if cfg.GCDiscardRatio == 0 {
-			cfg.GCDiscardRatio = 0.7
+			cfg.GCDiscardRatio = 0.5 // badger recommend 0.5
 		}
 		go bvfs.runGC(cfg.GCInterval, cfg.GCDiscardRatio)
 	}
 
 	return bvfs, nil
+}
+
+func (bvfs *BadgerVFS) DB() *badger.DB {
+	return bvfs.db
 }
 
 func (bvfs *BadgerVFS) List(path string) ([]vfs.Meta, error) {

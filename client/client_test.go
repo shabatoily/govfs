@@ -532,7 +532,7 @@ func TestClient_Login(t *testing.T) {
 		defer server.Close()
 
 		c := client.NewClient(server.URL)
-		err := c.Login(username, password)
+		_, err := c.Login(username, password)
 		assert.NoError(t, err)
 
 		// Trigger a request to verify the token is set and sent
@@ -556,7 +556,7 @@ func TestClient_Login(t *testing.T) {
 		defer server.Close()
 
 		c := client.NewClient(server.URL)
-		err := c.Login(username, password)
+		_, err := c.Login(username, password)
 		assert.NoError(t, err)
 	})
 
@@ -573,7 +573,7 @@ func TestClient_Login(t *testing.T) {
 		defer server.Close()
 
 		c := client.NewClient(server.URL)
-		err := c.Login(username, password)
+		_, err := c.Login(username, password)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "login failed: 401")
 	})

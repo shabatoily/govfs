@@ -2,14 +2,72 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strings"
+	"os"
+	"path/filepath"
+	"time"
 
+	"github.com/goccy/go-json"
+	vfs "github.com/meteormin/govfs"
 	"github.com/meteormin/govfs/config"
+	"github.com/meteormin/govfs/server/types"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
+
+const (
+	DefaultServerURL = "http://localhost:3000"
+)
+
+var configPath string
+
+type (
+	ContextKeyAppInfo    struct{}
+	ContextKeyUserConfig struct{}
+)
+
+type UserConfig struct {
+	ServerURL string    `json:"serverURL"`
+	Username  string    `json:"username"`
+	Password  string    `json:"password"`
+	TokenInfo TokenInfo `json:"tokenInfo"`
+}
+
+type TokenInfo struct {
+	types.TokenResponse
+}
+
+func (t TokenInfo) IsExpired() bool {
+	if t.ExpiresAt.IsZero() {
+		return true
+	}
+	return t.ExpiresAt.Before(time.Now())
+}
+
+func GetUserConfig() (UserConfig, error) {
+	var userConfig UserConfig
+
+	file, err := os.Open(filepath.Join(configPath, "config.json"))
+	if err != nil {
+		return userConfig, err
+	}
+	defer file.Close()
+
+	err = json.NewDecoder(file).Decode(&userConfig)
+
+	return userConfig, err
+}
+
+func SetUserConfig(u UserConfig) error {
+	file, err := os.Create(filepath.Join(configPath, "config.json"))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return json.NewEncoder(file).Encode(&u)
+}
 
 func newInfoCommand() *cobra.Command {
 	var verbose bool
@@ -18,14 +76,14 @@ func newInfoCommand() *cobra.Command {
 		Use:   "info",
 		Short: "Print system information",
 		Run: func(c *cobra.Command, _ []string) {
-			cfg := c.Context().Value(config.ContextKeyConfig{}).(*config.Config)
-			fmt.Printf("%s %s - %s\n", cfg.App.Name, cfg.App.Version, cfg.App.BuildTime)
+			info := c.Context().Value(ContextKeyAppInfo{}).(*config.AppInfo)
+			fmt.Printf("%s %s - %s\n", info.Name, info.Version, info.BuildTime)
 			if verbose {
-				b, err := toml.Marshal(cfg)
+				b, err := toml.Marshal(info)
 				if err != nil {
-					fmt.Printf("\n[Config]\n%s\n", err.Error())
+					fmt.Printf("\n[Info]\n%s\n", err.Error())
 				} else {
-					fmt.Printf("\n[Config]\n%s\n", string(b))
+					fmt.Printf("\n[Info]\n%s\n", string(b))
 				}
 			}
 		},
@@ -37,27 +95,44 @@ func newInfoCommand() *cobra.Command {
 }
 
 func NewRootCommand(appInfo config.AppInfo) *cobra.Command {
-	var configPath string
-
 	root := &cobra.Command{
 		Use:   appInfo.Name,
 		Short: appInfo.Name,
 		Long:  appInfo.Description,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := config.LoadWithViper(configPath, appInfo)
-			if err != nil {
-				return err
+			ctx := context.WithValue(cmd.Context(), ContextKeyAppInfo{}, appInfo)
+
+			if configPath == "" {
+				baseDir, err := os.UserHomeDir()
+				if err != nil {
+					return err
+				}
+				configPath = baseDir
 			}
-			ctx := context.WithValue(cmd.Context(), config.ContextKeyConfig{}, cfg)
+
+			configPath = filepath.Join(configPath, ".govfs")
+			if _, err := os.Stat(configPath); errors.Is(err, os.ErrNotExist) {
+				err = os.Mkdir(configPath, vfs.DefaultFileMode)
+				if err != nil {
+					return err
+				}
+			}
+
+			u, err := GetUserConfig()
+			if err != nil {
+				u.ServerURL = DefaultServerURL
+				SetUserConfig(u)
+			}
+
+			ctx = context.WithValue(ctx, ContextKeyUserConfig{}, u)
+
 			cmd.SetContext(ctx)
+
 			return nil
 		},
 	}
 
-	configFlagUsage := fmt.Sprintf("path to config file (supported exts: %q",
-		strings.Join(viper.SupportedExts, ","))
-
-	root.PersistentFlags().StringVarP(&configPath, "config", "c", "", configFlagUsage)
+	root.PersistentFlags().StringVarP(&configPath, "config", "c", "", "path to config.json file")
 
 	root.AddCommand(newInfoCommand())
 

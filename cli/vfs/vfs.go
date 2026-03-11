@@ -14,8 +14,8 @@ import (
 	"github.com/jedib0t/go-pretty/v6/list"
 	"github.com/jedib0t/go-pretty/v6/table"
 	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/cli"
 	"github.com/meteormin/govfs/client"
-	"github.com/meteormin/govfs/config"
 	"github.com/meteormin/govfs/server/types"
 	"github.com/spf13/cobra"
 )
@@ -26,22 +26,28 @@ type Handler struct {
 }
 
 func NewHandler(cmd *cobra.Command) (*Handler, error) {
-	cfg, ok := cmd.Context().Value(config.ContextKeyConfig{}).(*config.Config)
+	u, ok := cmd.Context().Value(cli.ContextKeyUserConfig{}).(cli.UserConfig)
 	if !ok {
 		return nil, errors.New("config not found")
 	}
 
-	host := cfg.Server.Host
-	if host == "" {
-		host = "localhost"
-	}
+	c := client.NewClient(u.ServerURL)
+	if _, err := c.Me(); err != nil {
+		if !u.TokenInfo.IsExpired() {
+			c.SetToken(u.TokenInfo.Token)
+		}
 
-	url := fmt.Sprintf("http://%s:%d", host, cfg.Server.Port)
-	c := client.NewClient(url)
+		t, err := c.Login(u.Username, u.Password)
+		if err != nil {
+			return nil, err
+		}
 
-	if cfg.Server.Auth.Enabled {
-		if err := c.Login(cfg.Server.Auth.Username, cfg.Server.Auth.Password); err != nil {
-			return nil, fmt.Errorf("failed to authenticate: %w", err)
+		c.SetToken(t.Token)
+
+		u.TokenInfo = cli.TokenInfo{TokenResponse: t}
+		err = cli.SetUserConfig(u)
+		if err != nil {
+			return nil, err
 		}
 	}
 

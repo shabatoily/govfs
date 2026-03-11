@@ -377,7 +377,9 @@ func (c *Client) SetToken(token string) {
 }
 
 // Login authenticates with the server and configures the client to use the received token
-func (c *Client) Login(username, password string) error {
+func (c *Client) Login(username, password string) (types.TokenResponse, error) {
+	var res types.TokenResponse
+
 	req := types.LoginRequest{
 		Username: username,
 		Password: password,
@@ -385,25 +387,46 @@ func (c *Client) Login(username, password string) error {
 
 	cfg, err := createJSONConfig(req)
 	if err != nil {
-		return err
+		return res, err
 	}
 
 	resp, err := c.c.Post("/auth/login", cfg)
 	if err != nil {
-		return err
+		return res, err
 	}
 
-	if resp.StatusCode() == fiber.StatusOK {
-		var res map[string]string
-		if err := resp.JSON(&res); err != nil {
-			return err
-		}
-		if token, ok := res["token"]; ok {
-			c.SetToken(token)
-		}
-		// If no token but OK, it could be "Auth is disabled"
-		return nil
+	status := resp.StatusCode()
+	if status != fiber.StatusOK && status != fiber.StatusNoContent {
+		return res, fmt.Errorf("login failed: %v", resp.StatusCode())
 	}
 
-	return fmt.Errorf("login failed: %v", resp.StatusCode())
+	if err := resp.JSON(&res); err != nil {
+		return res, err
+	}
+
+	c.SetToken(res.Token)
+	// If no token but OK, it could be "Auth is disabled"
+	return res, nil
+}
+
+func (c *Client) Me() (types.TokenResponse, error) {
+	var res types.TokenResponse
+
+	resp, err := c.c.Get("/auth/me")
+	if err != nil {
+		return res, err
+	}
+
+	status := resp.StatusCode()
+	if status != fiber.StatusOK && status != fiber.StatusNoContent {
+		return res, fmt.Errorf("not logged in: %v", resp.StatusCode())
+	}
+
+	if err := resp.JSON(&res); err != nil {
+		return res, err
+	}
+
+	c.SetToken(res.Token)
+
+	return res, nil
 }

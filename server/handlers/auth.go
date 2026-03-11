@@ -132,6 +132,7 @@ func (h *AuthHandler) IsLoggedIn(c fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(types.TokenResponse{
 		Username:  sub,
+		Token:     token.Raw,
 		ExpiresAt: exp.Time,
 	})
 }

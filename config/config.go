@@ -99,8 +99,6 @@ var DefaultConfig = &Config{
 	},
 }
 
-type ContextKeyConfig struct{}
-
 func SetSwaggerInfo(cfg *Config) {
 	docs.SwaggerInfo.Title = cfg.App.Name
 	docs.SwaggerInfo.Description = cfg.App.Description
