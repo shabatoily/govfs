@@ -43,11 +43,11 @@ jobs:
       - name: Run Tests
         run: make test
 
-  # [2] 빌드 단계: develop 브랜치가 아닐 때만 수행
+  # [2] 빌드 단계: (바이너리) develop 브랜치가 아닐 때만 수행
   build:
     name: Build Artifact
     needs: test
-    if: github.ref_name != 'develop'
+    if: github.ref_name == 'main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -78,7 +78,56 @@ jobs:
           path: release/
           retention-days: 5
 
-  # [3] 릴리즈 단계: 실제 버전 태그(v1.0.0 등)가 푸시될 때만 수행
+  # [3] 도커 빌드 및 베포 (바이너리 빌드와 병렬로 수행)
+  docker:
+    name: Build and Push Docker Image
+    needs: test
+    if: github.event_name != 'pull_request' 
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ github.ref_name }}
+
+  # [4] 릴리즈 단계: 실제 버전 태그(v1.0.0 등)가 푸시될 때만 수행
   publish:
     name: Publish GitHub Release
     needs: build
