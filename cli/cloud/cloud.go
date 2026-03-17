@@ -29,12 +29,12 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 	}
 
 	c := client.NewClient(u.ServerURL)
-	if _, err := c.Me(); err != nil {
+	if _, err := c.Auth().Me(); err != nil {
 		if !u.TokenInfo.IsExpired() {
 			c.SetToken(u.TokenInfo.Token)
 		}
 
-		t, err := c.Login(u.Username, u.Password)
+		t, err := c.Auth().Login(u.Username, u.Password)
 		if err != nil {
 			return nil, err
 		}
@@ -59,7 +59,7 @@ func NewStorage(cfg *config.CloudConfig) (cloud.Storage, error) {
 }
 
 func (h *Handler) List(p string) error {
-	files, err := h.client.CloudList(p)
+	files, err := h.client.Cloud().List(p)
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (h *Handler) Upload(uploadFilePath string) error {
 	defer f.Close()
 
 	p := filepath.Base(uploadFilePath)
-	err = h.client.CloudUpload(p, f)
+	err = h.client.Cloud().Upload(p, f)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (h *Handler) Download(src, dst string) error {
 		return err
 	}
 
-	r, err := h.client.CloudDownload(src)
+	r, err := h.client.Cloud().Download(src)
 	if err != nil {
 		return err
 	}

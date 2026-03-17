@@ -106,7 +106,7 @@ func NewListCommand() *cobra.Command {
 				p = args[0]
 			}
 
-			metas, err := h.client.List(p)
+			metas, err := h.client.VFS().List(p)
 			if err != nil {
 				return err
 			}
@@ -138,7 +138,7 @@ func NewTreeCommand() *cobra.Command {
 				p = args[0]
 			}
 
-			tree, err := h.client.Tree(p)
+			tree, err := h.client.VFS().Tree(p)
 			if err != nil {
 				return err
 			}
@@ -171,7 +171,7 @@ func NewStatCommand() *cobra.Command {
 				}
 			}
 
-			stat, err := h.client.Stat(id)
+			stat, err := h.client.VFS().Stat(id)
 			if err != nil {
 				return err
 			}

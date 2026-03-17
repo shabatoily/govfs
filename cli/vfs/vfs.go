@@ -32,12 +32,12 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 	}
 
 	c := client.NewClient(u.ServerURL)
-	if _, err := c.Me(); err != nil {
+	if _, err := c.Auth().Me(); err != nil {
 		if !u.TokenInfo.IsExpired() {
 			c.SetToken(u.TokenInfo.Token)
 		}
 
-		t, err := c.Login(u.Username, u.Password)
+		t, err := c.Auth().Login(u.Username, u.Password)
 		if err != nil {
 			return nil, err
 		}
@@ -65,7 +65,7 @@ func (h *Handler) Backup(backupFile string) error {
 	}
 	defer f.Close()
 
-	r, err := h.client.Backup()
+	r, err := h.client.VFS().Backup()
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (h *Handler) Restore(restoreFile string) error {
 	}
 	defer f.Close()
 
-	err = h.client.Restore(f)
+	err = h.client.VFS().Restore(f)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func (h *Handler) Restore(restoreFile string) error {
 }
 
 func (h *Handler) Rotate(newKey string) error {
-	return h.client.Rotate(newKey)
+	return h.client.VFS().Rotate(newKey)
 }
 
 func (h *Handler) handleUpload(srcLocal, dstVfs string) error {
@@ -126,7 +126,7 @@ func (h *Handler) handleUpload(srcLocal, dstVfs string) error {
 		dstVfs = dstVfs + "/" + info.Name()
 	}
 
-	res, err := h.client.CreateFile(dstVfs, f)
+	res, err := h.client.VFS().CreateFile(dstVfs, f)
 	if err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 		targetPath = filepath.ToSlash(targetPath)
 
 		if info.IsDir() {
-			_, err = h.client.CreateDir(targetPath)
+			_, err = h.client.VFS().CreateDir(targetPath)
 			if err != nil {
 				// Ignore "already exists" error if possible, or client should handle
 				// Client CreateDir returns error on existing.
@@ -202,7 +202,7 @@ func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 		}
 		defer f.Close()
 
-		res, err := h.client.CreateFile(targetPath, f)
+		res, err := h.client.VFS().CreateFile(targetPath, f)
 		if err != nil {
 			return err
 		}
@@ -233,7 +233,7 @@ func (h *Handler) handleDownload(srcVfs, dstLocal string) error {
 		return fmt.Errorf("'%s' is a directory (use -r to copy directories)", srcVfs)
 	}
 
-	reader, _, err := h.client.Read(meta.ID)
+	reader, _, err := h.client.VFS().Read(meta.ID)
 	if err != nil {
 		return err
 	}
@@ -273,7 +273,7 @@ func (h *Handler) handleRecursiveDownload(srcVfs, dstLocal string) error {
 	startTime := time.Now()
 
 	// Use Tree API
-	tree, err := h.client.Tree(srcVfs)
+	tree, err := h.client.VFS().Tree(srcVfs)
 	if err != nil {
 		return err
 	}
@@ -303,7 +303,7 @@ func (h *Handler) handleRecursiveDownload(srcVfs, dstLocal string) error {
 				}
 			}
 		} else {
-			reader, _, readErr := h.client.Read(node.Meta.ID)
+			reader, _, readErr := h.client.VFS().Read(node.Meta.ID)
 			if readErr != nil {
 				return readErr
 			}
@@ -357,7 +357,7 @@ func (h *Handler) findMetaByPath(path string) (types.MetaRes, error) {
 		targetName = cleanPath[lastSlash+1:]
 	}
 
-	metas, err := h.client.List(parentPath)
+	metas, err := h.client.VFS().List(parentPath)
 	if err != nil {
 		return types.MetaRes{}, err
 	}
@@ -415,7 +415,7 @@ func (h *Handler) Mkdir(path string, parents bool) error {
 		for i, p := range paths {
 			if p != "" {
 				target := filepath.Join(parent, p)
-				_, err := h.client.CreateDir(target)
+				_, err := h.client.VFS().CreateDir(target)
 				parent = target
 				if err != nil {
 					// Client CreateDir returns error if exists or failed.
@@ -433,7 +433,7 @@ func (h *Handler) Mkdir(path string, parents bool) error {
 		}
 		return nil
 	}
-	_, err := h.client.CreateDir(path)
+	_, err := h.client.VFS().CreateDir(path)
 	if err == nil {
 		h.cmd.Printf("Created directory: %s\n", path)
 	}
@@ -447,7 +447,7 @@ func (h *Handler) Remove(path string, recursive bool) error {
 	}
 
 	if !recursive {
-		delErr := h.client.Delete(meta.ID)
+		delErr := h.client.VFS().Delete(meta.ID)
 		if delErr == nil {
 			h.cmd.Printf("Removed: %s\n", path)
 		}
@@ -455,14 +455,14 @@ func (h *Handler) Remove(path string, recursive bool) error {
 	}
 
 	if !meta.IsDir {
-		delErr := h.client.Delete(meta.ID)
+		delErr := h.client.VFS().Delete(meta.ID)
 		if delErr == nil {
 			h.cmd.Printf("Removed: %s\n", path)
 		}
 		return delErr
 	}
 
-	treeRes, treeErr := h.client.Tree(path)
+	treeRes, treeErr := h.client.VFS().Tree(path)
 	if treeErr != nil {
 		return treeErr
 	}
@@ -474,7 +474,7 @@ func (h *Handler) Remove(path string, recursive bool) error {
 				return walkErr
 			}
 		}
-		if delErr := h.client.Delete(node.Meta.ID); delErr != nil {
+		if delErr := h.client.VFS().Delete(node.Meta.ID); delErr != nil {
 			return delErr
 		}
 		h.cmd.Printf("Removed: %s\n", node.Meta.Path)
@@ -511,7 +511,7 @@ func (h *Handler) Copy(src, dst string, recursive bool) error {
 			if err == nil && meta.IsDir {
 				dstRaw = strings.TrimSuffix(dstRaw, "/") + "/" + filepath.Base(srcRaw)
 			}
-			_, _ = h.client.CreateDir(dstRaw)
+			_, _ = h.client.VFS().CreateDir(dstRaw)
 
 			return h.handleRecursiveUpload(srcRaw, dstRaw)
 		}
@@ -530,7 +530,7 @@ func (h *Handler) Copy(src, dst string, recursive bool) error {
 		if err != nil {
 			return err
 		}
-		return h.client.Copy(srcMeta.ID, dstRaw)
+		return h.client.VFS().Copy(srcMeta.ID, dstRaw)
 	default:
 		return fmt.Errorf("local to local copy is not supported by this tool")
 	}
