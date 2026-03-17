@@ -40,7 +40,7 @@ type SSEData struct {
 	Meta      SSEMeta   `json:"meta"`
 }
 
-func (data SSEData) MarshalJSON() ([]byte, error) {
+func (data *SSEData) MarshalJSON() ([]byte, error) {
 	if data.Meta.Zero() {
 		return json.Marshal(map[string]any{
 			"timestamp": data.Timestamp.Format(time.RFC3339),
@@ -64,7 +64,7 @@ type SSEMessage struct {
 	Retry time.Duration `json:"retry"`
 }
 
-func (msg SSEMessage) MarshalJSON() ([]byte, error) {
+func (msg *SSEMessage) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
 		"id":    msg.ID.String(),
 		"event": msg.Event,
@@ -73,7 +73,7 @@ func (msg SSEMessage) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (msg SSEMessage) WriteTo(w io.Writer) (int64, error) {
+func (msg *SSEMessage) WriteTo(w io.Writer) (int64, error) {
 	var total int64
 	var n int
 	var err error
