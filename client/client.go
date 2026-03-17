@@ -47,6 +47,19 @@ func (c *Client) VFS() *VFSClient {
 	return c.vfs
 }
 
+func NewClient(url string) *Client {
+	c := client.New()
+	c.SetBaseURL(url)
+	base := &baseClient{c: c}
+	return &Client{
+		baseClient: base,
+		auth:       &AuthClient{baseClient: base},
+		cloud:      &CloudClient{baseClient: base},
+		sse:        &SSEClient{baseClient: base},
+		vfs:        &VFSClient{baseClient: base},
+	}
+}
+
 // Helper function to create JSON config
 func createJSONConfig(data any) (client.Config, error) {
 	jsonb, err := json.Marshal(data)
@@ -73,17 +86,4 @@ func checkResponse[T any](resp *client.Response, err error, expectedStatus int, 
 		}
 	}
 	return nil
-}
-
-func NewClient(url string) *Client {
-	c := client.New()
-	c.SetBaseURL(url)
-	base := &baseClient{c: c}
-	return &Client{
-		baseClient: base,
-		auth:       &AuthClient{baseClient: base},
-		cloud:      &CloudClient{baseClient: base},
-		sse:        &SSEClient{baseClient: base},
-		vfs:        &VFSClient{baseClient: base},
-	}
 }
