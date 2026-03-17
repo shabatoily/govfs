@@ -26,25 +26,25 @@ func (c *baseClient) SetToken(token string) {
 type Client struct {
 	*baseClient
 	auth  *AuthClient
-	vfs   *VFSClient
-	sse   *SSEClient
 	cloud *CloudClient
+	sse   *SSEClient
+	vfs   *VFSClient
 }
 
 func (c *Client) Auth() *AuthClient {
 	return c.auth
 }
 
-func (c *Client) VFS() *VFSClient {
-	return c.vfs
+func (c *Client) Cloud() *CloudClient {
+	return c.cloud
 }
 
 func (c *Client) SSE() *SSEClient {
 	return c.sse
 }
 
-func (c *Client) Cloud() *CloudClient {
-	return c.cloud
+func (c *Client) VFS() *VFSClient {
+	return c.vfs
 }
 
 // Helper function to create JSON config
@@ -82,8 +82,8 @@ func NewClient(url string) *Client {
 	return &Client{
 		baseClient: base,
 		auth:       &AuthClient{baseClient: base},
-		vfs:        &VFSClient{baseClient: base},
-		sse:        &SSEClient{baseClient: base},
 		cloud:      &CloudClient{baseClient: base},
+		sse:        &SSEClient{baseClient: base},
+		vfs:        &VFSClient{baseClient: base},
 	}
 }
