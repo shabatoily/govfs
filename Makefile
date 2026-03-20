@@ -108,12 +108,20 @@ release-docker:
 	docker push ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):latest
 	@echo "[release-docker] complete release-docker"
 
-##clean: clean application
+##clean: clean project build and cache
 .PHONY: clean
 clean:
-	@echo "[clean] Cleaning build directory"
+	@echo "[clean] Cleaning project build and cache"
+	@echo "[clean] remove build output directory"
 	rm -rf bin/*
 	rm -rf webui/dist/*
+	@echo "[clean] clean go cache"
+	go clean -cache
+	go clean -modcache
+	@echo "[clean] clean yarn cache"
+	yarn --cwd webui cache clean
+	@echo "[clean] clear node_modules"
+	rm -rf webui/node_modules
 	@echo "[clean] complete clean"
 
 ##clean-docker: clean docker
