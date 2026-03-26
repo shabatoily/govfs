@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goccy/go-json"
 	vfs "github.com/meteormin/govfs"
 	"github.com/meteormin/govfs/config"
 	"github.com/meteormin/govfs/server/types"
@@ -31,10 +30,10 @@ type (
 )
 
 type UserConfig struct {
-	ServerURL string    `json:"serverURL"`
-	Username  string    `json:"username"`
-	Password  string    `json:"password"`
-	TokenInfo TokenInfo `json:"tokenInfo"`
+	ServerURL string
+	Username  string
+	Password  string
+	TokenInfo TokenInfo
 }
 
 type TokenInfo struct {
@@ -57,7 +56,7 @@ func GetUserConfig() (UserConfig, error) {
 	}
 	defer file.Close()
 
-	err = json.NewDecoder(file).Decode(&userConfig)
+	err = toml.NewDecoder(file).Decode(&userConfig)
 
 	return userConfig, err
 }
@@ -69,16 +68,13 @@ func SetUserConfig(u *UserConfig) error {
 	}
 	defer file.Close()
 
-	return json.NewEncoder(file).Encode(&u)
+	return toml.NewEncoder(file).Encode(u)
 }
 
 func newConfigCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "config",
 		Short: "Set configuration",
-		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
-			return nil
-		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return promptSetConfig(cmd, &UserConfig{})
 		},
@@ -118,6 +114,11 @@ func NewRootCommand(appInfo *config.AppInfo) *cobra.Command {
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := context.WithValue(cmd.Context(), ContextKeyAppInfo{}, appInfo)
 
+			if cmd.Name() == "info" {
+				cmd.SetContext(ctx)
+				return nil
+			}
+
 			if configPath == "" {
 				baseDir, err := os.UserHomeDir()
 				if err != nil {
@@ -132,6 +133,11 @@ func NewRootCommand(appInfo *config.AppInfo) *cobra.Command {
 				if err != nil {
 					return err
 				}
+			}
+
+			if cmd.Name() == "config" {
+				cmd.SetContext(ctx)
+				return nil
 			}
 
 			u, err := GetUserConfig()
