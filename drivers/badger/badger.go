@@ -974,6 +974,7 @@ func (bvfs *BadgerVFS) Rotate(newKey []byte) error {
 
 	// Update current key in struct
 	bvfs.key = newKey
+
 	return nil
 }
 

@@ -17,7 +17,7 @@ import (
 	vfs "github.com/meteormin/govfs"
 )
 
-const IndexFileName = "vfs_index.json"
+const IndexFileName = ".vfs_index.json"
 
 type Config struct {
 	Path   string      `json:"path"`
@@ -34,6 +34,10 @@ type LocalStorage struct {
 }
 
 func New(cfg *Config) (*LocalStorage, error) {
+	if cfg.Logger == nil {
+		cfg.Logger = vfs.DefaultLogger
+	}
+
 	// 1. basePath를 미리 깔끔하게 정리하고 구분자를 붙여 경계를 명확히 합니다.
 	basePath := filepath.Clean(cfg.Path)
 	// 유닉스/윈도우 공통으로 안전하게 접두사를 확인하기 위해 구분자를 추가합니다.

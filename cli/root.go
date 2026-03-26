@@ -51,7 +51,7 @@ func (t TokenInfo) IsExpired() bool {
 func GetUserConfig() (UserConfig, error) {
 	var userConfig UserConfig
 
-	file, err := os.Open(filepath.Join(configPath, "config.json"))
+	file, err := os.Open(filepath.Join(configPath, "config"))
 	if err != nil {
 		return userConfig, err
 	}
@@ -63,7 +63,7 @@ func GetUserConfig() (UserConfig, error) {
 }
 
 func SetUserConfig(u *UserConfig) error {
-	file, err := os.Create(filepath.Join(configPath, "config.json"))
+	file, err := os.Create(filepath.Join(configPath, "config"))
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func NewRootCommand(appInfo *config.AppInfo) *cobra.Command {
 		},
 	}
 
-	root.PersistentFlags().StringVarP(&configPath, "config", "c", "", "path to config.json file")
+	root.PersistentFlags().StringVarP(&configPath, "config", "c", "", "path to config file or directory (default: ~/.govfs/config)")
 
 	root.AddCommand(newInfoCommand())
 
