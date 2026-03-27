@@ -7,6 +7,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/client"
+	"github.com/meteormin/govfs/server/types"
 )
 
 type baseClient struct {
@@ -21,6 +22,20 @@ func (c *baseClient) SetToken(token string) {
 	if token != "" && token != "disabled" {
 		c.c.AddHeader(fiber.HeaderAuthorization, "Bearer "+token)
 	}
+}
+
+func (c *baseClient) Config() (types.ConfigRes, error) {
+	res, err := c.c.Get("/config", client.Config{
+		Header: map[string]string{"Content-Type": "application/json"},
+	})
+	if err != nil {
+		return types.ConfigRes{}, err
+	}
+	var cfg types.ConfigRes
+	if err := res.JSON(&cfg); err != nil {
+		return types.ConfigRes{}, err
+	}
+	return cfg, nil
 }
 
 type Client struct {
@@ -47,7 +62,7 @@ func (c *Client) VFS() *VFSClient {
 	return c.vfs
 }
 
-func NewClient(url string) *Client {
+func New(url string) *Client {
 	c := client.New()
 	c.SetBaseURL(url)
 	base := &baseClient{c: c}

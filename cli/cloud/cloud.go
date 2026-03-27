@@ -28,7 +28,7 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 		return nil, fmt.Errorf("not found user config in context")
 	}
 
-	c := client.NewClient(u.ServerURL)
+	c := client.New(u.ServerURL)
 	if _, err := c.Auth().Me(); err != nil {
 		if !u.TokenInfo.IsExpired() {
 			c.SetToken(u.TokenInfo.Token)

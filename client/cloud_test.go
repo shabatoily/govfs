@@ -26,7 +26,7 @@ func TestCloudClient_GoogleDriveAuthCodeURL(t *testing.T) {
 		}))
 		defer server.Close()
 
-		c := client.NewClient(server.URL)
+		c := client.New(server.URL)
 		url, err := c.Cloud().GoogleDriveAuthCodeURL()
 		assert.NoError(t, err)
 		assert.Equal(t, expectedURL, url)
@@ -47,7 +47,7 @@ func TestCloudClient_List(t *testing.T) {
 		}))
 		defer server.Close()
 
-		c := client.NewClient(server.URL)
+		c := client.New(server.URL)
 		files, err := c.Cloud().List("/some/path")
 		assert.NoError(t, err)
 		assert.Equal(t, expectedFiles, files)
@@ -79,7 +79,7 @@ func TestCloudClient_Upload(t *testing.T) {
 		}))
 		defer server.Close()
 
-		c := client.NewClient(server.URL)
+		c := client.New(server.URL)
 		err := c.Cloud().Upload(fileName, strings.NewReader(fileContent))
 		assert.NoError(t, err)
 	})
@@ -99,7 +99,7 @@ func TestCloudClient_Download(t *testing.T) {
 		}))
 		defer server.Close()
 
-		c := client.NewClient(server.URL)
+		c := client.New(server.URL)
 		reader, err := c.Cloud().Download("/some/file.txt")
 		assert.NoError(t, err)
 
@@ -121,7 +121,7 @@ func TestCloudClient_Delete(t *testing.T) {
 		}))
 		defer server.Close()
 
-		c := client.NewClient(server.URL)
+		c := client.New(server.URL)
 		err := c.Cloud().Delete("/some/file.txt")
 		assert.NoError(t, err)
 	})

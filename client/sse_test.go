@@ -20,7 +20,7 @@ func TestSSEClient_Subscribe(t *testing.T) {
 		}))
 		defer server.Close()
 
-		c := client.NewClient(server.URL)
+		c := client.New(server.URL)
 		resp, err := c.SSE().Subscribe()
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode())
@@ -46,7 +46,7 @@ func TestSSEClient_Publish(t *testing.T) {
 		}))
 		defer server.Close()
 
-		c := client.NewClient(server.URL)
+		c := client.New(server.URL)
 		resp, err := c.SSE().Publish(id, data)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode())

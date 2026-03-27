@@ -41,7 +41,7 @@ func TestAuthClient_Login(t *testing.T) {
 		}))
 		defer server.Close()
 
-		c := client.NewClient(server.URL)
+		c := client.New(server.URL)
 		_, err := c.Auth().Login(username, password)
 		assert.NoError(t, err)
 
@@ -65,7 +65,7 @@ func TestAuthClient_Login(t *testing.T) {
 		}))
 		defer server.Close()
 
-		c := client.NewClient(server.URL)
+		c := client.New(server.URL)
 		_, err := c.Auth().Login(username, password)
 		assert.NoError(t, err)
 	})
@@ -82,7 +82,7 @@ func TestAuthClient_Login(t *testing.T) {
 		}))
 		defer server.Close()
 
-		c := client.NewClient(server.URL)
+		c := client.New(server.URL)
 		_, err := c.Auth().Login(username, password)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "login failed: 401")
@@ -106,7 +106,7 @@ func TestAuthClient_Me(t *testing.T) {
 		}))
 		defer server.Close()
 
-		c := client.NewClient(server.URL)
+		c := client.New(server.URL)
 		res, err := c.Auth().Me()
 		assert.NoError(t, err)
 		assert.Equal(t, token, res.Token)
@@ -121,7 +121,7 @@ func TestAuthClient_Me(t *testing.T) {
 		}))
 		defer server.Close()
 
-		c := client.NewClient(server.URL)
+		c := client.New(server.URL)
 		_, err := c.Auth().Me()
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "not logged in: 401")

@@ -31,7 +31,7 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 		return nil, errors.New("config not found")
 	}
 
-	c := client.NewClient(u.ServerURL)
+	c := client.New(u.ServerURL)
 	if _, err := c.Auth().Me(); err != nil {
 		if !u.TokenInfo.IsExpired() {
 			c.SetToken(u.TokenInfo.Token)

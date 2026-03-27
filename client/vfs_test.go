@@ -54,7 +54,7 @@ func TestVFSClient_List(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := client.NewClient(server.URL)
+	c := client.New(server.URL)
 	res, err := c.VFS().List("/")
 	require.NoError(t, err)
 	require.NotEmpty(t, res)
@@ -88,7 +88,7 @@ func TestVFSClient_Read(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := client.NewClient(server.URL)
+	c := client.New(server.URL)
 	rc, meta, err := c.VFS().Read(id)
 	require.NoError(t, err)
 	assert.Equal(t, expectedMeta.Name, meta.Name) // Check a field
@@ -118,7 +118,7 @@ func TestVFSClient_CreateDir(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := client.NewClient(server.URL)
+	c := client.New(server.URL)
 	_, err := c.VFS().CreateDir(dirName)
 	assert.NoError(t, err)
 }
@@ -162,7 +162,7 @@ func TestVFSClient_CreateFile(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := client.NewClient(server.URL)
+	c := client.New(server.URL)
 	_, err = c.VFS().CreateFile(fileName, file)
 	assert.NoError(t, err)
 }
@@ -187,7 +187,7 @@ func TestVFSClient_FileOps_Write(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := client.NewClient(server.URL)
+	c := client.New(server.URL)
 	err := c.VFS().Write(id, content)
 	assert.NoError(t, err)
 }
@@ -212,7 +212,7 @@ func TestVFSClient_FileOps_Move(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := client.NewClient(server.URL)
+	c := client.New(server.URL)
 	err := c.VFS().Move(id, dst)
 	assert.NoError(t, err)
 }
@@ -234,7 +234,7 @@ func TestVFSClient_FileOps_Copy(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := client.NewClient(server.URL)
+	c := client.New(server.URL)
 	err := c.VFS().Copy(id, dst)
 	assert.NoError(t, err)
 }
@@ -249,7 +249,7 @@ func TestVFSClient_FileOps_Delete(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := client.NewClient(server.URL)
+	c := client.New(server.URL)
 	err := c.VFS().Delete(id)
 	assert.NoError(t, err)
 }
@@ -288,7 +288,7 @@ func TestVFSClient_Admin_Restore(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := client.NewClient(server.URL)
+	c := client.New(server.URL)
 	err = c.VFS().Restore(file)
 	assert.NoError(t, err)
 }
@@ -307,7 +307,7 @@ func TestVFSClient_Admin_Backup(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := client.NewClient(server.URL)
+	c := client.New(server.URL)
 	reader, err := c.VFS().Backup()
 	assert.NoError(t, err)
 
@@ -333,7 +333,7 @@ func TestVFSClient_Admin_Rotate(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := client.NewClient(server.URL)
+	c := client.New(server.URL)
 	err := c.VFS().Rotate(newKey)
 	assert.NoError(t, err)
 }
@@ -356,7 +356,7 @@ func TestVFSClient_Meta_Stat(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := client.NewClient(server.URL)
+	c := client.New(server.URL)
 	meta, err := c.VFS().Stat(id)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedMeta.Name, meta.Name)
@@ -384,7 +384,7 @@ func TestVFSClient_Meta_Tree(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := client.NewClient(server.URL)
+	c := client.New(server.URL)
 	res, err := c.VFS().Tree("/")
 	assert.NoError(t, err)
 	assert.Equal(t, "root", res.Meta.Name)
@@ -407,7 +407,7 @@ func TestVFSClient_Misc_WriteComments(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := client.NewClient(server.URL)
+	c := client.New(server.URL)
 	err := c.VFS().WriteComments(id, comment)
 	assert.NoError(t, err)
 }

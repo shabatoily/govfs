@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/client"
 	"github.com/meteormin/govfs/config"
 	"github.com/meteormin/govfs/server/types"
 	"github.com/pelletier/go-toml/v2"
@@ -87,17 +87,45 @@ func newInfoCommand() *cobra.Command {
 	info := &cobra.Command{
 		Use:   "info",
 		Short: "Print system information",
-		Run: func(c *cobra.Command, _ []string) {
-			info := c.Context().Value(ContextKeyAppInfo{}).(*config.AppInfo)
-			fmt.Printf("%s %s - %s\n", info.Name, info.Version, info.BuildTime)
-			if verbose {
-				b, err := toml.Marshal(info)
-				if err != nil {
-					fmt.Printf("\n[Info]\n%s\n", err.Error())
-				} else {
-					fmt.Printf("\n[Info]\n%s\n", string(b))
-				}
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			info := cmd.Context().Value(ContextKeyAppInfo{}).(*config.AppInfo)
+			if !verbose {
+				cmd.Printf("%s %s - %s\n", info.Name, info.Version, info.BuildTime)
+				return nil
 			}
+
+			b, err := toml.Marshal(info)
+			if err != nil {
+				return err
+			}
+
+			cmd.Printf("\n[Client]\n%s\n", string(b))
+
+			u, err := GetUserConfig()
+			if err != nil {
+				return err
+			}
+
+			c := client.New(u.ServerURL)
+			t, err := c.Auth().Login(u.Username, u.Password)
+			if err != nil {
+				return err
+			}
+			c.SetToken(t.Token)
+
+			cfg, err := c.Config()
+			if err != nil {
+				return err
+			}
+
+			b, err = toml.Marshal(cfg)
+			if err != nil {
+				return err
+			}
+
+			cmd.Printf("\n[Server]\n%s\n", string(b))
+
+			return nil
 		},
 	}
 
@@ -114,11 +142,6 @@ func NewRootCommand(appInfo *config.AppInfo) *cobra.Command {
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := context.WithValue(cmd.Context(), ContextKeyAppInfo{}, appInfo)
 
-			if cmd.Name() == "info" {
-				cmd.SetContext(ctx)
-				return nil
-			}
-
 			if configPath == "" {
 				baseDir, err := os.UserHomeDir()
 				if err != nil {
@@ -127,17 +150,17 @@ func NewRootCommand(appInfo *config.AppInfo) *cobra.Command {
 				configPath = baseDir
 			}
 
+			if cmd.Name() == "config" || (cmd.Name() == "info" && !cmd.Flag("verbose").Changed) {
+				cmd.SetContext(ctx)
+				return nil
+			}
+
 			configPath = filepath.Join(configPath, ".govfs")
 			if _, err := os.Stat(configPath); errors.Is(err, os.ErrNotExist) {
 				err = os.Mkdir(configPath, vfs.DefaultDirMode)
 				if err != nil {
 					return err
 				}
-			}
-
-			if cmd.Name() == "config" {
-				cmd.SetContext(ctx)
-				return nil
 			}
 
 			u, err := GetUserConfig()

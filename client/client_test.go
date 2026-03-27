@@ -18,7 +18,7 @@ func TestClient_SetToken(t *testing.T) {
 		}))
 		defer server.Close()
 
-		c := client.NewClient(server.URL)
+		c := client.New(server.URL)
 		c.SetToken(token)
 
 		// Trigger a request to verify the token is sent

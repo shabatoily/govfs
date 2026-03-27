@@ -59,15 +59,15 @@ func resolveConfigPath(in string) string {
 }
 
 func resolveConfig(cfg *Config) error {
+	if cfg.Server.Fiber.AppName == "" {
+		cfg.Server.Fiber.AppName = cfg.App.Name + " v" + cfg.App.Version
+	}
 	if cfg.Server.Auth.Enabled && cfg.Server.Auth.JWT.Secret == "" {
 		b := make([]byte, 32)
 		if _, err := rand.Read(b); err != nil {
 			return err
 		}
 		cfg.Server.Auth.JWT.Secret = hex.EncodeToString(b)
-	}
-	if cfg.VFS.Driver.Type == "" {
-		cfg.VFS.Driver = DefaultConfig.VFS.Driver
 	}
 	if cfg.Server.Port < 0 {
 		cfg.Server.Port = DefaultConfig.Server.Port
@@ -78,12 +78,17 @@ func resolveConfig(cfg *Config) error {
 			return err
 		}
 	}
+
+	if cfg.VFS.Driver.Type == "" {
+		cfg.VFS.Driver = DefaultConfig.VFS.Driver
+	}
 	if cfg.VFS.Logger.Path != "" {
 		err := mkdirAll(cfg.VFS.Logger.Path)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -103,7 +108,6 @@ func setConfigFromViper(cfg *Config, appInfo AppInfo) error {
 	}
 
 	cfg.App = appInfo
-	cfg.Server.Fiber.AppName = appInfo.Name + " v" + appInfo.Version
 
 	return nil
 }

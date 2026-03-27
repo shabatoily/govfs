@@ -20,6 +20,7 @@ import (
 	vfs "github.com/meteormin/govfs"
 	"github.com/meteormin/govfs/config"
 	"github.com/meteormin/govfs/server/middlewares/swaggo"
+	"github.com/meteormin/govfs/server/types"
 )
 
 // CommonMiddlewares returns a middleware that applies common middlewares to the app.
@@ -83,11 +84,14 @@ func CommonMiddlewares(app *fiber.App, cfg *config.ServerConfig) {
 		app.Get("/expose/envvars", jwtAuth, envvar.New()).Name("envvars")
 	}
 
-	// show configs
+	// show config
 	if cfg.Middlewares.Config {
-		app.Get("/configs", jwtAuth, func(c fiber.Ctx) error {
-			return c.Status(fiber.StatusOK).JSON(cfg)
-		}).Name("configs")
+		app.Get("/config", jwtAuth, func(c fiber.Ctx) error {
+			return c.Status(fiber.StatusOK).JSON(types.ConfigRes{
+				AppName:      cfg.Fiber.AppName,
+				ServerConfig: *cfg,
+			})
+		}).Name("config")
 	}
 
 	// show routes
