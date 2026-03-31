@@ -9,16 +9,18 @@ import (
 	"github.com/meteormin/govfs/client"
 	"github.com/meteormin/govfs/server/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAuthClient_Login(t *testing.T) {
-	t.Run("Success", func(t *testing.T) {
-		username := "admin"
-		password := "password"
-		token := "login-token"
+	username := "admin"
+	password := "password"
+	token := "login-token"
+	endPoint := "/auth/login"
 
+	t.Run("Success", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/auth/login" {
+			if r.URL.Path == endPoint {
 				assert.Equal(t, http.MethodPost, r.Method)
 				var req types.LoginRequest
 				err := json.NewDecoder(r.Body).Decode(&req)
@@ -43,20 +45,17 @@ func TestAuthClient_Login(t *testing.T) {
 
 		c := client.New(server.URL)
 		_, err := c.Auth().Login(username, password)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Trigger a request to verify the token is set and sent
 		resp, err := c.SSE().Subscribe()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode())
 	})
 
 	t.Run("Disabled", func(t *testing.T) {
-		username := "admin"
-		password := "password"
-
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/auth/login" {
+			if r.URL.Path == endPoint {
 				assert.Equal(t, http.MethodPost, r.Method)
 				w.WriteHeader(http.StatusOK)
 				_, _ = w.Write([]byte(`{}`))
@@ -67,15 +66,12 @@ func TestAuthClient_Login(t *testing.T) {
 
 		c := client.New(server.URL)
 		_, err := c.Auth().Login(username, password)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("Failed", func(t *testing.T) {
-		username := "admin"
-		password := "password"
-
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/auth/login" {
+			if r.URL.Path == endPoint {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
@@ -84,17 +80,18 @@ func TestAuthClient_Login(t *testing.T) {
 
 		c := client.New(server.URL)
 		_, err := c.Auth().Login(username, password)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "login failed: 401")
 	})
 }
 
 func TestAuthClient_Me(t *testing.T) {
-	t.Run("Success", func(t *testing.T) {
-		token := "login-token"
+	token := "login-token"
+	endPoint := "/auth/me"
 
+	t.Run("Success", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/auth/me" {
+			if r.URL.Path == endPoint {
 				assert.Equal(t, http.MethodGet, r.Method)
 
 				w.WriteHeader(http.StatusOK)
@@ -108,13 +105,13 @@ func TestAuthClient_Me(t *testing.T) {
 
 		c := client.New(server.URL)
 		res, err := c.Auth().Me()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, token, res.Token)
 	})
 
 	t.Run("Failed", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/auth/me" {
+			if r.URL.Path == endPoint {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
@@ -123,7 +120,7 @@ func TestAuthClient_Me(t *testing.T) {
 
 		c := client.New(server.URL)
 		_, err := c.Auth().Me()
-		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "not logged in: 401")
+		require.Error(t, err)
 	})
 }

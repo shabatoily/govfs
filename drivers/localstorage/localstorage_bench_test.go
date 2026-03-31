@@ -83,7 +83,7 @@ func Benchmark_LocalStorage_Read(b *testing.B) {
 			b.SetBytes(int64(bm.size))
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				f, err := ls.Open(meta.ID)
 				if err != nil {
 					b.Fatal(err)
@@ -117,7 +117,7 @@ func Benchmark_LocalStorage_Seek(b *testing.B) {
 	b.SetBytes(1024)
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		offset := int64((i * 102400) % (size - 1024))
 
 		if _, err := f.Seek(offset, io.SeekStart); err != nil {

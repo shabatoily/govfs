@@ -777,7 +777,7 @@ func Test_BadgerVFS_WriteLargeFile(t *testing.T) {
 			if !bytes.Equal(largeContent, readContent) {
 				t.Error("Read content does not match written content")
 				// Find first mismatch for debugging
-				for i := 0; i < len(largeContent); i++ {
+				for i := range largeContent {
 					if i >= len(readContent) {
 						t.Logf("Mismatch at offset %d: expected byte but read buffer ended", i)
 						break

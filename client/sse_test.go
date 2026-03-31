@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/meteormin/govfs/client"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSSEClient_Subscribe(t *testing.T) {
@@ -22,7 +23,7 @@ func TestSSEClient_Subscribe(t *testing.T) {
 
 		c := client.New(server.URL)
 		resp, err := c.SSE().Subscribe()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode())
 	})
 }
@@ -48,7 +49,7 @@ func TestSSEClient_Publish(t *testing.T) {
 
 		c := client.New(server.URL)
 		resp, err := c.SSE().Publish(id, data)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode())
 	})
 }

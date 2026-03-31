@@ -7,11 +7,12 @@ import (
 
 	"github.com/meteormin/govfs/client"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestClient_SetToken(t *testing.T) {
 	t.Run("SetToken", func(t *testing.T) {
-		token := "my-auth-token"
+		token := "my-auth-token" //nolint:gosec // This is a test token
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "Bearer "+token, r.Header.Get("Authorization"))
 			w.WriteHeader(http.StatusOK)
@@ -23,7 +24,7 @@ func TestClient_SetToken(t *testing.T) {
 
 		// Trigger a request to verify the token is sent
 		resp, err := c.SSE().Subscribe()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode())
 	})
 }

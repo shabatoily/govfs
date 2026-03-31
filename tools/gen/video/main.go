@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -8,25 +9,25 @@ import (
 	"path/filepath"
 )
 
-func main() {
-	var (
-		width    int
-		height   int
-		duration int
-		count    int
-		outDir   string
-		fps      int
-	)
+const dirFileMode = 0o755
 
-	flag.IntVar(&width, "width", 640, "Video width")
-	flag.IntVar(&height, "height", 480, "Video height")
-	flag.IntVar(&duration, "duration", 5, "Video duration in seconds")
-	flag.IntVar(&count, "count", 1, "Number of videos to generate")
-	flag.StringVar(&outDir, "out", ".", "Output directory")
-	flag.IntVar(&fps, "fps", 24, "Frames per second")
+func main() {
+	width := 640
+	height := 480
+	duration := 5
+	count := 1
+	outDir := "."
+	fps := 24
+
+	flag.IntVar(&width, "width", width, "Video width")
+	flag.IntVar(&height, "height", height, "Video height")
+	flag.IntVar(&duration, "duration", duration, "Video duration in seconds")
+	flag.IntVar(&count, "count", count, "Number of videos to generate")
+	flag.StringVar(&outDir, "out", outDir, "Output directory")
+	flag.IntVar(&fps, "fps", fps, "Frames per second")
 	flag.Parse()
 
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
+	if err := os.MkdirAll(outDir, dirFileMode); err != nil {
 		fmt.Printf("Error creating output directory: %v\n", err)
 		os.Exit(1)
 	}
@@ -39,9 +40,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	for i := 0; i < count; i++ {
+	ctx := context.Background()
+
+	for i := range count {
 		filename := filepath.Join(outDir, fmt.Sprintf("video_%d_%dx%d_%ds.mp4", i, width, height, duration))
-		if err := generateVideo(filename, width, height, duration, fps); err != nil {
+		if err := generateVideo(ctx, filename, width, height, duration, fps); err != nil {
 			fmt.Printf("Error generating video %s: %v\n", filename, err)
 		} else {
 			fmt.Printf("Generated %s\n", filename)
@@ -49,7 +52,7 @@ func main() {
 	}
 }
 
-func generateVideo(filename string, w, h, duration, fps int) error {
+func generateVideo(ctx context.Context, filename string, w, h, duration, fps int) error {
 	// Use ffmpeg to generate a test pattern video
 	// -f lavfi -i testsrc:size=WxH:rate=FPS:duration=SEC
 	// -c:v libx264 (H.264 is widely supported and lightweight enough for dummy)
@@ -65,7 +68,8 @@ func generateVideo(filename string, w, h, duration, fps int) error {
 	// changing background color of testsrc is not straightforward without complex filters,
 	// so we'll just stick to standard testsrc.
 
-	cmd := exec.Command("ffmpeg",
+	//nolint:gosec // 파일 경로는 내부 로직(filepath.Join)에 의해 생성되며, 파일명은 고정된 포맷을 따름
+	cmd := exec.CommandContext(ctx, "ffmpeg",
 		"-y",          // Overwrite output
 		"-f", "lavfi", // Input format: lavfi (Libavfilter input virtual device)
 		"-i", fmt.Sprintf("testsrc=size=%s:rate=%s:duration=%s", size, rate, dur), // Input source
@@ -79,7 +83,7 @@ func generateVideo(filename string, w, h, duration, fps int) error {
 	// fmt.Println(cmd.String())
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("ffmpeg failed: %v, output: %s", err, string(output))
+		return fmt.Errorf("ffmpeg failed: %w, output: %s", err, string(output))
 	}
 
 	return nil

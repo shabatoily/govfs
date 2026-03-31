@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -560,23 +561,33 @@ type countWriter struct {
 
 func (cw *countWriter) Write(p []byte) (int, error) {
 	n, err := cw.w.Write(p)
-	cw.n += uint64(n)
+	if n > 0 {
+		cw.n += uint64(n)
+	}
 	return n, err
 }
 
-func (ls *LocalStorage) Load(r io.Reader, maxPendingWrites int) error {
+func (ls *LocalStorage) Load(r io.Reader, _ int) error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 
 	// 1. Clear existing data
-	if err := os.RemoveAll(ls.basePath); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(ls.basePath, vfs.DefaultDirMode); err != nil {
+	if err := ls.clearData(); err != nil {
 		return err
 	}
 
 	// 2. Extract
+	return ls.extractArchive(r)
+}
+
+func (ls *LocalStorage) clearData() error {
+	if err := os.RemoveAll(ls.basePath); err != nil {
+		return err
+	}
+	return os.MkdirAll(ls.basePath, vfs.DefaultDirMode)
+}
+
+func (ls *LocalStorage) extractArchive(r io.Reader) error {
 	gr, err := gzip.NewReader(r)
 	if err != nil {
 		return err
@@ -597,45 +608,53 @@ func (ls *LocalStorage) Load(r io.Reader, maxPendingWrites int) error {
 			return err
 		}
 
-		if header.Name == IndexFileName {
-			// Write index back to disk too
-			if writeErr := ls.writeIndexFile(tr); writeErr != nil {
-				return writeErr
-			}
-			continue
+		if err := ls.extractTarEntry(header, tr); err != nil {
+			return err
 		}
-
-		// Security: prevent path traversal
-		// #nosec G305
-		targetPath := filepath.Join(ls.basePath, header.Name)
-		rel, err := filepath.Rel(ls.basePath, targetPath)
-		if err != nil || strings.HasPrefix(rel, "..") {
-			return fmt.Errorf("security: illegal path traversal in tar file: %s", header.Name)
-		}
-
-		if header.Typeflag == tar.TypeDir {
-			if mkdirErr := os.MkdirAll(targetPath, vfs.DefaultDirMode); mkdirErr != nil {
-				return mkdirErr
-			}
-			continue
-		}
-
-		if mkdirErr := os.MkdirAll(filepath.Dir(targetPath), vfs.DefaultDirMode); mkdirErr != nil {
-			return mkdirErr
-		}
-
-		f, openErr := os.OpenFile(targetPath, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-		if openErr != nil {
-			return openErr
-		}
-
-		if _, copyErr := io.Copy(f, tr); copyErr != nil {
-			f.Close()
-			return copyErr
-		}
-		f.Close()
 	}
 
+	return nil
+}
+
+func (ls *LocalStorage) extractTarEntry(header *tar.Header, tr *tar.Reader) error {
+	if header.Name == IndexFileName {
+		// Write index back to disk too
+		return ls.writeIndexFile(tr)
+	}
+
+	// Security: prevent path traversal
+	// #nosec G305
+	targetPath := filepath.Join(ls.basePath, header.Name)
+	rel, err := filepath.Rel(ls.basePath, targetPath)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return fmt.Errorf("security: illegal path traversal in tar file: %s", header.Name)
+	}
+
+	if header.Typeflag == tar.TypeDir {
+		return os.MkdirAll(targetPath, vfs.DefaultDirMode)
+	}
+
+	if mkdirAllErr := os.MkdirAll(filepath.Dir(targetPath), vfs.DefaultDirMode); mkdirAllErr != nil {
+		return mkdirAllErr
+	}
+
+	if header.Mode < 0 {
+		return fmt.Errorf("security: illegal file mode in tar file: %s", header.Name)
+	}
+
+	if header.Mode > math.MaxUint32 {
+		return fmt.Errorf("security: illegal file mode in tar file: %s", header.Name)
+	}
+
+	f, err := os.OpenFile(targetPath, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if _, err := io.Copy(f, tr); err != nil {
+		return err
+	}
 	return nil
 }
 

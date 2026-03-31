@@ -104,7 +104,7 @@ func (d *Adapter) Init(token *oauth2.Token) error {
 	return d.saveToken(token)
 }
 
-func (d *Adapter) AuthCodeURL(redirectURL string, state string) string {
+func (d *Adapter) AuthCodeURL(redirectURL, state string) string {
 	oauth2Config := d.cfg.OAuth2Config
 	oauth2Config.RedirectURL = redirectURL
 	return oauth2Config.AuthCodeURL(state, oauth2.AccessTypeOffline)

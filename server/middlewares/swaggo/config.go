@@ -1,3 +1,4 @@
+// Original code from https://github.com/gofiber/contrib/tree/main/v3/swaggo/config.go
 package swaggo
 
 import (
@@ -5,6 +6,8 @@ import (
 )
 
 // Config stores SwaggerUI configuration variables
+//
+//nolint:lll // Config struct is from original code
 type Config struct {
 	// This parameter can be used to name different swagger document instances.
 	// default: ""
@@ -190,7 +193,7 @@ type FilterConfig struct {
 	Expression string
 }
 
-func (fc FilterConfig) Value() interface{} {
+func (fc FilterConfig) Value() any {
 	if fc.Expression != "" {
 		return fc.Expression
 	}
@@ -207,13 +210,14 @@ type SyntaxHighlightConfig struct {
 	Theme string `json:"theme,omitempty"`
 }
 
-func (shc SyntaxHighlightConfig) Value() interface{} {
+func (shc SyntaxHighlightConfig) Value() any {
 	if shc.Activate {
 		return shc
 	}
 	return false
 }
 
+// OAuthConfig stores OAuth2 configuration variables
 type OAuthConfig struct {
 	// ID of the client sent to the OAuth2 provider.
 	// default: ""

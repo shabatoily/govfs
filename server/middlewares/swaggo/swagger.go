@@ -1,3 +1,4 @@
+// Original code from https://github.com/gofiber/contrib/tree/main/v3/swaggo/swagger.go
 package swaggo
 
 import (
@@ -24,6 +25,8 @@ const (
 var HandlerDefault = New()
 
 // New returns custom handler
+//
+//nolint:gocyclo // 기존 소스 그대로 가져옴
 func New(config ...Config) fiber.Handler {
 	cfg := configDefault(config...)
 
@@ -48,6 +51,7 @@ func New(config ...Config) fiber.Handler {
 		}
 
 		cfgCopy := cfg
+		//nolint:gocritic // 기존 소스 그대로 가져옴
 		if len(cfgCopy.URL) == 0 {
 			cfgCopy.URL = path.Join(prefix, defaultDocURL)
 		}

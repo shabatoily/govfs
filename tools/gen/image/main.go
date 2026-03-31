@@ -9,29 +9,37 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
-	"strconv"
+)
+
+const (
+	defaultDirMode = 0o755
+
+	mod = 255
+
+	x0 = 10
+	y0 = 10
+	x1 = 60
+	y1 = 60
 )
 
 func main() {
-	var (
-		width  int
-		height int
-		count  int
-		outDir string
-	)
+	width := 640
+	height := 480
+	count := 1
+	outDir := "."
 
-	flag.IntVar(&width, "width", 640, "Image width")
-	flag.IntVar(&height, "height", 480, "Image height")
-	flag.IntVar(&count, "count", 1, "Number of images to generate")
-	flag.StringVar(&outDir, "out", ".", "Output directory")
+	flag.IntVar(&width, "width", width, "Image width")
+	flag.IntVar(&height, "height", height, "Image height")
+	flag.IntVar(&count, "count", count, "Number of images to generate")
+	flag.StringVar(&outDir, "out", outDir, "Output directory")
 	flag.Parse()
 
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
+	if err := os.MkdirAll(outDir, defaultDirMode); err != nil {
 		fmt.Printf("Error creating output directory: %v\n", err)
 		os.Exit(1)
 	}
 
-	for i := 0; i < count; i++ {
+	for i := range count {
 		filename := filepath.Join(outDir, fmt.Sprintf("image_%d_%dx%d.png", i, width, height))
 		if err := generateImage(filename, width, height, i); err != nil {
 			fmt.Printf("Error generating image %s: %v\n", filename, err)
@@ -44,13 +52,18 @@ func main() {
 func generateImage(filename string, w, h, index int) error {
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
 
+	if index < 0 {
+		return fmt.Errorf("invalid index: %d", index)
+	}
+
 	// Fill background with a unique color based on index
 	bgColor := color.RGBA{
-		R: uint8((index * 50) % 255),
-		G: uint8((index * 80) % 255),
-		B: uint8((index * 110) % 255),
-		A: 255,
+		R: uint8((index * 50) % mod),
+		G: uint8((index * 80) % mod),
+		B: uint8((index * 110) % mod),
+		A: uint8(mod),
 	}
+
 	draw.Draw(img, img.Bounds(), &image.Uniform{bgColor}, image.Point{}, draw.Src)
 
 	// Draw a diagonal line
@@ -64,8 +77,8 @@ func generateImage(filename string, w, h, index int) error {
 	for y := 20; y < h-20; y += gridSize {
 		for x := 20; x < w-20; x += gridSize {
 			// Draw filled square
-			for dy := 0; dy < 4; dy++ {
-				for dx := 0; dx < 4; dx++ {
+			for dy := range 4 {
+				for dx := range 4 {
 					img.Set(x+dx, y+dy, color.White)
 				}
 			}
@@ -73,8 +86,8 @@ func generateImage(filename string, w, h, index int) error {
 	}
 
 	// Draw index number (simulated by a colored block at top-left)
-	indexColor := color.RGBA{uint8(index % 255), 255, 0, 255}
-	draw.Draw(img, image.Rect(10, 10, 60, 60), &image.Uniform{indexColor}, image.Point{}, draw.Src)
+	indexColor := color.RGBA{uint8(index % mod), uint8(mod), 0, uint8(mod)}
+	draw.Draw(img, image.Rect(x0, y0, x1, y1), &image.Uniform{indexColor}, image.Point{}, draw.Src)
 
 	// Draw size text (simulated)
 	// Real text drawing requires external font parsing which is heavy for a "dummy" generator,
@@ -88,16 +101,4 @@ func generateImage(filename string, w, h, index int) error {
 
 	// PNG for lossless, widely supported dummy image
 	return png.Encode(f, img)
-}
-
-func parseColor(s string) color.RGBA {
-	// Simple helper if we wanted custom colors, currently unused but good for extension
-	// expecting hex string like "#RRGGBB"
-	if len(s) == 7 && s[0] == '#' {
-		r, _ := strconv.ParseUint(s[1:3], 16, 8)
-		g, _ := strconv.ParseUint(s[3:5], 16, 8)
-		b, _ := strconv.ParseUint(s[5:7], 16, 8)
-		return color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: 255}
-	}
-	return color.RGBA{0, 0, 0, 255} // Default black
 }

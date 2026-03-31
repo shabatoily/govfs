@@ -36,6 +36,7 @@ type Meta struct {
 	Comments  string    `json:"comments"`
 }
 
+//nolint:gocyclo // switch case is not long
 func (m *Meta) MIME() string {
 	switch m.Extension {
 	case "md":

@@ -46,24 +46,16 @@ func Test_LocalStorage_Mkdir(t *testing.T) {
 		wantErr assert.ErrorAssertionFunc
 	}{
 		{
-			name:  "Create Single Directory",
-			setup: nil,
-			args:  args{path: "/test"},
-			wantErr: func(t assert.TestingT, err error, i ...any) bool {
-				return assert.NoError(t, err, i...)
-			},
+			name:    "Create Single Directory",
+			setup:   nil,
+			args:    args{path: "/test"},
+			wantErr: assert.NoError,
 		},
 		{
-			name:  "Create Nested Directory",
-			setup: nil,
-			args:  args{path: "/test/a/b"},
-			wantErr: func(t assert.TestingT, err error, _ ...any) bool {
-				// LocalStorage implementation uses MkdirAll, so nested creation implies parents created automatically?
-				// The implementation logic for Create/Mkdir uses os.MkdirAll.
-				// However, VFS spec often requires strict parent existence or recursive flag.
-				// Let's check implementation: `os.MkdirAll(localPath)` -> Success.
-				return assert.NoError(t, err)
-			},
+			name:    "Create Nested Directory",
+			setup:   nil,
+			args:    args{path: "/test/a/b"},
+			wantErr: assert.NoError,
 		},
 		{
 			name: "Create Existing Directory",
@@ -558,7 +550,7 @@ func Test_LocalStorage_Seek(t *testing.T) {
 			name:     "Seek Current",
 			offset:   5,
 			whence:   io.SeekCurrent,
-			expected: 20, // 10(prev) + 5(read) + 5(seek) = 20
+			expected: 20,
 			readLen:  1,
 			want:     "K",
 			wantErr:  false,
@@ -646,21 +638,21 @@ func Test_RecursiveDelete(t *testing.T) {
 
 	// Verify /a is gone
 	_, err = ls.Stat(metaA.ID)
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = ls.StatByPath("/a/")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// Verify /a/b is gone (recursive metadata cleanup)
 	_, err = ls.Stat(metaB.ID)
-	assert.Error(t, err, "Child directory metadata should be deleted")
+	require.Error(t, err, "Child directory metadata should be deleted")
 	_, err = ls.StatByPath("/a/b/")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// Verify /a/b/c.txt is gone
 	_, err = ls.Stat(metaC.ID)
-	assert.Error(t, err, "Grandchild file metadata should be deleted")
+	require.Error(t, err, "Grandchild file metadata should be deleted")
 	_, err = ls.StatByPath("/a/b/c.txt")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func Test_RecursiveMove(t *testing.T) {
@@ -668,9 +660,14 @@ func Test_RecursiveMove(t *testing.T) {
 	defer cleanup()
 
 	// Create /a/b/c.txt
-	ls.Mkdir("/a")
-	ls.Mkdir("/a/b")
-	ls.Create("/a/b/c.txt", bytes.NewBufferString("content"))
+	_, err := ls.Mkdir("/a")
+	require.NoError(t, err)
+
+	_, err = ls.Mkdir("/a/b")
+	require.NoError(t, err)
+
+	_, err = ls.Create("/a/b/c.txt", bytes.NewBufferString("content"))
+	require.NoError(t, err)
 
 	metaA, err := ls.StatByPath("/a/")
 	require.NoError(t, err)
@@ -681,21 +678,21 @@ func Test_RecursiveMove(t *testing.T) {
 
 	// Verify /a gone
 	_, err = ls.StatByPath("/a/")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// Verify /x exists
 	_, err = ls.StatByPath("/x/")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Verify /x/b exists (recursive update)
 	metaB, err := ls.StatByPath("/x/b/")
-	assert.NoError(t, err, "Child path should be updated")
-	assert.Equal(t, "/x/b/", metaB.Path)
+	require.NoError(t, err, "Child path should be updated")
+	require.Equal(t, "/x/b/", metaB.Path)
 
 	// Verify /x/b/c.txt exists
 	metaC, err := ls.StatByPath("/x/b/c.txt")
-	assert.NoError(t, err, "Grandchild path should be updated")
-	assert.Equal(t, "/x/b/c.txt", metaC.Path)
+	require.NoError(t, err, "Grandchild path should be updated")
+	require.Equal(t, "/x/b/c.txt", metaC.Path)
 
 	// Content check
 	f, err := ls.Open(metaC.ID)
@@ -707,10 +704,17 @@ func Test_TreeStructure(t *testing.T) {
 	ls, cleanup := setupVFS(t)
 	defer cleanup()
 
-	ls.Mkdir("/a")
-	ls.Mkdir("/a/b")
-	ls.Create("/a/b/c.txt", bytes.NewBuffer([]byte("c")))
-	ls.Create("/a/d.txt", bytes.NewBuffer([]byte("d")))
+	_, err := ls.Mkdir("/a")
+	require.NoError(t, err)
+
+	_, err = ls.Mkdir("/a/b")
+	require.NoError(t, err)
+
+	_, err = ls.Create("/a/b/c.txt", bytes.NewBuffer([]byte("c")))
+	require.NoError(t, err)
+
+	_, err = ls.Create("/a/d.txt", bytes.NewBuffer([]byte("d")))
+	require.NoError(t, err)
 
 	// Tree("/")
 	root, err := ls.Tree("/")
@@ -732,9 +736,10 @@ func Test_TreeStructure(t *testing.T) {
 	var nodeB, nodeD *vfs.TreeNode
 	for _, child := range nodeA.Children {
 		name := filepath.Base(child.Meta.Path)
-		if name == "b" {
+		switch name {
+		case "b":
 			nodeB = child
-		} else if name == "d.txt" {
+		case "d.txt":
 			nodeD = child
 		}
 	}

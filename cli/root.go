@@ -68,6 +68,7 @@ func SetUserConfig(u *UserConfig) error {
 	}
 	defer file.Close()
 
+	//nolint:gosec // Password is not hardcoded, it is stored in the config file
 	return toml.NewEncoder(file).Encode(u)
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/meteormin/govfs/client"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCloudClient_GoogleDriveAuthCodeURL(t *testing.T) {
@@ -28,7 +29,7 @@ func TestCloudClient_GoogleDriveAuthCodeURL(t *testing.T) {
 
 		c := client.New(server.URL)
 		url, err := c.Cloud().GoogleDriveAuthCodeURL()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, expectedURL, url)
 	})
 }
@@ -49,7 +50,7 @@ func TestCloudClient_List(t *testing.T) {
 
 		c := client.New(server.URL)
 		files, err := c.Cloud().List("/some/path")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, expectedFiles, files)
 	})
 }
@@ -63,7 +64,9 @@ func TestCloudClient_Upload(t *testing.T) {
 			assert.Equal(t, "/cloud", r.URL.Path)
 			assert.Equal(t, http.MethodPost, r.Method)
 
-			err := r.ParseMultipartForm(32 << 20)
+			r.Body = http.MaxBytesReader(w, r.Body, 32<<20)
+
+			err := r.ParseForm()
 			assert.NoError(t, err)
 
 			file, header, err := r.FormFile("file")
@@ -101,11 +104,11 @@ func TestCloudClient_Download(t *testing.T) {
 
 		c := client.New(server.URL)
 		reader, err := c.Cloud().Download("/some/file.txt")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		buf := new(bytes.Buffer)
 		_, err = io.Copy(buf, reader)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, fileContent, buf.String())
 	})
 }

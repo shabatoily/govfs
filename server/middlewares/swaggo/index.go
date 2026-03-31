@@ -1,3 +1,6 @@
+// Original code from https://github.com/gofiber/contrib/tree/main/v3/swaggo/index.go
+//
+//nolint:lll // 원본 코드의 라인 길이가 길어 어쩔 수 없음
 package swaggo
 
 const indexTmpl string = `

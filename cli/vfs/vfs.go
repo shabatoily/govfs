@@ -137,9 +137,16 @@ func (h *Handler) handleUpload(srcLocal, dstVfs string) error {
 func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 	var count int
 	var totalBytes int64
+
 	startTime := time.Now()
 
-	err := filepath.Walk(srcLocal, func(path string, info os.FileInfo, err error) error {
+	root, err := os.OpenRoot(srcLocal)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+
+	err = filepath.Walk(srcLocal, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -196,7 +203,7 @@ func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 			return nil
 		}
 
-		f, err := os.Open(path)
+		f, err := root.Open(path)
 		if err != nil {
 			return err
 		}

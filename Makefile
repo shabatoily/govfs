@@ -33,25 +33,21 @@ OS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 # 아키텍처 정보를 반환합니다. (예: amd64, arm64 등)
 ARCH := $(shell ./scripts/detect-arch)
 
-##install: install development packages
-.PHONY: install
-install:
-	@echo "[install] installing development packages"
-	@echo "[install] go mod download"
-	go mod download
-	@echo "[install] go mod tidy"
-	go mod tidy
-	@echo "[install] yarn install"
-	yarn --cwd webui install
-	@echo "[install] complete install"
+##audit: 🚀 Conduct quality checks
+.PHONY: audit
+audit:
+	@echo "[audit] starting audit"
+	go mod verify
+	go vet ./...
+	GOTOOLCHAIN=$(GOVERSION) go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+	@echo "[audit] complete audit"
 
-##build-webui
-.PHONY: build-webui
-build-webui:
-	@echo "[build-webui] building webui"
-	@echo "[build-webui] yarn build"
-	yarn --cwd webui build
-	@echo "[build-webui] complete build-webui"
+##benchmark: 📈 Benchmark code performance
+.PHONY: benchmark
+benchmark:
+	@echo "[benchmark] starting benchmark $(PRJ_NAME)"
+	go test ./... -benchmem -bench=. -run=^Benchmark$
+	@echo "[benchmark] complete benchmark"
 
 ##build os={os [linux, darwin]} arch={arch [amd64, arm64]} tag={tag [v1.0.0]}: build application
 .PHONY: build
@@ -79,6 +75,66 @@ build-docker:
 	@echo "[build-docker] image: ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):$(tag)"
 	docker build -t ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):$(tag) --build-arg "VERSION=$(tag)" --build-arg "BUILD_TIME=$(DATE_UTC)" .
 	@echo "[build-docker] complete build-docker"
+
+##build-webui
+.PHONY: build-webui
+build-webui:
+	@echo "[build-webui] building webui"
+	@echo "[build-webui] yarn build"
+	yarn --cwd webui build
+	@echo "[build-webui] complete build-webui"
+
+##clean: clean project build and cache
+.PHONY: clean
+clean:
+	@echo "[clean] Cleaning project build and cache"
+	@echo "[clean] remove build output directory"
+	rm -rf bin/*
+	rm -rf webui/dist/*
+	@echo "[clean] clean go cache"
+	go clean -cache
+	go clean -modcache
+	@echo "[clean] clean yarn cache"
+	yarn --cwd webui cache clean
+	@echo "[clean] clear node_modules"
+	rm -rf webui/node_modules
+	@echo "[clean] complete clean"
+
+##clean-docker: clean docker
+.PHONY: clean-docker
+clean-docker:
+	@echo "[clean-docker] cleaning docker"
+	rm -rf .docker/*
+	./scripts/docker-clean
+	@echo "[clean-docker] complete clean-docker"
+
+##coverage: ☂️  Generate coverage report
+.PHONY: coverage
+coverage:
+	@echo "[coverage] starting coverage"
+	go test ./... -coverprofile=/tmp/coverage.out
+	@echo "[coverage] generating coverage report"
+	go tool cover -html=/tmp/coverage.out
+	@echo "[coverage] complete coverage"
+
+##install: install development packages
+.PHONY: install
+install:
+	@echo "[install] installing development packages"
+	@echo "[install] go mod download"
+	go mod download
+	@echo "[install] go mod tidy"
+	go mod tidy -v
+	@echo "[install] yarn install"
+	yarn --cwd webui install
+	@echo "[install] complete install"
+
+##lint: 🚨 Run lint checks
+.PHONY: lint
+lint:
+	@echo "[lint] starting lint"
+	GOTOOLCHAIN=$(GOVERSION) go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4 run ./...
+	@echo "[lint] complete lint"
 
 ##release tag={tag [v1.0.0]}: release application
 .PHONY: release
@@ -108,36 +164,12 @@ release-docker:
 	docker push ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):latest
 	@echo "[release-docker] complete release-docker"
 
-##clean: clean project build and cache
-.PHONY: clean
-clean:
-	@echo "[clean] Cleaning project build and cache"
-	@echo "[clean] remove build output directory"
-	rm -rf bin/*
-	rm -rf webui/dist/*
-	@echo "[clean] clean go cache"
-	go clean -cache
-	go clean -modcache
-	@echo "[clean] clean yarn cache"
-	yarn --cwd webui cache clean
-	@echo "[clean] clear node_modules"
-	rm -rf webui/node_modules
-	@echo "[clean] complete clean"
-
-##clean-docker: clean docker
-.PHONY: clean-docker
-clean-docker:
-	@echo "[clean-docker] cleaning docker"
-	rm -rf .docker/*
-	./scripts/docker-clean
-	@echo "[clean-docker] complete clean-docker"
-
-##test-webui: test webui
-.PHONY: test-webui
-test-webui:
-	@echo "[test-webui] starting test webui"
-	cd webui && yarn test run
-	@echo "[test-webui] complete test webui"
+##swag: generate api docs
+.PHONY: swag
+swag:
+	@echo "[swag] generating api docs"
+	swag init -g cmd/server/main.go --parseDependency --parseInternal --v3.1
+	@echo "[swag] complete swag"
 
 ##test report={[0=inactive, 1=active]}: test
 .PHONY: test
@@ -154,25 +186,9 @@ else
 endif
 	@echo "[test] complete test"
 
-##benchmark: 📈 Benchmark code performance
-.PHONY: benchmark
-benchmark:
-	@echo "[benchmark] starting benchmark $(PRJ_NAME)"
-	go test ./... -benchmem -bench=. -run=^Benchmark$
-	@echo "[benchmark] complete benchmark"
-
-##coverage: ☂️  Generate coverage report
-.PHONY: coverage
-coverage:
-	@echo "[coverage] starting coverage"
-	go test ./... -coverprofile=/tmp/coverage.out
-	@echo "[coverage] generating coverage report"
-	go tool cover -html=/tmp/coverage.out
-	@echo "[coverage] complete coverage"
-
-##swag: generate api docs
-.PHONY: swag
-swag:
-	@echo "[swag] generating api docs"
-	swag init -g cmd/server/main.go --parseDependency --parseInternal --v3.1
-	@echo "[swag] complete swag"
+##test-webui: test webui
+.PHONY: test-webui
+test-webui:
+	@echo "[test-webui] starting test webui"
+	cd webui && yarn test run
+	@echo "[test-webui] complete test webui"

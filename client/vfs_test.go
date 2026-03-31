@@ -107,7 +107,8 @@ func TestVFSClient_CreateDir(t *testing.T) {
 		assert.Equal(t, "/vfs", r.URL.Path)
 		assert.Equal(t, http.MethodPost, r.Method)
 
-		err := r.ParseMultipartForm(32 << 20)
+		r.Body = http.MaxBytesReader(w, r.Body, 32<<20)
+		err := r.ParseMultipartForm(30 << 20)
 		assert.NoError(t, err)
 		assert.Equal(t, "true", r.FormValue("isDir"))
 		assert.Equal(t, dirName, r.FormValue("name"))
@@ -142,6 +143,7 @@ func TestVFSClient_CreateFile(t *testing.T) {
 		assert.Equal(t, "/vfs", r.URL.Path)
 		assert.Equal(t, http.MethodPost, r.Method)
 
+		r.Body = http.MaxBytesReader(w, r.Body, 32<<20)
 		parseErr := r.ParseMultipartForm(32 << 20)
 		assert.NoError(t, parseErr)
 		assert.Equal(t, "false", r.FormValue("isDir"))
@@ -272,7 +274,8 @@ func TestVFSClient_Admin_Restore(t *testing.T) {
 		assert.Equal(t, "/vfs/restore", r.URL.Path)
 		assert.Equal(t, http.MethodPost, r.Method)
 
-		parseErr := r.ParseMultipartForm(32 << 20)
+		r.Body = http.MaxBytesReader(w, r.Body, 32<<20)
+		parseErr := r.ParseMultipartForm(30 << 20)
 		assert.NoError(t, parseErr)
 
 		file, header, fileErr := r.FormFile("file")
@@ -309,11 +312,11 @@ func TestVFSClient_Admin_Backup(t *testing.T) {
 
 	c := client.New(server.URL)
 	reader, err := c.VFS().Backup()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, reader)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, content, buf.String())
 }
 
@@ -358,7 +361,7 @@ func TestVFSClient_Meta_Stat(t *testing.T) {
 
 	c := client.New(server.URL)
 	meta, err := c.VFS().Stat(id)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedMeta.Name, meta.Name)
 }
 
@@ -386,7 +389,7 @@ func TestVFSClient_Meta_Tree(t *testing.T) {
 
 	c := client.New(server.URL)
 	res, err := c.VFS().Tree("/")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "root", res.Meta.Name)
 }
 
