@@ -13,7 +13,6 @@ import (
 	"github.com/meteormin/govfs/docs"
 	"github.com/meteormin/govfs/drivers"
 	"github.com/meteormin/govfs/drivers/badger"
-	"github.com/meteormin/govfs/drivers/localstorage"
 )
 
 type AppInfo struct {
@@ -90,9 +89,6 @@ var DefaultConfig = &Config{
 		Driver: drivers.Config{
 			Type: drivers.DriverTypeBadger,
 			Badger: badger.Config{
-				Path: "./data",
-			},
-			LocalStorage: localstorage.Config{
 				Path: "./data",
 			},
 		},
