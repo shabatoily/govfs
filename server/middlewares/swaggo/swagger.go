@@ -124,7 +124,7 @@ func getForwardedPrefix(c fiber.Ctx) string {
 		return ""
 	}
 
-	prefix := ""
+	var prefix strings.Builder
 
 	for _, rawPrefix := range header {
 		endIndex := len(rawPrefix)
@@ -132,8 +132,8 @@ func getForwardedPrefix(c fiber.Ctx) string {
 			endIndex--
 		}
 
-		prefix += rawPrefix[:endIndex]
+		prefix.WriteString(rawPrefix[:endIndex])
 	}
 
-	return prefix
+	return prefix.String()
 }

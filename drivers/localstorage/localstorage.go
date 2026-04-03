@@ -388,8 +388,8 @@ func (ls *LocalStorage) Move(id uuid.UUID, dst string) (vfs.Meta, error) {
 			if uid == id {
 				continue
 			}
-			if strings.HasPrefix(m.Path, prefix) {
-				rel := strings.TrimPrefix(m.Path, prefix)
+			if after, ok0 := strings.CutPrefix(m.Path, prefix); ok0 {
+				rel := after
 				newPath := dstPrefix + rel
 
 				delete(ls.pathMap, m.Path)
