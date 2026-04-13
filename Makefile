@@ -2,12 +2,17 @@ PRJ_NAME=govfs
 GITHUB_USER=meteormin
 AUTHOR="Meteormin \(miniyu97@gmail.com\)"
 PRJ_BASE=$(shell pwd)
-PRJ_DESC=$(PRJ_NAME) Deployment and Development Makefile.\n Author: $(AUTHOR)
+PRJ_DESC=$(PRJ_NAME) Deployment and Development Makefile.
 
 SUPPORTED_OS=linux darwin
 SUPPORTED_ARCH=amd64 arm64
 
 DATE_UTC=$(shell date +"%Y-%m-%dT%H:%M:%S%z")
+
+# OS와 ARCH가 정의되어 있지 않으면 기본값을 설정합니다.
+# go env를 통해 현재 시스템의 OS와 ARCH를 가져옵니다.
+OS=$(shell go env GOOS)
+ARCH=$(shell go env GOARCH)
 
 .DEFAULT: help
 .SILENT:;
@@ -18,6 +23,11 @@ help: Makefile
 	echo ""
 	echo " $(PRJ_DESC)"
 	echo ""
+	echo " Author: $(AUTHOR)"
+	echo ""
+	echo " OS: $(OS)"
+	echo " ARCH: $(ARCH)"
+	echo ""
 	echo " Usage:"
 	echo ""
 	echo "	make {command}"
@@ -26,12 +36,6 @@ help: Makefile
 	echo ""
 	sed -n 's/^##/	/p' $< | column -t -s ':' |  sed -e 's/^/ /'
 	echo ""
-
-# OS와 ARCH가 정의되어 있지 않으면 기본값을 설정합니다.
-# uname -s는 OS 이름(예: Linux, Darwin 등)을 반환하고, tr를 통해 소문자로 변환합니다.
-OS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
-# 아키텍처 정보를 반환합니다. (예: amd64, arm64 등)
-ARCH := $(shell ./scripts/detect-arch)
 
 ##audit: 🚀 Conduct quality checks
 .PHONY: audit
