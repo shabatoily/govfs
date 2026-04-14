@@ -130,7 +130,7 @@ func TestVFSClient_CreateFile(t *testing.T) {
 
 	tempDir := t.TempDir()
 	filePath := filepath.Join(tempDir, fileName)
-	err := os.WriteFile(filePath, []byte(fileContent), 0o600)
+	err := os.WriteFile(filePath, []byte(fileContent), 0600)
 	require.NoError(t, err)
 	defer os.Remove(filePath)
 

@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	defaultDirMode = 0o755
+	defaultDirMode = 0755
 
 	mod = 255
 

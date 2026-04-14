@@ -3,7 +3,7 @@
 # Configuration
 APP_NAME="govfs"
 CLI_NAME="govfs-cli"
-GITHUB_REPO="meteormin/govfs"
+GITHUB_REPO="${GITHUB_REPO:-meteormin/govfs}"
 
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')"
@@ -20,38 +20,45 @@ BIN_URL="https://github.com/${GITHUB_REPO}/releases/latest/download/${BIN_NAME}"
 CLI_BIN_URL="https://github.com/${GITHUB_REPO}/releases/latest/download/${CLI_BIN_NAME}"
 CONFIG_URL="https://github.com/${GITHUB_REPO}/releases/latest/download/config.toml"
 
-echo "Setup workspace directory..."
+echo "🚀 Starting installation for ${GITHUB_REPO}..."
+echo "📍 Workspace: $APP_DIR"
+
+echo "📁 Setup workspace directory..."
 mkdir -p "$APP_DIR"
 
-echo "Downloading config.toml from latest GitHub release..."
+echo "📥 Downloading config.toml from latest GitHub release..."
 if command -v curl >/dev/null 2>&1; then
-    curl -sfL "$CONFIG_URL" -o "$CONFIG_PATH" || { echo "Error: Failed to download config.toml from latest release."; exit 1; }
+    curl -sfL "$CONFIG_URL" -o "$CONFIG_PATH" || { echo "❌ Error: Failed to download config.toml."; exit 1; }
 else
-    wget -qO "$CONFIG_PATH" "$CONFIG_URL" || { echo "Error: Failed to download config.toml from latest release."; exit 1; }
+    wget -qO "$CONFIG_PATH" "$CONFIG_URL" || { echo "❌ Error: Failed to download config.toml."; exit 1; }
 fi
 
 # 2. 서버 및 CLI 바이너리 다운로드 및 설치
-echo "Downloading server binary ($BIN_NAME) from latest GitHub release..."
+cleanup() {
+    rm -f "$TMP_BIN" "$TMP_CLI_BIN"
+}
+trap cleanup EXIT
+
+echo "📥 Downloading server binary ($BIN_NAME) from latest GitHub release..."
 TMP_BIN="/tmp/$BIN_NAME"
 if command -v curl >/dev/null 2>&1; then
-    curl -sfL "$BIN_URL" -o "$TMP_BIN" || { echo "Error: Failed to download binary $BIN_NAME from latest release."; exit 1; }
+    curl -sfL "$BIN_URL" -o "$TMP_BIN" || { echo "❌ Error: Failed to download binary $BIN_NAME."; exit 1; }
 else
-    wget -qO "$TMP_BIN" "$BIN_URL" || { echo "Error: Failed to download binary $BIN_NAME from latest release."; exit 1; }
+    wget -qO "$TMP_BIN" "$BIN_URL" || { echo "❌ Error: Failed to download binary $BIN_NAME."; exit 1; }
 fi
 
-echo "Downloading CLI binary ($CLI_BIN_NAME) from latest GitHub release..."
+echo "📥 Downloading CLI binary ($CLI_BIN_NAME) from latest GitHub release..."
 TMP_CLI_BIN="/tmp/$CLI_BIN_NAME"
 if command -v curl >/dev/null 2>&1; then
-    curl -sfL "$CLI_BIN_URL" -o "$TMP_CLI_BIN" || { echo "Error: Failed to download CLI binary $CLI_BIN_NAME from latest release."; exit 1; }
+    curl -sfL "$CLI_BIN_URL" -o "$TMP_CLI_BIN" || { echo "❌ Error: Failed to download CLI binary $CLI_BIN_NAME."; exit 1; }
 else
-    wget -qO "$TMP_CLI_BIN" "$CLI_BIN_URL" || { echo "Error: Failed to download CLI binary $CLI_BIN_NAME from latest release."; exit 1; }
+    wget -qO "$TMP_CLI_BIN" "$CLI_BIN_URL" || { echo "❌ Error: Failed to download CLI binary $CLI_BIN_NAME."; exit 1; }
 fi
 
-echo "Installing server binary to $INSTALL_PATH..."
+echo "⚙️  Installing binaries to /usr/local/bin (requires sudo)..."
 sudo mv "$TMP_BIN" "$INSTALL_PATH"
 sudo chmod +x "$INSTALL_PATH"
 
-echo "Installing CLI binary to $CLI_INSTALL_PATH..."
 sudo mv "$TMP_CLI_BIN" "$CLI_INSTALL_PATH"
 sudo chmod +x "$CLI_INSTALL_PATH"
 

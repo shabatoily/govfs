@@ -12,8 +12,8 @@ import (
 const (
 	Root = "/"
 
-	DefaultFileMode = 0o644
-	DefaultDirMode  = 0o755
+	DefaultFileMode = 0644
+	DefaultDirMode  = 0755
 )
 
 var (

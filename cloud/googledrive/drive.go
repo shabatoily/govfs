@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	tokenDirMode         = 0o600
-	tokenFileMode        = 0o600
+	tokenDirMode         = 0600
+	tokenFileMode        = 0600
 	defaultTokenFilename = "token.json"
 )
 

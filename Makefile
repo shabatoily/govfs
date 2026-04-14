@@ -140,21 +140,23 @@ lint:
 	GOTOOLCHAIN=$(GOVERSION) go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4 run ./...
 	@echo "[lint] complete lint"
 
-##release tag={tag [v1.0.0]}: release application
+## release tag={tag [v1.0.0]}: release application
 .PHONY: release
 release: tag ?= "0.0.1"
 release:
 	@echo "[release] releasing at $(DATE_UTC)"
 	@echo "[release] tag: $(tag)"
-	@echo "[release] target: release/$(tag)"
-	mkdir -p release/$(tag)
+	@echo "[release] target: release/"
+	rm -rf release/*
+	mkdir -p release
 	$(foreach os, $(SUPPORTED_OS), \
 		$(foreach arch, $(SUPPORTED_ARCH), \
 			$(MAKE) build os=$(os) arch=$(arch); \
-			cp bin/$(PRJ_NAME)-$(os)-$(arch) release/$(tag)/; \
+			cp bin/$(PRJ_NAME)-$(os)-$(arch) release/; \
+			cp bin/$(PRJ_NAME)-cli-$(os)-$(arch) release/; \
 		) \
 	)
-	cp config.toml release/$(tag)/config.toml
+	cp config.toml release/config.toml
 
 ##release-docker tag={tag [v1.0.0]}: release application
 .PHONY: release-docker

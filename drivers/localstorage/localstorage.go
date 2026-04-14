@@ -520,7 +520,7 @@ func (ls *LocalStorage) Backup(w io.Writer, _ uint64) (uint64, error) {
 	// Write Index to Tar
 	hdr := &tar.Header{
 		Name: IndexFileName,
-		Mode: 0o644,
+		Mode: 0644,
 		Size: int64(len(indexData)),
 	}
 	if err := tw.WriteHeader(hdr); err != nil {

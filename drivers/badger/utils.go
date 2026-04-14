@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	secretFileMode = 0o600
-	secretDirMode  = 0o755
+	secretFileMode = 0600
+	secretDirMode  = 0755
 	chunkSeqLen    = 4
 )
 
