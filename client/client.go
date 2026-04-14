@@ -1,3 +1,4 @@
+// Package client는 govfs 서버와 통신하기 위한 API 클라이언트를 제공합니다.
 package client
 
 import (
@@ -10,12 +11,13 @@ import (
 	"github.com/meteormin/govfs/server/types"
 )
 
+// baseClient는 모든 세부 클라이언트(Auth, Cloud 등)에서 공통으로 사용하는 기본 클라이언트 구조체입니다.
 type baseClient struct {
 	mu sync.RWMutex // 읽기/쓰기 잠금 제어
 	c  *client.Client
 }
 
-// SetToken manually sets the authorization token
+// SetToken은 서버 통신에 사용할 인증 토큰을 수동으로 설정합니다.
 func (c *baseClient) SetToken(token string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -24,6 +26,7 @@ func (c *baseClient) SetToken(token string) {
 	}
 }
 
+// Config는 서버로부터 전체 설정 정보를 조회합니다.
 func (c *baseClient) Config() (types.ConfigRes, error) {
 	res, err := c.c.Get("/config", client.Config{
 		Header: map[string]string{"Content-Type": "application/json"},
@@ -38,6 +41,7 @@ func (c *baseClient) Config() (types.ConfigRes, error) {
 	return cfg, nil
 }
 
+// Client는 모든 분산된 클라이언트 기능을 하나로 통합하는 메인 클라이언트 구조체입니다.
 type Client struct {
 	*baseClient
 	auth  *AuthClient
@@ -62,6 +66,7 @@ func (c *Client) VFS() *VFSClient {
 	return c.vfs
 }
 
+// New는 주어진 URL을 기반으로 새로운 통합 API 클라이언트를 생성합니다.
 func New(url string) *Client {
 	c := client.New()
 	c.SetBaseURL(url)
@@ -75,7 +80,7 @@ func New(url string) *Client {
 	}
 }
 
-// Helper function to create JSON config
+// createJSONConfig는 데이터를 JSON으로 직렬화하여 클라이언트 요청 설정을 생성하는 헬퍼 함수입니다.
 func createJSONConfig(data any) (client.Config, error) {
 	jsonb, err := json.Marshal(data)
 	if err != nil {
@@ -87,7 +92,7 @@ func createJSONConfig(data any) (client.Config, error) {
 	}, nil
 }
 
-// Helper function to check response status and unmarshal body
+// checkResponse는 응답 상태 코드를 확인하고 본문을 구조체로 언마샬링하는 공통 처리 함수입니다.
 func checkResponse[T any](resp *client.Response, err error, expectedStatus int, out *T) error {
 	if err != nil {
 		return err

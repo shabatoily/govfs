@@ -1,3 +1,4 @@
+// Package badger는 BadgerDB를 백엔드 저장소로 사용하는 VFS 드라이버 구현을 제공합니다.
 package badger
 
 import (
@@ -17,16 +18,23 @@ import (
 )
 
 const (
+	// Byte는 크기 단위의 기본 바이트입니다.
 	Byte int64 = 1
-	KiB        = 1024 * Byte
-	MiB        = 1024 * KiB
+	// KiB는 키비바이트(1024 bytes)입니다.
+	KiB = 1024 * Byte
+	// MiB는 메비바이트(1024 KiB)입니다.
+	MiB = 1024 * KiB
 )
 
 var (
-	DefaultSecretFilename       = ".secret"
-	DefaultSecretKeySize        = 32
+	// DefaultSecretFilename은 암호화 키를 저장하는 기본 파일명입니다.
+	DefaultSecretFilename = ".secret"
+	// DefaultSecretKeySize는 생성할 암호화 키의 기본 길이(바이트)입니다.
+	DefaultSecretKeySize = 32
+	// DefaultIndexCacheSize는 BadgerDB의 기본 인덱스 캐시 크기(MiB)입니다.
 	DefaultIndexCacheSize int64 = 100
-	ChunkSize                   = 256 * KiB
+	// ChunkSize는 데이터를 저장할 때 분할하는 기본 청크 크기입니다.
+	ChunkSize = 256 * KiB
 )
 
 var bufPool = sync.Pool{
@@ -45,22 +53,32 @@ var (
 	prefixIndex = []byte("index:")
 )
 
-// BadgerConfig Badger DB의 설정을 정의합니다.
+// Config는 BadgerDB 드라이버의 설정을 정의합니다.
 type Config struct {
-	Context                       context.Context `json:"-"`
-	Path                          string          `json:"path"`
-	CacheSize                     int64           `json:"cacheSize"`
-	EncryptKey                    []byte          `json:"-"`
-	EncryptionKeyRotationDuration time.Duration   `json:"encryptionKeyRotationDuration"`
-	GCInterval                    time.Duration   `json:"gcInterval"`
-	GCDiscardRatio                float64         `json:"gcRatio"`
-	InMemory                      bool            `json:"inMemory"`
-	Logger                        *vfs.Logger     `json:"-"`
+	// Context는 드라이버의 생명주기를 관리하는 컨텍스트입니다.
+	Context context.Context `json:"-"`
+	// Path는 DB 파일이 저장될 경로입니다.
+	Path string `json:"path"`
+	// CacheSize는 인덱스 캐시 크기(MiB)입니다.
+	CacheSize int64 `json:"cacheSize"`
+	// EncryptKey는 데이터 암호화에 사용할 키입니다.
+	EncryptKey []byte `json:"-"`
+	// EncryptionKeyRotationDuration은 암호화 키 회전 주기입니다.
+	EncryptionKeyRotationDuration time.Duration `json:"encryptionKeyRotationDuration"`
+	// GCInterval은 가비지 컬렉션 실행 주기입니다.
+	GCInterval time.Duration `json:"gcInterval"`
+	// GCDiscardRatio는 GC를 실행할 데이터 폐기 비율입니다.
+	GCDiscardRatio float64 `json:"gcRatio"`
+	// InMemory는 DB를 메모리 내에서만 운용할지 여부입니다.
+	InMemory bool `json:"inMemory"`
+	// Logger는 VFS 로거 인스턴스입니다.
+	Logger *vfs.Logger `json:"-"`
 }
 
+// Options는 Config를 기반으로 BadgerDB의 실행 옵션을 생성합니다.
 func (cfg *Config) Options() badger.Options {
 	if cfg.Path == "" {
-		// 강제 In-memory 모드
+		// 경로가 없으면 강제로 In-memory 모드로 동작합니다.
 		cfg.InMemory = true
 	}
 	if cfg.EncryptKey == nil {
@@ -93,6 +111,7 @@ func (cfg *Config) Options() badger.Options {
 		WithIndexCacheSize(cfg.CacheSize)
 }
 
+// BadgerVFS는 BadgerDB를 백엔드로 사용하는 VFS 구현체입니다.
 type BadgerVFS struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
@@ -104,6 +123,7 @@ type BadgerVFS struct {
 	keyRotationDuration time.Duration
 }
 
+// New는 주어진 설정을 바탕으로 새로운 BadgerVFS 인스턴스를 생성합니다.
 func New(cfg *Config) (*BadgerVFS, error) {
 	opts := cfg.Options()
 	db, err := badger.Open(opts)
@@ -133,7 +153,7 @@ func New(cfg *Config) (*BadgerVFS, error) {
 
 	if cfg.GCInterval > 0 {
 		if cfg.GCDiscardRatio == 0 {
-			cfg.GCDiscardRatio = 0.5 // badger recommend 0.5
+			cfg.GCDiscardRatio = 0.5 // badger 권장값 0.5
 		}
 		go bvfs.runGC(cfg.GCInterval, cfg.GCDiscardRatio)
 	}
@@ -141,10 +161,12 @@ func New(cfg *Config) (*BadgerVFS, error) {
 	return bvfs, nil
 }
 
+// DB는 내부 BadgerDB 인스턴스를 반환합니다.
 func (bvfs *BadgerVFS) DB() *badger.DB {
 	return bvfs.db
 }
 
+// List는 지정된 경로의 하위 파일 및 디렉토리 목록을 반환합니다.
 func (bvfs *BadgerVFS) List(path string) ([]vfs.Meta, error) {
 	// 1. Normalize path to always end with a slash
 	path = strings.TrimSpace(path)
@@ -218,6 +240,7 @@ func (bvfs *BadgerVFS) List(path string) ([]vfs.Meta, error) {
 	return list, err
 }
 
+// Open은 지정된 ID의 파일을 열고 vfs.File 인스턴스를 반환합니다.
 func (bvfs *BadgerVFS) Open(id uuid.UUID) (*vfs.File, error) {
 	var im internalMeta
 	var reader io.ReadCloser
@@ -257,6 +280,7 @@ func (bvfs *BadgerVFS) Open(id uuid.UUID) (*vfs.File, error) {
 	return vfs.NewFile(&im.Meta, reader), nil
 }
 
+// Create은 지정된 경로에 새로운 파일을 생성하고 데이터를 저장합니다.
 func (bvfs *BadgerVFS) Create(path string, r io.Reader) (vfs.Meta, error) {
 	if path == vfs.Root {
 		return vfs.Meta{}, vfs.ErrInvalidPath
@@ -345,6 +369,7 @@ func (bvfs *BadgerVFS) Create(path string, r io.Reader) (vfs.Meta, error) {
 	return meta, nil
 }
 
+// Write는 기존 파일의 내용을 덮어씁니다. (Atomic Swap 방식)
 func (bvfs *BadgerVFS) Write(id uuid.UUID, r io.Reader) (vfs.Meta, error) {
 	var im internalMeta
 	var oldInternalID uuid.UUID
@@ -490,6 +515,7 @@ func (bvfs *BadgerVFS) deleteChunks(id []byte) error {
 	})
 }
 
+// WriteComments는 지정된 ID의 파일 또는 디렉토리에 설명을 추가합니다.
 func (bvfs *BadgerVFS) WriteComments(id uuid.UUID, comments string) (vfs.Meta, error) {
 	var im internalMeta
 
@@ -521,6 +547,7 @@ func (bvfs *BadgerVFS) WriteComments(id uuid.UUID, comments string) (vfs.Meta, e
 	return im.Meta, nil
 }
 
+// Delete는 지정된 ID의 파일 또는 디렉토리(및 그 하위 항목)를 삭제합니다.
 func (bvfs *BadgerVFS) Delete(id uuid.UUID) error {
 	return bvfs.db.Update(func(txn *badger.Txn) error {
 		metaItem, internalErr := findMetaItemByID(txn, id)
@@ -575,6 +602,7 @@ func (bvfs *BadgerVFS) Delete(id uuid.UUID) error {
 	})
 }
 
+// Mkdir은 새로운 디렉토리를 생성합니다.
 func (bvfs *BadgerVFS) Mkdir(path string) (vfs.Meta, error) {
 	path = strings.TrimSpace(path)
 	if path == "" || path == "/" {
@@ -651,6 +679,7 @@ func (bvfs *BadgerVFS) Mkdir(path string) (vfs.Meta, error) {
 	return im.Meta, nil
 }
 
+// StatByPath는 경로를 통해 파일 또는 디렉토리의 메타데이터를 조회합니다.
 func (bvfs *BadgerVFS) StatByPath(p string) (vfs.Meta, error) {
 	if p == vfs.Root {
 		return vfs.Meta{}, vfs.ErrInvalidPath
@@ -673,6 +702,7 @@ func (bvfs *BadgerVFS) StatByPath(p string) (vfs.Meta, error) {
 	return im.Meta, err
 }
 
+// Stat은 ID를 통해 파일 또는 디렉토리의 메타데이터를 조회합니다.
 func (bvfs *BadgerVFS) Stat(id uuid.UUID) (vfs.Meta, error) {
 	var path string
 	var im internalMeta
@@ -718,6 +748,7 @@ func (bvfs *BadgerVFS) Stat(id uuid.UUID) (vfs.Meta, error) {
 	return im.Meta, nil
 }
 
+// Move는 파일 또는 디렉토리를 새로운 경로로 이동시킵니다.
 func (bvfs *BadgerVFS) Move(id uuid.UUID, dst string) (vfs.Meta, error) {
 	dst = strings.TrimSpace(dst)
 	if !strings.HasPrefix(dst, "/") {
@@ -776,6 +807,7 @@ func (bvfs *BadgerVFS) Move(id uuid.UUID, dst string) (vfs.Meta, error) {
 	return im.Meta, nil
 }
 
+// Copy는 파일 또는 디렉토리를 새로운 경로로 복사합니다.
 func (bvfs *BadgerVFS) Copy(id uuid.UUID, dst string) (vfs.Meta, error) {
 	var im internalMeta
 	var newIM internalMeta
@@ -861,6 +893,7 @@ func (bvfs *BadgerVFS) Copy(id uuid.UUID, dst string) (vfs.Meta, error) {
 	return newIM.Meta, nil
 }
 
+// Close는 VFS 드라이버를 안전하게 종료합니다. (진행 중인 GC 중단 및 DB 연결 종료)
 func (bvfs *BadgerVFS) Close() error {
 	// Cancel the context to stop background GC goroutines
 	bvfs.cancel()
@@ -868,14 +901,17 @@ func (bvfs *BadgerVFS) Close() error {
 	return bvfs.close()
 }
 
+// Backup은 지정된 시점 이후의 데이터를 기록 스트림으로 백업합니다.
 func (bvfs *BadgerVFS) Backup(w io.Writer, since uint64) (uint64, error) {
 	return bvfs.db.Backup(w, since)
 }
 
+// Load는 백업 스트림으로부터 데이터를 복구합니다.
 func (bvfs *BadgerVFS) Load(r io.Reader, maxPendingWrites int) error {
 	return bvfs.db.Load(r, maxPendingWrites)
 }
 
+// Tree는 지정된 경로 이하의 파일 시스템 구조를 트리 형태로 반환합니다.
 func (bvfs *BadgerVFS) Tree(targetPath string) (*vfs.TreeNode, error) {
 	if targetPath == "" {
 		targetPath = vfs.Root
@@ -951,6 +987,7 @@ func (bvfs *BadgerVFS) Tree(targetPath string) (*vfs.TreeNode, error) {
 	return rootNode, err
 }
 
+// Rotate는 데이터 암호화 키를 새 키로 교체합니다.
 func (bvfs *BadgerVFS) Rotate(newKey []byte) error {
 	opt := badger.KeyRegistryOptions{
 		Dir:                           bvfs.path,
@@ -981,6 +1018,7 @@ func (bvfs *BadgerVFS) Rotate(newKey []byte) error {
 // Badger manage
 
 // AllKeys returns all keys in the database
+// AllKeys는 데이터베이스에 저장된 모든 키 목록을 반환합니다.
 func (bvfs *BadgerVFS) AllKeys() ([]string, error) {
 	keys := make([]string, 0)
 	err := bvfs.db.View(func(txn *badger.Txn) error {
@@ -997,6 +1035,7 @@ func (bvfs *BadgerVFS) AllKeys() ([]string, error) {
 }
 
 // AllKeysByPrefix returns all keys with the given prefix
+// AllKeysByPrefix는 지정된 접두사로 시작하는 모든 키 목록을 반환합니다.
 func (bvfs *BadgerVFS) AllKeysByPrefix(prefix string) ([]string, error) {
 	keys := make([]string, 0)
 	err := bvfs.db.View(func(txn *badger.Txn) error {
@@ -1033,6 +1072,7 @@ func (bvfs *BadgerVFS) close() error {
 	return err
 }
 
+// runGC는 백그라운드에서 주기적으로 가비지 컬렉션을 실행하여 저장 공간을 최적화합니다.
 func (bvfs *BadgerVFS) runGC(gcInterval time.Duration, gcRatio float64) {
 	ticker := time.NewTicker(gcInterval)
 
@@ -1060,11 +1100,13 @@ func (bvfs *BadgerVFS) runGC(gcInterval time.Duration, gcRatio float64) {
 	}
 }
 
+// internalMeta는 VFS 메타데이터에 실제 데이터 저장용 내부 ID를 포함한 확장 구조체입니다.
 type internalMeta struct {
 	vfs.Meta
 	InternalID uuid.UUID `json:"internalId,omitempty"`
 }
 
+// blobReader는 BadgerDB에 분할 저장된 청크들을 순차적으로 읽기 위한 Reader입니다.
 type blobReader struct {
 	vfs            *BadgerVFS
 	id             []byte

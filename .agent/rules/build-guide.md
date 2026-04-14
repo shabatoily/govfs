@@ -9,4 +9,4 @@ trigger: always_on
 
 ## Makefile
 
-- 빌드 관련 커맨드는 [Makefile](../../Makefile)을 참조하여 알려주세요.
+- 빌드 관련 커맨드는 [Makefile](../../Makefile)을 참조

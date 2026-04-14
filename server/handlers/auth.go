@@ -1,3 +1,4 @@
+// Package handlers는 HTTP 요청을 처리하고 응답을 반환하는 핸들러를 제공합니다.
 package handlers
 
 import (
@@ -11,10 +12,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// AuthHandler는 사용자 인증 관련 요청을 처리합니다.
 type AuthHandler struct {
 	cfg config.AuthConfig
 }
 
+// NewAuthHandler는 새로운 AuthHandler 인스턴스를 생성합니다.
 func NewAuthHandler(cfg config.AuthConfig) *AuthHandler {
 	return &AuthHandler{
 		cfg: cfg,
@@ -32,6 +35,7 @@ func NewAuthHandler(cfg config.AuthConfig) *AuthHandler {
 // @Failure      401  {object}  fiber.Error
 // @Failure      500  {object}  fiber.Error
 // @Router       /auth/login [post]
+// Login은 사용자 로그인을 처리하고 JWT 토큰을 발급합니다.
 func (h *AuthHandler) Login(c fiber.Ctx) error {
 	if !h.cfg.Enabled {
 		return c.SendStatus(fiber.StatusNoContent)
@@ -86,6 +90,7 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 // @Success      204  {object}  fiber.Error
 // @Failure      500  {object}  fiber.Error
 // @Router       /auth/logout [post]
+// Logout은 사용자 로그아웃을 처리하고 클라이언트의 토큰 쿠키를 삭제합니다.
 func (h *AuthHandler) Logout(c fiber.Ctx) error {
 	if !h.cfg.Enabled {
 		return c.SendStatus(fiber.StatusNoContent)
@@ -110,6 +115,7 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 // @Success      200  {object}  types.TokenResponse
 // @Failure      500  {object}  fiber.Error
 // @Router       /auth/me [get]
+// IsLoggedIn은 현재 사용자의 로그인 상태를 확인하고 정보를 반환합니다.
 func (h *AuthHandler) IsLoggedIn(c fiber.Ctx) error {
 	if !h.cfg.Enabled {
 		return c.SendStatus(fiber.StatusNoContent)

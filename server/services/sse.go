@@ -1,3 +1,4 @@
+// Package services는 서버의 핵심 비즈니스 로직을 제공합니다.
 package services
 
 import (
@@ -21,6 +22,7 @@ type SSEConfig struct {
 	MaxMessageBuffer int
 }
 
+// SSEBroker는 여러 클라이언트에게 실시간 메시지를 중계하는 역할을 합니다.
 type SSEBroker struct {
 	// 새 클라이언트 채널을 등록
 	newClients chan clientInfo
@@ -42,6 +44,7 @@ type clientInfo struct {
 	Ch chan *types.SSEMessage
 }
 
+// Subscribe는 새로운 클라이언트를 브로커에 등록하고 구독 성공 메시지를 반환합니다.
 func (b *SSEBroker) Subscribe(ctx context.Context) (*types.SSEMessage, <-chan *types.SSEMessage) {
 	if !b.isRunning.Load() {
 		log.Warn("Attempted to subscribe to stopped SSE Broker")
@@ -85,6 +88,7 @@ func (b *SSEBroker) Subscribe(ctx context.Context) (*types.SSEMessage, <-chan *t
 	}
 }
 
+// Unsubscribe는 브로커에서 클라이언트를 제거하고 관련 리소스를 정리합니다.
 func (b *SSEBroker) Unsubscribe(id uuid.UUID) {
 	// Broker가 실행 중이 아니면 무시
 	if !b.isRunning.Load() {
@@ -99,6 +103,7 @@ func (b *SSEBroker) Unsubscribe(id uuid.UUID) {
 	}
 }
 
+// Hearbeat는 클라이언트 연결 유지를 위해 하트비트 메시지를 전송합니다.
 func (b *SSEBroker) Hearbeat(id uuid.UUID) {
 	msg := types.SSEMessage{
 		ID:    id,
@@ -111,20 +116,24 @@ func (b *SSEBroker) Hearbeat(id uuid.UUID) {
 	b.publish(&msg)
 }
 
+// Publish는 특정 클라이언트에게 일반 메시지를 발행합니다.
 func (b *SSEBroker) Publish(id uuid.UUID, data *types.SSEData, retry time.Duration) {
 	msg := types.SSEMessage{Event: types.SSEEventPublish, ID: id, Data: *data, Retry: retry}
 	b.publish(&msg)
 }
 
+// Broadcast는 연결된 모든 클라이언트에게 메시지를 브로드캐스트합니다.
 func (b *SSEBroker) Broadcast(data *types.SSEData, retry time.Duration) {
 	b.Publish(uuid.Nil, data, retry)
 }
 
+// Error는 특정 클라이언트에게 에러 이벤트를 전송합니다.
 func (b *SSEBroker) Error(id uuid.UUID, data *types.SSEData, retry time.Duration) {
 	msg := types.SSEMessage{Event: types.SSEEventError, ID: id, Data: *data, Retry: retry}
 	b.publish(&msg)
 }
 
+// Shutdown은 브로커를 종료하고 모든 클라이언트 연결을 해제합니다.
 func (b *SSEBroker) Shutdown() {
 	b.isRunning.Store(false)
 	b.cancel()
@@ -144,6 +153,7 @@ func (b *SSEBroker) publish(msg *types.SSEMessage) {
 	}
 }
 
+// AsyncExcute는 함수를 비동기적으로 실행하고 결과를 SSE를 통해 클라이언트에 알립니다.
 func (b *SSEBroker) AsyncExcute(id uuid.UUID, do func() (types.SSEMeta, error)) {
 	go func() {
 		meta, err := do()
@@ -155,6 +165,7 @@ func (b *SSEBroker) AsyncExcute(id uuid.UUID, do func() (types.SSEMeta, error)) 
 	}()
 }
 
+// NewSSEBroker는 주어진 설정을 기반으로 새로운 SSEBroker 인스턴스를 생성합니다.
 func NewSSEBroker(config SSEConfig) *SSEBroker {
 	if config.Context == nil {
 		config.Context = context.Background()

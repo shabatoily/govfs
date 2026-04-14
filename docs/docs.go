@@ -28,6 +28,7 @@ const docTemplate = `{
                 "type": "object"
             },
             "time.Duration": {
+                "description": "재연결 시도 주기",
                 "enum": [
                     -9223372036854775808,
                     9223372036854775807,
@@ -53,6 +54,7 @@ const docTemplate = `{
             "types.BadgerKeyRes": {
                 "properties": {
                     "keys": {
+                        "description": "매칭된 키 목록",
                         "items": {
                             "type": "string"
                         },
@@ -60,6 +62,7 @@ const docTemplate = `{
                         "uniqueItems": false
                     },
                     "prefix": {
+                        "description": "조회 시 사용한 접두사",
                         "type": "string"
                     }
                 },
@@ -108,6 +111,7 @@ const docTemplate = `{
                 "type": "object"
             },
             "types.MetaRes": {
+                "description": "노드 메타데이터",
                 "properties": {
                     "comments": {
                         "type": "string"
@@ -134,29 +138,35 @@ const docTemplate = `{
                         "type": "integer"
                     },
                     "url": {
+                        "description": "파일 다운로드 또는 접근 URL",
                         "type": "string"
                     }
                 },
                 "type": "object"
             },
             "types.SSEData": {
+                "description": "데이터 페이로드",
                 "properties": {
                     "message": {
+                        "description": "메시지 내용",
                         "type": "string"
                     },
                     "meta": {
                         "$ref": "#/components/schemas/types.SSEMeta"
                     },
                     "status": {
+                        "description": "성공 여부",
                         "type": "boolean"
                     },
                     "timestamp": {
+                        "description": "이벤트 발생 시간",
                         "type": "string"
                     }
                 },
                 "type": "object"
             },
             "types.SSEEvent": {
+                "description": "이벤트 유형",
                 "enum": [
                     "heartbeat",
                     "subscribe",
@@ -182,6 +192,7 @@ const docTemplate = `{
                         "$ref": "#/components/schemas/types.SSEEvent"
                     },
                     "id": {
+                        "description": "메시지 고유 ID",
                         "type": "string"
                     },
                     "retry": {
@@ -191,14 +202,18 @@ const docTemplate = `{
                 "type": "object"
             },
             "types.SSEMeta": {
+                "description": "메타데이터",
                 "properties": {
                     "action": {
+                        "description": "수행된 액션",
                         "type": "string"
                     },
                     "id": {
+                        "description": "관련 리소스 ID",
                         "type": "string"
                     },
                     "path": {
+                        "description": "관련 리소스 경로",
                         "type": "string"
                     }
                 },
@@ -221,6 +236,7 @@ const docTemplate = `{
             "types.TreeNodeRes": {
                 "properties": {
                     "children": {
+                        "description": "하위 자식 노드 목록",
                         "items": {
                             "$ref": "#/components/schemas/types.TreeNodeRes"
                         },
@@ -241,12 +257,15 @@ const docTemplate = `{
                 ],
                 "properties": {
                     "path": {
+                        "description": "요청된 경로",
                         "type": "string"
                     },
                     "payload": {
+                        "description": "실제 데이터 페이로드",
                         "type": "object"
                     },
                     "viewType": {
+                        "description": "조회 방식",
                         "enum": [
                             "list",
                             "tree"
@@ -757,12 +776,15 @@ const docTemplate = `{
                                             ],
                                             "properties": {
                                                 "path": {
+                                                    "description": "요청된 경로",
                                                     "type": "string"
                                                 },
                                                 "payload": {
+                                                    "description": "실제 데이터 페이로드",
                                                     "type": "object"
                                                 },
                                                 "viewType": {
+                                                    "description": "조회 방식",
                                                     "enum": [
                                                         "list",
                                                         "tree"
@@ -780,12 +802,15 @@ const docTemplate = `{
                                             ],
                                             "properties": {
                                                 "path": {
+                                                    "description": "요청된 경로",
                                                     "type": "string"
                                                 },
                                                 "payload": {
+                                                    "description": "실제 데이터 페이로드",
                                                     "type": "object"
                                                 },
                                                 "viewType": {
+                                                    "description": "조회 방식",
                                                     "enum": [
                                                         "list",
                                                         "tree"

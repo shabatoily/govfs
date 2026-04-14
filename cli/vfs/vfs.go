@@ -1,3 +1,4 @@
+// Package vfs는 CLI에서 VFS 기능을 제어하기 위한 핸들러와 커맨드를 제공합니다.
 package vfs
 
 import (
@@ -20,11 +21,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Handler는 CLI의 VFS 관련 명령 처리를 담당하는 구조체입니다.
 type Handler struct {
 	cmd    *cobra.Command
 	client *client.Client
 }
 
+// NewHandler는 컨텍스트 기반으로 새로운 VFS 핸들러를 반환하며, 필요시 자동 로그인을 수행합니다.
 func NewHandler(cmd *cobra.Command) (*Handler, error) {
 	u, ok := cmd.Context().Value(cli.ContextKeyUserConfig{}).(*cli.UserConfig)
 	if !ok {
@@ -57,6 +60,7 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 	}, nil
 }
 
+// Backup은 서버의 전체 VFS 데이터를 로컬 파일로 백업합니다.
 func (h *Handler) Backup(backupFile string) error {
 	backupFileName := fmt.Sprintf(backupFile, time.Now().Format("2006-01-02_15-04-05"))
 	f, err := os.Create(backupFileName)
@@ -80,6 +84,7 @@ func (h *Handler) Backup(backupFile string) error {
 	return nil
 }
 
+// Restore는 로컬 백업 파일을 서버로 전송하여 VFS를 복구합니다.
 func (h *Handler) Restore(restoreFile string) error {
 	f, err := os.Open(restoreFile)
 	if err != nil {
@@ -408,6 +413,7 @@ func buildList(l list.Writer, node *types.TreeNodeRes) {
 	}
 }
 
+// Mkdir은 VFS 상에 새로운 디렉토리를 생성합니다.
 func (h *Handler) Mkdir(path string, parents bool) error {
 	if parents {
 		var paths []string
@@ -447,6 +453,7 @@ func (h *Handler) Mkdir(path string, parents bool) error {
 	return err
 }
 
+// Remove는 VFS 상의 파일 또는 디렉토리를 삭제합니다.
 func (h *Handler) Remove(path string, recursive bool) error {
 	meta, err := h.findMetaByPath(path)
 	if err != nil {
@@ -491,6 +498,7 @@ func (h *Handler) Remove(path string, recursive bool) error {
 	return walker(treeRes)
 }
 
+// Copy는 로컬과 VFS 간, 또는 VFS 내부에서 파일/디렉토리를 복사합니다.
 func (h *Handler) Copy(src, dst string, recursive bool) error {
 	srcIsVfs := strings.HasPrefix(src, "vfs:")
 	dstIsVfs := strings.HasPrefix(dst, "vfs:")

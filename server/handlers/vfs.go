@@ -1,3 +1,4 @@
+// Package handlers는 HTTP 요청을 처리하고 응답을 반환하는 핸들러를 제공합니다.
 package handlers
 
 import (
@@ -14,6 +15,7 @@ import (
 	"github.com/meteormin/govfs/server/types"
 )
 
+// VfsHandler는 가상 파일 시스템(VFS) 관련 HTTP 요청을 처리하는 핸들러입니다.
 type VfsHandler struct {
 	srv    *services.VfsService
 	broker *services.SSEBroker
@@ -37,6 +39,7 @@ func (h *VfsHandler) Prefix() string {
 //	@Failure      404  {object}  fiber.Error
 //	@Failure      500  {object}  fiber.Error
 //	@Router       /vfs [get]
+// List는 파일 및 디렉토리 목록을 조회하여 반환합니다. (목록형 또는 트리형)
 func (h *VfsHandler) List(ctx fiber.Ctx) error {
 	q := ctx.Query("q", "/")
 	t := ctx.Query("viewType", string(types.ViewTypeList))
@@ -82,6 +85,7 @@ func (h *VfsHandler) List(ctx fiber.Ctx) error {
 //	@Failure      404  {object}  fiber.Error
 //	@Failure      500  {object}  fiber.Error
 //	@Router       /vfs/:id [get]
+// Read는 지정된 ID의 파일 바이너리 데이터를 스트리밍 응답으로 반환합니다. (Range 요청 지원)
 func (h *VfsHandler) Read(ctx fiber.Ctx) error {
 	parsedID, err := fiber.Convert(ctx.Params("id"), uuid.Parse)
 	if err != nil {
@@ -146,6 +150,7 @@ func (h *VfsHandler) Read(ctx fiber.Ctx) error {
 // @Failure      404  {object}  fiber.Error
 // @Failure      500  {object}  fiber.Error
 // @Router       /vfs/:id/stat [get]
+// Stat은 지정된 ID의 메타데이터 정보를 조회하여 반환합니다.
 func (h *VfsHandler) Stat(ctx fiber.Ctx) error {
 	parsedID, err := fiber.Convert(ctx.Params("id"), uuid.Parse)
 	if err != nil {
@@ -174,6 +179,7 @@ func (h *VfsHandler) Stat(ctx fiber.Ctx) error {
 // @Failure      404  {object}  fiber.Error
 // @Failure      500  {object}  fiber.Error
 // @Router       /vfs [post]
+// Create은 새로운 파일 또는 디렉토리를 생성합니다.
 func (h *VfsHandler) Create(ctx fiber.Ctx) error {
 	var meta types.MetaRes
 	var err error
@@ -244,6 +250,7 @@ func (h *VfsHandler) Create(ctx fiber.Ctx) error {
 // @Failure      404  {object}  fiber.Error
 // @Failure      500  {object}  fiber.Error
 // @Router       /vfs/:id [put]
+// Write는 파일 내용을 업데이트합니다. (비동기 처리)
 func (h *VfsHandler) Write(ctx fiber.Ctx) error {
 	parsedID, err := fiber.Convert(ctx.Params("id"), uuid.Parse)
 	if err != nil {
@@ -283,6 +290,7 @@ func (h *VfsHandler) Write(ctx fiber.Ctx) error {
 // @Failure      404  {object}  fiber.Error
 // @Failure      500  {object}  fiber.Error
 // @Router       /vfs/:id [patch]
+// Move는 파일 또는 디렉토리의 경로를 변경합니다. (비동기 처리)
 func (h *VfsHandler) Move(ctx fiber.Ctx) error {
 	return h.asyncModify(ctx, h.srv.Move)
 }
@@ -300,6 +308,7 @@ func (h *VfsHandler) Move(ctx fiber.Ctx) error {
 // @Failure      404  {object}  fiber.Error
 // @Failure      500  {object}  fiber.Error
 // @Router       /vfs/:id/copy [post]
+// Copy는 파일 또는 디렉토리를 지정된 경로로 복사합니다. (비동기 처리)
 func (h *VfsHandler) Copy(ctx fiber.Ctx) error {
 	return h.asyncModify(ctx, h.srv.Copy)
 }
@@ -315,6 +324,7 @@ func (h *VfsHandler) Copy(ctx fiber.Ctx) error {
 // @Failure      404  {object}  fiber.Error
 // @Failure      500  {object}  fiber.Error
 // @Router       /vfs/:id [delete]
+// Delete는 지정된 ID의 파일 또는 디렉토리를 삭제합니다. (비동기 처리)
 func (h *VfsHandler) Delete(ctx fiber.Ctx) error {
 	parsedID, err := fiber.Convert(ctx.Params("id"), uuid.Parse)
 	if err != nil {
@@ -346,6 +356,7 @@ func (h *VfsHandler) Delete(ctx fiber.Ctx) error {
 // @Failure      404  {object}  fiber.Error
 // @Failure      500  {object}  fiber.Error
 // @Router       /vfs/:id/comments [patch]
+// WriteComments는 파일 또는 디렉토리에 설명을 추가/수정합니다. (비동기 처리)
 func (h *VfsHandler) WriteComments(ctx fiber.Ctx) error {
 	parsedID, err := fiber.Convert(ctx.Params("id"), uuid.Parse)
 	if err != nil {
@@ -380,6 +391,7 @@ func (h *VfsHandler) WriteComments(ctx fiber.Ctx) error {
 // @Success      200  {file}	 string
 // @Failure      500  {object}  fiber.Error
 // @Router       /vfs/backup [post]
+// Backup은 전체 VFS 데이터를 tar.gz 파일 형식으로 스트리밍 다운로드합니다.
 func (h *VfsHandler) Backup(ctx fiber.Ctx) error {
 	backupFilename := fmt.Sprintf("backup_%s.tar.gz", time.Now().Format("2006-01-02_15-04-05"))
 
@@ -409,6 +421,7 @@ func (h *VfsHandler) Backup(ctx fiber.Ctx) error {
 // @Failure      400  {object}  fiber.Error
 // @Failure      500  {object}  fiber.Error
 // @Router       /vfs/restore [post]
+// Restore는 업로드된 백업 파일로부터 VFS 데이터를 복구합니다.
 func (h *VfsHandler) Restore(ctx fiber.Ctx) error {
 	formFile, err := ctx.FormFile("file")
 	if err != nil {
@@ -439,6 +452,7 @@ func (h *VfsHandler) Restore(ctx fiber.Ctx) error {
 // @Failure      400  {object}  fiber.Error
 // @Failure      500  {object}  fiber.Error
 // @Router       /vfs/rotate [post]
+// Rotate는 데이터 암호화 키를 교체합니다. (비동기 처리)
 func (h *VfsHandler) Rotate(ctx fiber.Ctx) error {
 	type rotateReq struct {
 		Key string `json:"key"`
@@ -461,6 +475,7 @@ func (h *VfsHandler) Rotate(ctx fiber.Ctx) error {
 	return ctx.SendStatus(fiber.StatusAccepted)
 }
 
+// NewVfsHandler는 새로운 VfsHandler 인스턴스를 생성합니다.
 func NewVfsHandler(srv *services.VfsService, broker *services.SSEBroker) *VfsHandler {
 	return &VfsHandler{srv: srv, broker: broker}
 }

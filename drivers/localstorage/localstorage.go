@@ -1,3 +1,4 @@
+// Package localstorage는 로컬 파일 시스템을 백엔드 저장소로 사용하는 VFS 드라이버 구현을 제공합니다.
 package localstorage
 
 import (
@@ -18,22 +19,27 @@ import (
 	vfs "github.com/meteormin/govfs"
 )
 
+// IndexFileName은 메타데이터 인덱스를 저장하는 파일명입니다.
 const IndexFileName = ".vfs_index.json"
 
+// Config는 LocalStorage 드라이버의 설정을 정의합니다.
 type Config struct {
+	// Path는 실제 파일들이 저장될 루트 경로입니다.
 	Path   string      `json:"path"`
+	// Logger는 VFS 로거 인스턴스입니다.
 	Logger *vfs.Logger `json:"-"`
 }
 
-// LocalStorage implements the VFS interface using the local file system.
+// LocalStorage는 로컬 파일 시스템을 시스템의 VFS 인터페이스로 매핑하는 구현체입니다.
 type LocalStorage struct {
 	basePath string
 	mu       sync.RWMutex
-	idMap    map[uuid.UUID]vfs.Meta // ID -> Meta mapping
-	pathMap  map[string]vfs.Meta    // Path -> Meta mapping (for fast lookup)
+	idMap    map[uuid.UUID]vfs.Meta // ID -> Meta 매핑
+	pathMap  map[string]vfs.Meta    // Path -> Meta 매핑 (빠른 조회를 위함)
 	logger   *vfs.Logger
 }
 
+// New는 주어진 설정을 기반으로 새로운 LocalStorage 드라이버 인스턴스를 생성합니다.
 func New(cfg *Config) (*LocalStorage, error) {
 	if cfg.Logger == nil {
 		cfg.Logger = vfs.DefaultLogger
@@ -54,7 +60,7 @@ func New(cfg *Config) (*LocalStorage, error) {
 		logger:   cfg.Logger,
 	}
 
-	// Try to load index
+	// 저장된 인덱스 로드 시도
 	indexFile := filepath.Join(ls.basePath, IndexFileName)
 	if _, err := os.Stat(indexFile); err == nil {
 		data, err := os.ReadFile(indexFile)
@@ -94,6 +100,7 @@ func (ls *LocalStorage) toLocalPath(vfsPath string) string {
 	return filepath.Join(ls.basePath, rel)
 }
 
+// List는 지정된 경로의 하위 파일 및 디렉토리 목록을 반환합니다.
 func (ls *LocalStorage) List(path string) ([]vfs.Meta, error) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
@@ -137,6 +144,7 @@ func getParentPath(path string) string {
 	return dir
 }
 
+// Open은 지정된 ID의 파일을 열고 vfs.File 인스턴스를 반환합니다.
 func (ls *LocalStorage) Open(id uuid.UUID) (*vfs.File, error) {
 	ls.mu.RLock()
 	meta, ok := ls.idMap[id]
@@ -157,6 +165,7 @@ func (ls *LocalStorage) Open(id uuid.UUID) (*vfs.File, error) {
 	return vfs.NewFile(&meta, f), nil
 }
 
+// Create은 로컬 시스템에 파일을 생성하고 데이터를 저장합니다.
 func (ls *LocalStorage) Create(path string, r io.Reader) (vfs.Meta, error) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
@@ -204,6 +213,7 @@ func (ls *LocalStorage) Create(path string, r io.Reader) (vfs.Meta, error) {
 	return meta, nil
 }
 
+// Write는 기존 파일의 내용을 덮어씁니다.
 func (ls *LocalStorage) Write(id uuid.UUID, r io.Reader) (vfs.Meta, error) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
@@ -233,6 +243,7 @@ func (ls *LocalStorage) Write(id uuid.UUID, r io.Reader) (vfs.Meta, error) {
 	return meta, nil
 }
 
+// WriteComments는 지정된 ID의 파일 또는 디렉토리에 설명을 추가합니다.
 func (ls *LocalStorage) WriteComments(id uuid.UUID, comment string) (vfs.Meta, error) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
@@ -244,6 +255,7 @@ func (ls *LocalStorage) WriteComments(id uuid.UUID, comment string) (vfs.Meta, e
 	return meta, nil
 }
 
+// Delete는 지정된 ID의 파일 또는 디렉토리(및 그 하위 항목)를 영구적으로 삭제합니다.
 func (ls *LocalStorage) Delete(id uuid.UUID) error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
@@ -277,6 +289,7 @@ func (ls *LocalStorage) Delete(id uuid.UUID) error {
 	return nil
 }
 
+// Mkdir은 새로운 디렉토리를 생성합니다.
 func (ls *LocalStorage) Mkdir(path string) (vfs.Meta, error) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
@@ -310,6 +323,7 @@ func (ls *LocalStorage) Mkdir(path string) (vfs.Meta, error) {
 	return meta, nil
 }
 
+// Stat은 ID를 통해 파일 또는 디렉토리의 메타데이터를 조회합니다.
 func (ls *LocalStorage) Stat(id uuid.UUID) (vfs.Meta, error) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
@@ -320,6 +334,7 @@ func (ls *LocalStorage) Stat(id uuid.UUID) (vfs.Meta, error) {
 	return m, nil
 }
 
+// StatByPath는 경로를 통해 파일 또는 디렉토리의 메타데이터를 조회합니다.
 func (ls *LocalStorage) StatByPath(p string) (vfs.Meta, error) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
@@ -330,6 +345,7 @@ func (ls *LocalStorage) StatByPath(p string) (vfs.Meta, error) {
 	return m, nil
 }
 
+// Move는 파일 또는 디렉토리를 새로운 경로로 이동시킵니다.
 func (ls *LocalStorage) Move(id uuid.UUID, dst string) (vfs.Meta, error) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
@@ -404,6 +420,7 @@ func (ls *LocalStorage) Move(id uuid.UUID, dst string) (vfs.Meta, error) {
 	return meta, nil
 }
 
+// Copy는 파일 또는 디렉토리를 새로운 경로로 복사합니다.
 func (ls *LocalStorage) Copy(id uuid.UUID, dst string) (vfs.Meta, error) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
@@ -470,12 +487,14 @@ func (ls *LocalStorage) Copy(id uuid.UUID, dst string) (vfs.Meta, error) {
 	return newMeta, nil
 }
 
+// Close는 드라이버를 안전하게 종료하고 현재 인덱스를 저장합니다.
 func (ls *LocalStorage) Close() error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 	return ls.saveIndex()
 }
 
+// Backup은 현재 VFS의 모든 파일과 인덱스를 tar.gz 형태로 묶어 출력 스트림으로 백업합니다.
 func (ls *LocalStorage) Backup(w io.Writer, _ uint64) (uint64, error) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
@@ -567,6 +586,7 @@ func (cw *countWriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
+// Load는 백업 스트림으로부터 데이터와 인덱스를 복구합니다.
 func (ls *LocalStorage) Load(r io.Reader, _ int) error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
@@ -658,6 +678,7 @@ func (ls *LocalStorage) extractTarEntry(header *tar.Header, tr *tar.Reader) erro
 	return nil
 }
 
+// Tree는 지정된 경로 이하의 파일 시스템 구조를 트리 형태로 반환합니다.
 func (ls *LocalStorage) Tree(path string) (*vfs.TreeNode, error) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()

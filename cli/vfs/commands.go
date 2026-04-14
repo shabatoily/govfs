@@ -1,3 +1,4 @@
+// Package vfs는 CLI에서 VFS 기능을 제어하기 위한 핸들러와 커맨드를 제공합니다.
 package vfs
 
 import (
@@ -12,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// RegisterCommands는 VFS와 관련된 모든 CLI 명령을 등록합니다.
 func RegisterCommands(target *cobra.Command) {
 	target.AddCommand(NewBackupCommand(), NewRestoreCommand(), NewRotateCommand(),
 		NewListCommand(), NewTreeCommand(), NewStatCommand(), NewCopyCommand(),

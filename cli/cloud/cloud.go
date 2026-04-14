@@ -1,3 +1,4 @@
+// Package cloud는 CLI에서 클라우드 저장소 기능을 사용하기 위한 핸들러와 커맨드를 제공합니다.
 package cloud
 
 import (
@@ -17,11 +18,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Handler는 CLI의 클라우드 관련 명령을 처리하는 핸들러 구조체입니다.
 type Handler struct {
 	cmd    *cobra.Command
 	client *client.Client
 }
 
+// NewHandler는 컨텍스트의 설정을 기반으로 새로운 클라우드 핸들러를 생성합니다.
 func NewHandler(cmd *cobra.Command) (*Handler, error) {
 	u, ok := cmd.Context().Value(cli.ContextKeyUserConfig{}).(cli.UserConfig)
 	if !ok {
@@ -58,6 +61,7 @@ func NewStorage(cfg *config.CloudConfig) (cloud.Storage, error) {
 	return bootstrap.InitCloud(cfg)
 }
 
+// List는 클라우드 저장소의 파일 목록을 출력합니다.
 func (h *Handler) List(p string) error {
 	files, err := h.client.Cloud().List(p)
 	if err != nil {
@@ -84,6 +88,7 @@ func (h *Handler) List(p string) error {
 	return nil
 }
 
+// Upload는 로컬 파일을 클라우드 저장소로 업로드합니다.
 func (h *Handler) Upload(uploadFilePath string) error {
 	abs, err := filepath.Abs(uploadFilePath)
 	if err != nil {
@@ -107,6 +112,7 @@ func (h *Handler) Upload(uploadFilePath string) error {
 	return nil
 }
 
+// Download는 클라우드 저장소의 파일을 로컬로 다운로드합니다.
 func (h *Handler) Download(src, dst string) error {
 	p, err := filepath.Abs(dst)
 	if err != nil {

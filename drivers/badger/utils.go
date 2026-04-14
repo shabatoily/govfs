@@ -23,7 +23,7 @@ const (
 	chunkSeqLen    = 4
 )
 
-// GenerateEncryptionKey 32바이트(256비트)의 랜덤 암호화 키를 생성합니다.
+// GenerateEncryptionKey는 지정된 파일에 랜덤 암호화 키를 생성하고 저장합니다.
 func GenerateEncryptionKey(secretFile string, keySize int) ([]byte, error) {
 	key, err := randomSecretKey(keySize)
 	if err != nil {
@@ -43,12 +43,14 @@ func GenerateEncryptionKey(secretFile string, keySize int) ([]byte, error) {
 	return key, nil
 }
 
+// randomSecretKey는 지정된 길이의 무작위 바이트 슬라이스를 생성합니다.
 func randomSecretKey(keySize int) ([]byte, error) {
 	key := make([]byte, keySize) // AES-256에 필요한 32바이트 키
 	_, err := rand.Read(key)
 	return key, err
 }
 
+// getEncryptionKey는 파일에서 암호화 키를 읽어옵니다.
 func getEncryptionKey(secretFile string) ([]byte, error) {
 	if _, err := os.Stat(secretFile); err != nil {
 		return nil, err
@@ -61,6 +63,7 @@ func getEncryptionKey(secretFile string) ([]byte, error) {
 	return key, nil
 }
 
+// extractExtension은 경로에서 파일 확장자를 추출합니다.
 func extractExtension(path string) string {
 	ext := filepath.Ext(path)
 	if ext != "" {
@@ -70,6 +73,7 @@ func extractExtension(path string) string {
 }
 
 // 경로 문자열에서 부모 경로를 찾는 헬퍼 함수
+// getParentPath는 지정된 경로의 부모 디렉토리 경로를 계산하여 반환합니다.
 func getParentPath(path string) string {
 	if path == vfs.Root || path == "" {
 		return vfs.Root
@@ -98,6 +102,7 @@ func getParentPath(path string) string {
 }
 
 // 키 생성을 안전하게 처리하는 헬퍼
+// makeKey는 접두사와 접미사를 결합하여 BadgerDB용 키를 생성합니다.
 func makeKey(prefix, suffix []byte) []byte {
 	k := make([]byte, len(prefix)+len(suffix))
 	copy(k, prefix)
@@ -105,6 +110,7 @@ func makeKey(prefix, suffix []byte) []byte {
 	return k
 }
 
+// makeChunkKey는 데이터 청크 저장을 위한 고유 키를 생성합니다.
 func makeChunkKey(id []byte, seq uint32) []byte {
 	k := make([]byte, len(prefixBlob)+len(id)+chunkSeqLen)
 	copy(k, prefixBlob)
@@ -113,6 +119,7 @@ func makeChunkKey(id []byte, seq uint32) []byte {
 	return k
 }
 
+// setMeta는 지정된 트랜잭션을 통해 메타데이터를 저장합니다.
 func setMeta(txn *badger.Txn, metaKey []byte, im *internalMeta) error {
 	jsonByte, err := json.Marshal(im)
 	if err != nil {
@@ -121,6 +128,7 @@ func setMeta(txn *badger.Txn, metaKey []byte, im *internalMeta) error {
 	return txn.Set(metaKey, jsonByte)
 }
 
+// getMeta는 Badger 항목에서 메타데이터를 추출합니다.
 func getMeta(item *badger.Item) (internalMeta, error) {
 	var im internalMeta
 	err := item.Value(func(val []byte) error {
@@ -133,6 +141,7 @@ func getMeta(item *badger.Item) (internalMeta, error) {
 	return im, nil
 }
 
+// findMetaItemByID는 ID를 기반으로 해당 항목의 메타데이터 Badger 항목을 찾습니다.
 func findMetaItemByID(txn *badger.Txn, id uuid.UUID) (*badger.Item, error) {
 	idBytes, err := id.MarshalBinary()
 	if err != nil {
@@ -160,6 +169,7 @@ func findMetaItemByID(txn *badger.Txn, id uuid.UUID) (*badger.Item, error) {
 	return txn.Get([]byte("meta:" + path))
 }
 
+// findByPath는 경로를 기반으로 메타데이터를 검색합니다. (디렉토리 경로 매칭 포함)
 func findByPath(txn *badger.Txn, path string) (internalMeta, error) {
 	if path == vfs.Root {
 		return internalMeta{}, vfs.ErrNotFound
@@ -198,6 +208,7 @@ func findByPath(txn *badger.Txn, path string) (internalMeta, error) {
 	return internalMeta{}, vfs.ErrNotFound
 }
 
+// deleteIndex는 메타데이터 ID 검색용 인덱스를 삭제합니다.
 func deleteIndex(txn *badger.Txn, meta *vfs.Meta) error {
 	// Delete Index
 	idBytes, marshalBinErr := meta.ID.MarshalBinary()
@@ -211,6 +222,7 @@ func deleteIndex(txn *badger.Txn, meta *vfs.Meta) error {
 	return nil
 }
 
+// deleteChunks는 저정된 ID와 연결된 모든 데이터 청크를 삭제합니다.
 func deleteChunks(txn *badger.Txn, id []byte) error {
 	prefix := make([]byte, len(prefixBlob)+len(id))
 	copy(prefix, prefixBlob)
@@ -233,6 +245,7 @@ func deleteChunks(txn *badger.Txn, id []byte) error {
 	return nil
 }
 
+// deleteItem은 단일 파일 항목(메타데이터, 인덱스, 데이터 청크)을 모두 삭제합니다.
 func deleteItem(txn *badger.Txn, im *internalMeta) error {
 	// Single file delete
 	idBytes, marshalBinErr := im.InternalID.MarshalBinary()
@@ -257,6 +270,7 @@ func deleteItem(txn *badger.Txn, im *internalMeta) error {
 	return nil
 }
 
+// deleteItems는 여러 항목을 일괄 삭제합니다.
 func deleteItems(txn *badger.Txn, items []internalMeta) error {
 	for i := range items {
 		if !items[i].IsDir {
@@ -279,6 +293,7 @@ func deleteItems(txn *badger.Txn, items []internalMeta) error {
 	return nil
 }
 
+// moveItem은 단일 항목의 경로 정보를 업데이트하고 키를 변경합니다.
 func moveItem(txn *badger.Txn, im *internalMeta, newPath string) error {
 	// 1. Delete old meta key
 	oldKey := makeKey(prefixMeta, []byte(im.Path))
@@ -308,6 +323,7 @@ func moveItem(txn *badger.Txn, im *internalMeta, newPath string) error {
 	return nil
 }
 
+// moveChildren은 디렉토리 이동 시 하위 모든 항목들의 경로를 재귀적으로 변경합니다.
 func moveChildren(txn *badger.Txn, srcPath, dstPath string) error {
 	prefix := srcPath
 	if !strings.HasSuffix(prefix, "/") {

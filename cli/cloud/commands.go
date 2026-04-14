@@ -1,15 +1,18 @@
+// Package cloud는 CLI에서 클라우드 저장소 기능을 사용하기 위한 핸들러와 커맨드를 제공합니다.
 package cloud
 
 import (
 	"github.com/spf13/cobra"
 )
 
+// RegisterCommands는 `cloud`와 관련된 모든 하위 명령을 등록합니다.
 func RegisterCommands(target *cobra.Command) {
 	cloudCmd := NewCloudCmd()
 	cloudCmd.AddCommand(NewListCmd(), NewUploadCmd(), NewDownloadCmd())
 	target.AddCommand(cloudCmd)
 }
 
+// NewCloudCmd는 `cloud` 명령 그룹을 생성합니다.
 func NewCloudCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "cloud",

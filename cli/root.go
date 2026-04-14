@@ -1,3 +1,4 @@
+// Package cli는 govfs CLI 도구의 핵심 로직과 커맨드 구조를 정의합니다.
 package cli
 
 import (
@@ -24,18 +25,21 @@ const (
 
 var configPath string
 
+// ContextKeyAppInfo 및 ContextKeyUserConfig는 Cobra 커맨드 컨텍스트에서 정보를 저장하기 위한 키 타입입니다.
 type (
 	ContextKeyAppInfo    struct{}
 	ContextKeyUserConfig struct{}
 )
 
+// UserConfig는 CLI 클라이언트가 서버에 접속하기 위해 필요한 사용자 설정을 정의합니다.
 type UserConfig struct {
-	ServerURL string
-	Username  string
-	Password  string
-	TokenInfo TokenInfo
+	ServerURL string    // 서버 접속 주소
+	Username  string    // 사용자 이름
+	Password  string    // 사용자 비밀번호
+	TokenInfo TokenInfo // 발급받은 인증 토큰 정보
 }
 
+// TokenInfo는 서버로부터 발급받은 토큰 응답 정보를 포함합니다.
 type TokenInfo struct {
 	types.TokenResponse
 }
@@ -47,6 +51,7 @@ func (t TokenInfo) IsExpired() bool {
 	return t.ExpiresAt.Before(time.Now())
 }
 
+// GetUserConfig는 로컬 파일 시스템에서 사용자 설정 파일을 읽어 반환합니다.
 func GetUserConfig() (UserConfig, error) {
 	var userConfig UserConfig
 
@@ -61,6 +66,7 @@ func GetUserConfig() (UserConfig, error) {
 	return userConfig, err
 }
 
+// SetUserConfig는 사용자 설정을 로컬 파일 시스템에 저장합니다.
 func SetUserConfig(u *UserConfig) error {
 	file, err := os.Create(filepath.Join(configPath, "config"))
 	if err != nil {
@@ -135,6 +141,7 @@ func newInfoCommand() *cobra.Command {
 	return info
 }
 
+// NewRootCommand는 govfs CLI의 최상위(Root) 커맨드를 생성하고 초기화합니다.
 func NewRootCommand(appInfo *config.AppInfo) *cobra.Command {
 	root := &cobra.Command{
 		Use:   appInfo.Name,

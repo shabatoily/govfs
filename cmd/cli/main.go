@@ -1,3 +1,4 @@
+// Package main은 govfs CLI 도구의 진입점입니다.
 package main
 
 import (

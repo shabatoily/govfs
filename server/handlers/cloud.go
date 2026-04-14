@@ -1,3 +1,4 @@
+// Package handlers는 HTTP 요청을 처리하고 응답을 반환하는 핸들러를 제공합니다.
 package handlers
 
 import (
@@ -9,10 +10,12 @@ import (
 
 const GoogleAuthCodeCallbackURL = "/cloud/googledrive/callback"
 
+// CloudHandler는 외부 클라우드 저장소와의 상호작용을 처리하는 핸들러입니다.
 type CloudHandler struct {
 	storage cloud.Storage
 }
 
+// NewCloudHandler는 새로운 CloudHandler 인스턴스를 생성합니다.
 func NewCloudHandler(storage cloud.Storage) *CloudHandler {
 	return &CloudHandler{storage: storage}
 }
@@ -26,6 +29,7 @@ func NewCloudHandler(storage cloud.Storage) *CloudHandler {
 // @Success      200  {object}  types.CloudAuthResponse
 // @Failure      400  {object}  string
 // @Router       /cloud/googledrive/auth-code-url [get]
+// GoogleDriveAuthCodeURL은 Google Drive 인증을 위한 URL을 생성하여 반환합니다.
 func (h *CloudHandler) GoogleDriveAuthCodeURL(c fiber.Ctx) error {
 	googledriveAdaper, ok := h.storage.(*googledrive.Adapter)
 	if !ok {
@@ -46,6 +50,7 @@ func (h *CloudHandler) GoogleDriveAuthCodeURL(c fiber.Ctx) error {
 // @Success      200  {object}  string
 // @Failure      400  {object}  string
 // @Router       /cloud/googledrive/callback [get]
+// GoogleDriveCallback은 Google Drive 인증 후 전달되는 콜백을 처리합니다.
 func (h *CloudHandler) GoogleDriveCallback(c fiber.Ctx) error {
 	googledriveAdaper, ok := h.storage.(*googledrive.Adapter)
 	if !ok {
@@ -73,6 +78,7 @@ func (h *CloudHandler) GoogleDriveCallback(c fiber.Ctx) error {
 // @Success      200  {object}  types.CloudListResponse
 // @Failure      400  {object}  string
 // @Router       /cloud/list [get]
+// List는 클라우드 저장소 내의 파일 목록을 조회합니다.
 func (h *CloudHandler) List(c fiber.Ctx) error {
 	p := c.Query("path")
 	files, err := h.storage.List(p)
@@ -95,6 +101,7 @@ func (h *CloudHandler) List(c fiber.Ctx) error {
 // @Success      204  {object}  nil
 // @Failure      400  {object}  string
 // @Router       /cloud/upload [post]
+// Upload는 클라우드 저장소로 파일을 업로드합니다.
 func (h *CloudHandler) Upload(c fiber.Ctx) error {
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -123,6 +130,7 @@ func (h *CloudHandler) Upload(c fiber.Ctx) error {
 // @Success      200  {object}  io.ReadCloser
 // @Failure      400  {object}  string
 // @Router       /cloud/download [post]
+// Download는 클라우드 저장소로부터 파일을 다운로드합니다.
 func (h *CloudHandler) Download(c fiber.Ctx) error {
 	r, err := h.storage.Download(c.Query("path"))
 	if err != nil {
@@ -142,6 +150,7 @@ func (h *CloudHandler) Download(c fiber.Ctx) error {
 // @Success      204  {object}  nil
 // @Failure      400  {object}  string
 // @Router       /cloud/delete [delete]
+// Delete는 클라우드 저장소의 파일을 삭제합니다.
 func (h *CloudHandler) Delete(c fiber.Ctx) error {
 	if err := h.storage.Delete(c.Query("path")); err != nil {
 		return err

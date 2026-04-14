@@ -1,3 +1,4 @@
+// Package bootstrap은 서버 및 VFS, 클라우드 스토리지의 초기화를 담당합니다.
 package bootstrap
 
 import (
@@ -25,14 +26,15 @@ const banner = `
   \____|\___/ \_/ |_| |___/
 `
 
+// InitServer는 Fiber 애플리케이션을 생성하고 라우트, 미들웨어, 이벤트 후크를 설정합니다.
 func InitServer(fs vfs.VFS, cfg *config.ServerConfig) *fiber.App {
-	// Set error handler
+	// 에러 핸들러 설정
 	cfg.Fiber.ErrorHandler = middlewares.ErrorHandler
-	// Set JSON encoder and decoder
+	// JSON 인코더 및 디코더 설정
 	cfg.Fiber.JSONEncoder = json.Marshal
 	cfg.Fiber.JSONDecoder = json.Unmarshal
 
-	// Set fiber logger
+	// Fiber 로거 설정
 	log.SetLevel(cfg.Logger.Level)
 	fiberLogFile, err := os.Open(cfg.Logger.Path)
 	if err != nil {
@@ -46,7 +48,7 @@ func InitServer(fs vfs.VFS, cfg *config.ServerConfig) *fiber.App {
 
 	middlewares.CommonMiddlewares(app, cfg)
 
-	// web routes
+	// 웹 라우트 설정
 	routes.Web(app, &routes.DepsWeb{
 		Context:      cfg.Context,
 		VFS:          fs,
@@ -59,7 +61,7 @@ func InitServer(fs vfs.VFS, cfg *config.ServerConfig) *fiber.App {
 		return nil
 	})
 
-	// on pre shutdown
+	// 서버 종료 전 리소스 정리 정의
 	app.Hooks().OnPreShutdown(func() error {
 		var err error
 		if fs != nil {
@@ -74,6 +76,7 @@ func InitServer(fs vfs.VFS, cfg *config.ServerConfig) *fiber.App {
 	return app
 }
 
+// InitVFS는 주어진 설정을 기반으로 적절한 드라이버(Badger, LocalStorage 등)를 사용하여 VFS를 초기화합니다.
 func InitVFS(cfg *config.VfsConfig) (vfs.VFS, error) {
 	vfsLogger, err := vfs.NewLogger(cfg.Logger)
 	if err != nil {
@@ -90,6 +93,7 @@ func InitVFS(cfg *config.VfsConfig) (vfs.VFS, error) {
 	return drivers.New(&cfg.Driver)
 }
 
+// InitCloud는 클라우드 스토리지 인터페이스를 초기화합니다.
 func InitCloud(cfg *config.CloudConfig) (cloud.Storage, error) {
 	return cloud.New(&cfg.Config)
 }

@@ -1,3 +1,4 @@
+// Package middlewares는 Fiber 애플리케이션에서 사용하는 공통 및 커스텀 미들웨어를 제공합니다.
 package middlewares
 
 import (
@@ -23,8 +24,7 @@ import (
 	"github.com/meteormin/govfs/server/types"
 )
 
-// CommonMiddlewares returns a middleware that applies common middlewares to the app.
-// It returns a function that closes the access log file.
+// CommonMiddlewares는 애플리케이션 전반에 걸쳐 사용되는 공통 미들웨어들을 등록합니다.
 func CommonMiddlewares(app *fiber.App, cfg *config.ServerConfig) {
 	// common middlewares
 
@@ -118,6 +118,7 @@ func CommonMiddlewares(app *fiber.App, cfg *config.ServerConfig) {
 	})
 }
 
+// AccessLogWriter는 액세스 로그 파일 기록을 위한 Writer와 리소스 정리용 함수를 반환합니다.
 func AccessLogWriter(path string) (io.Writer, func() error) {
 	// If no path is provided, log to standard output and return a no-op cleanup function.
 	if path == "" {

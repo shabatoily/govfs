@@ -1,3 +1,4 @@
+// Package handlers는 HTTP 요청을 처리하고 응답을 반환하는 핸들러를 제공합니다.
 package handlers
 
 import (
@@ -16,6 +17,7 @@ const (
 	HeartbeatInterval = 15 * time.Second
 )
 
+// SSEHandler는 서버 전송 이벤트(SSE) 통신을 처리하는 핸들러입니다.
 type SSEHandler struct {
 	broker *services.SSEBroker
 }
@@ -28,6 +30,7 @@ type SSEHandler struct {
 // @Success 200 {object} types.SSEMessage
 // @Failure 500 {object} any
 // @Router /sse/subscribe [get]
+// Subscribe는 클라이언트의 SSE 연결 요청을 처리하고 이벤트 스트림을 시작합니다.
 func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 	ctx.Set(fiber.HeaderContentType, "text/event-stream")
 	ctx.Set(fiber.HeaderCacheControl, "no-cache")
@@ -81,6 +84,7 @@ func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 // @Success 204
 // @Failure 400 {object} fiber.Error
 // @Router /sse/:id/publish [post]
+// Publish는 외부 요청을 통해 특정 클라이언트에게 SSE 메시지를 전송합니다.
 func (h *SSEHandler) Publish(ctx fiber.Ctx) error {
 	var metaData types.SSEMeta
 	if err := ctx.Bind().Body(&metaData); err != nil {
@@ -107,6 +111,7 @@ func (h *SSEHandler) Publish(ctx fiber.Ctx) error {
 	return ctx.SendStatus(fiber.StatusNoContent)
 }
 
+// NewSSEHandler는 새로운 SSEHandler 인스턴스를 생성합니다.
 func NewSSEHandler(broker *services.SSEBroker) *SSEHandler {
 	return &SSEHandler{broker: broker}
 }

@@ -1,3 +1,4 @@
+// Package routes는 서버의 엔드포인트를 정의하고 라우트를 등록합니다.
 package routes
 
 import (
@@ -31,6 +32,7 @@ type DepsWeb struct {
 	WebUIEnabled bool
 }
 
+// Web은 Fiber 애플리케이션에 모든 웹 서비스 라우트를 등록합니다.
 func Web(app *fiber.App, deps *DepsWeb) {
 	sseBroker := services.NewSSEBroker(services.SSEConfig{
 		Context:          deps.Context,

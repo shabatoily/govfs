@@ -1,3 +1,4 @@
+// Package secret은 CLI에서 비밀번호 해싱 및 생성 등 보안 관련 명령을 제공합니다.
 package secret
 
 import (
@@ -14,12 +15,14 @@ const (
 	secretLength = 12
 )
 
+// RegisterCommands는 `secret`과 관련된 모든 하위 명령을 등록합니다.
 func RegisterCommands(target *cobra.Command) {
 	secretCmd := NewSecretCmd()
 	secretCmd.AddCommand(NewHashCmd(), NewCompareCmd(), NewGenerateHashCmd())
 	target.AddCommand(secretCmd)
 }
 
+// NewSecretCmd는 `secret` 명령 그룹을 생성합니다.
 func NewSecretCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "secret",

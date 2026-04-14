@@ -1,3 +1,4 @@
+// Package client는 govfs 서버와 통신하기 위한 API 클라이언트를 제공합니다.
 package client
 
 import (
@@ -14,7 +15,7 @@ type CloudClient struct {
 	*baseClient
 }
 
-// GoogleDriveAuthCodeURL returns the authentication URL for Google Drive.
+// GoogleDriveAuthCodeURL은 Google Drive 인증을 위해 필요한 URL을 서버로부터 받아옵니다.
 func (c *CloudClient) GoogleDriveAuthCodeURL() (string, error) {
 	resp, err := c.c.Post("/cloud/googledrive/auth")
 	if err != nil {
@@ -33,7 +34,7 @@ func (c *CloudClient) GoogleDriveAuthCodeURL() (string, error) {
 	return payload["url"], nil
 }
 
-// List lists files in the cloud storage.
+// List는 클라우드 저장소의 특정 경로에 있는 파일 목록을 조회합니다.
 func (c *CloudClient) List(path string) ([]string, error) {
 	u := fmt.Sprintf("/cloud?path=%s", path)
 	resp, err := c.c.Get(u)
@@ -53,7 +54,7 @@ func (c *CloudClient) List(path string) ([]string, error) {
 	return files, nil
 }
 
-// Upload uploads a file to the cloud storage.
+// Upload는 클라우드 저장소로 로컬 파일을 업로드합니다.
 func (c *CloudClient) Upload(name string, r io.Reader) error {
 	f := &client.File{}
 	f.SetFieldName("file")
@@ -80,7 +81,7 @@ func (c *CloudClient) Upload(name string, r io.Reader) error {
 	return nil
 }
 
-// Download downloads a file from the cloud storage.
+// Download는 클라우드 저장소로부터 파일을 다운로드하여 Reader로 반환합니다.
 func (c *CloudClient) Download(path string) (io.Reader, error) {
 	u := fmt.Sprintf("/cloud/download?path=%s", path)
 	resp, err := c.c.Post(u)
@@ -95,7 +96,7 @@ func (c *CloudClient) Download(path string) (io.Reader, error) {
 	return bytes.NewReader(resp.Body()), nil
 }
 
-// Delete deletes a file from the cloud storage.
+// Delete는 클라우드 저장소의 파일을 삭제합니다.
 func (c *CloudClient) Delete(path string) error {
 	u := fmt.Sprintf("/cloud?path=%s", path)
 	resp, err := c.c.Delete(u)
