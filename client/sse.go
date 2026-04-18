@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// SSEClient는 Server-Sent Events(SSE) 스트림 연결 및 이벤트 발행을 처리하는 클라이언트입니다.
 type SSEClient struct {
 	*baseClient
 }

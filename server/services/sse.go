@@ -16,6 +16,7 @@ const (
 	defaultBufferSize = 100
 )
 
+// SSEConfig는 SSEBroker 생성 및 초기화 시 사용할 설정 값들을 정의하는 구조체입니다.
 type SSEConfig struct {
 	Context          context.Context
 	MaxClients       int

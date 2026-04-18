@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v3/client"
 )
 
+// CloudClient는 클라우드 저장소 관련 API 통신을 담당하는 클라이언트입니다.
 type CloudClient struct {
 	*baseClient
 }

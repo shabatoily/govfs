@@ -21,6 +21,7 @@ type VfsHandler struct {
 	broker *services.SSEBroker
 }
 
+// Prefix는 VfsHandler가 담당하는 라우트의 URL 접두사를 반환합니다.
 func (h *VfsHandler) Prefix() string {
 	return h.srv.Prefix()
 }
@@ -480,6 +481,7 @@ func NewVfsHandler(srv *services.VfsService, broker *services.SSEBroker) *VfsHan
 	return &VfsHandler{srv: srv, broker: broker}
 }
 
+// parseDstReq는 요청 구조체에서 대상 경로 정보(DstReq)를 파싱합니다.
 func parseDstReq(ctx fiber.Ctx) (*types.DstReq, error) {
 	req := new(types.DstReq)
 	if err := ctx.Bind().JSON(req); err != nil || req.Name == "" {
@@ -488,6 +490,7 @@ func parseDstReq(ctx fiber.Ctx) (*types.DstReq, error) {
 	return req, nil
 }
 
+// ModifyFunc는 VFS 아이템을 수정(이동, 복사 등)하는 함수의 시그니처입니다.
 type ModifyFunc func(id uuid.UUID, dst string) (types.MetaRes, error)
 
 func (h *VfsHandler) asyncModify(ctx fiber.Ctx, fn ModifyFunc) error {

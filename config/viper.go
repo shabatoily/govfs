@@ -14,6 +14,8 @@ import (
 
 var defaultConfigName = "config"
 
+// LoadWithViper는 지정된 파일 경로에서 Viper 라이브러리를 사용하여 설정을 로드하고
+// 환경 변수 및 기본값과 병합하여 검증된 최종 설정 객체를 반환합니다.
 func LoadWithViper(in string, appInfo AppInfo) (*Config, error) {
 	if in == "" {
 		in = defaultConfigName

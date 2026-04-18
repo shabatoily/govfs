@@ -17,12 +17,15 @@ import (
 )
 
 var (
-	// endpoints
-	PrefixVFS   = "/vfs"
-	PrefixSSE   = "/sse"
+	// PrefixVFS는 가상 파일 시스템 관련 API의 URL 접두사입니다.
+	PrefixVFS = "/vfs"
+	// PrefixSSE는 서버 전송 이벤트(SSE) 관련 API의 URL 접두사입니다.
+	PrefixSSE = "/sse"
+	// PrefixWebui는 내장 웹 UI 서비스의 기본 URL 접두사입니다.
 	PrefixWebui = "/"
 )
 
+// DepsWeb은 웹 라우트 등록 시 필요한 의존성 객체들을 묶어 전달하기 위한 구조체입니다.
 type DepsWeb struct {
 	Context context.Context
 

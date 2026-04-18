@@ -50,18 +50,22 @@ type Client struct {
 	vfs   *VFSClient
 }
 
+// Auth는 인증 관련 통신을 담당하는 AuthClient를 반환합니다.
 func (c *Client) Auth() *AuthClient {
 	return c.auth
 }
 
+// Cloud는 클라우드 저장소 통신을 담당하는 CloudClient를 반환합니다.
 func (c *Client) Cloud() *CloudClient {
 	return c.cloud
 }
 
+// SSE는 이벤트 스트림 통신을 담당하는 SSEClient를 반환합니다.
 func (c *Client) SSE() *SSEClient {
 	return c.sse
 }
 
+// VFS는 가상 파일 시스템 연산을 담당하는 VFSClient를 반환합니다.
 func (c *Client) VFS() *VFSClient {
 	return c.vfs
 }

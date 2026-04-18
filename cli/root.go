@@ -20,6 +20,7 @@ import (
 )
 
 const (
+	// DefaultServerURL은 서버 접속 시 사용되는 기본 주소입니다.
 	DefaultServerURL = "http://localhost:3000"
 )
 
@@ -45,6 +46,7 @@ type TokenInfo struct {
 }
 
 func (t TokenInfo) IsExpired() bool {
+	// 토큰 만료 시간이 설정되지 않은 경우에는 만료된 것으로 간주합니다.
 	if t.ExpiresAt.IsZero() {
 		return true
 	}

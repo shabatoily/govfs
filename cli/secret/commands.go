@@ -30,6 +30,7 @@ func NewSecretCmd() *cobra.Command {
 	}
 }
 
+// NewHashCmd는 비밀번호 문자열을 바탕으로 해시값을 생성하는 커맨드를 반환합니다.
 func NewHashCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "hash <secret>",
@@ -46,6 +47,7 @@ func NewHashCmd() *cobra.Command {
 	}
 }
 
+// NewCompareCmd는 입력된 원본 비밀번호와 해시값이 일치하는지 비교하는 커맨드를 반환합니다.
 func NewCompareCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "compare <hashed> <secret>",
@@ -62,6 +64,7 @@ func NewCompareCmd() *cobra.Command {
 	}
 }
 
+// NewGenerateHashCmd는 무작위 값을 기반으로 해시된 비밀번호를 생성하는 커맨드를 반환합니다.
 func NewGenerateHashCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "generate",

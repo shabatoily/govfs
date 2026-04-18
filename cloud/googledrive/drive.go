@@ -1,3 +1,4 @@
+// Package googledrive는 Google Drive API를 사용한 클라우드 저장소 연동 기능(어댑터)을 제공합니다.
 package googledrive
 
 import (
@@ -24,8 +25,10 @@ const (
 	defaultTokenFilename = "token.json"
 )
 
+// ErrUnauthorized는 인증 정보가 없거나 유효하지 않을 때 발생하는 에러입니다.
 var ErrUnauthorized = errors.New("unauthorized")
 
+// ClientConfig는 Google Drive API 연동에 필요한 클라이언트 설정 정보를 포함하는 구조체입니다.
 type ClientConfig struct {
 	Context      context.Context `json:"-"`
 	TokenPath    string          `json:"tokenPath"`
@@ -35,14 +38,15 @@ type ClientConfig struct {
 	OAuth2Config oauth2.Config   `json:"-"`
 }
 
+// Adapter는 Google Drive와 연동하여 데이터를 읽고 쓰는 클라우드 스토리지 구현체입니다.
 type Adapter struct {
 	cfg     *ClientConfig
 	service *drive.Service
 }
 
-// New creates a new Google Drive Storage adapter.
-// If a parentFolderName is provided, it will find that folder in the root of the drive or create it if it doesn't exist.
-// All operations will then be scoped to that folder. If the name is empty, it will use the root of the drive.
+// New는 새로운 Google Drive 스토리지 어댑터를 생성합니다.
+// ParentFolder가 제공되면 드라이브 루트에서 해당 폴더를 찾거나 없으면 생성하며,
+// 이후 모든 작업은 해당 폴더 범위(스코프) 내에서만 수행됩니다.
 func New(cfg *ClientConfig) (*Adapter, error) {
 	d := &Adapter{cfg: cfg}
 
@@ -83,6 +87,7 @@ func New(cfg *ClientConfig) (*Adapter, error) {
 	return d, nil
 }
 
+// Init은 지정된 OAuth2 토큰을 사용하여 내부 Google Drive 서비스 클라이언트를 초기화합니다.
 func (d *Adapter) Init(token *oauth2.Token) error {
 	client := option.WithHTTPClient(d.cfg.OAuth2Config.Client(d.cfg.Context, token))
 	service, err := drive.NewService(d.cfg.Context, client)
@@ -104,12 +109,14 @@ func (d *Adapter) Init(token *oauth2.Token) error {
 	return d.saveToken(token)
 }
 
+// AuthCodeURL은 사용자 인증을 수행할 수 있는 초기 구글 로그인 페이지 URL을 생성합니다.
 func (d *Adapter) AuthCodeURL(redirectURL, state string) string {
 	oauth2Config := d.cfg.OAuth2Config
 	oauth2Config.RedirectURL = redirectURL
 	return oauth2Config.AuthCodeURL(state, oauth2.AccessTypeOffline)
 }
 
+// IssueToken은 권한 요청을 통해 받은 코드를 이용해 Google OAuth2 토큰을 발급받습니다.
 func (d *Adapter) IssueToken(code string) (*oauth2.Token, error) {
 	oauth2Config := d.cfg.OAuth2Config
 	token, err := oauth2Config.Exchange(context.TODO(), code)
@@ -185,6 +192,7 @@ func (d *Adapter) findOrCreatePath(filePath string) (string, error) {
 	return currentParentID, nil
 }
 
+// Upload는 지정된 경로에 파일을 업로드(또는 갱신)합니다. 필요한 부모 디렉토리는 자동으로 생성합니다.
 func (d *Adapter) Upload(p string, r io.Reader) error {
 	parentID, err := d.findOrCreatePath(p)
 	if err != nil {
@@ -211,6 +219,7 @@ func (d *Adapter) Upload(p string, r io.Reader) error {
 	return err
 }
 
+// Download는 지정된 경로의 파일을 다운로드할 수 있는 데이터 스트림(ReadCloser)을 반환합니다.
 func (d *Adapter) Download(p string) (io.ReadCloser, error) {
 	fileID, err := d.findFileIDByPath(p)
 	if err != nil {
@@ -224,6 +233,7 @@ func (d *Adapter) Download(p string) (io.ReadCloser, error) {
 	return resp.Body, nil
 }
 
+// Delete는 지정된 경로의 파일이나 폴더를 제거합니다. 파일이 없으면 정상 처리로 간주합니다.
 func (d *Adapter) Delete(p string) error {
 	fileID, err := d.findFileIDByPath(p)
 	if err != nil {
@@ -236,7 +246,7 @@ func (d *Adapter) Delete(p string) error {
 	return d.service.Files.Delete(fileID).Do()
 }
 
-// List returns a recursive listing of all files under the given prefix.
+// List는 주어진 접두사(prefix) 하위에 위치한 모든 파일들의 경로를 재귀적으로 탐색하여 목록을 반환합니다.
 func (d *Adapter) List(prefix string) ([]string, error) {
 	startFolderID := d.cfg.ParentFolder
 	if prefix != "" {
@@ -339,6 +349,7 @@ func escape(s string) string {
 	return strings.ReplaceAll(s, "'", "\\'")
 }
 
+// GetClient는 설정과 토큰을 사용하여 인가된 HTTP 클라이언트를 생성합니다.
 func GetClient(token *oauth2.Token, cfg *oauth2.Config) (*http.Client, error) {
 	return cfg.Client(context.Background(), token), nil
 }

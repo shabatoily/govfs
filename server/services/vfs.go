@@ -18,6 +18,7 @@ type VfsService struct {
 	prefix string  // 리소스 접근용 URL 프리픽스
 }
 
+// Prefix는 연동된 VFS 리소스의 기본 접근 URL 접두사를 반환합니다.
 func (s *VfsService) Prefix() string {
 	return s.prefix
 }

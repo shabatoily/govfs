@@ -20,6 +20,7 @@ func RegisterCommands(target *cobra.Command) {
 		NewMkdirCommand(), NewRemoveCommand())
 }
 
+// NewBackupCommand는 VFS 데이터를 지정된 로컬 파일로 백업하는 커맨드를 반환합니다.
 func NewBackupCommand() *cobra.Command {
 	var backupFile string
 
@@ -41,6 +42,7 @@ func NewBackupCommand() *cobra.Command {
 	return backupCmd
 }
 
+// NewRestoreCommand는 지정된 로컬 백업 파일을 이용해 VFS 데이터를 복원하는 커맨드를 반환합니다.
 func NewRestoreCommand() *cobra.Command {
 	var restoreFile string
 	restoreCmd := &cobra.Command{
@@ -61,6 +63,7 @@ func NewRestoreCommand() *cobra.Command {
 	return restoreCmd
 }
 
+// NewRotateCommand는 VFS 데이터의 암호화 키를 교체(Rotate)하는 커맨드를 반환합니다.
 func NewRotateCommand() *cobra.Command {
 	var newKeyPath string
 
@@ -94,6 +97,7 @@ func NewRotateCommand() *cobra.Command {
 	return cmd
 }
 
+// NewListCommand는 VFS 상의 파일 및 디렉토리 목록을 표 형식으로 조회하는 커맨드를 반환합니다.
 func NewListCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "ls <path>",
@@ -126,6 +130,7 @@ func NewListCommand() *cobra.Command {
 	}
 }
 
+// NewTreeCommand는 특정 경로 내부의 파일 및 디렉토리 구조를 트리 형태로 출력하는 커맨드를 반환합니다.
 func NewTreeCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "tree <path>",
@@ -154,6 +159,7 @@ func NewTreeCommand() *cobra.Command {
 	}
 }
 
+// NewStatCommand는 지정한 메타데이터 ID(UUID)를 기반으로 파일 상태 정보를 조회하는 커맨드를 반환합니다.
 func NewStatCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "stat <id>",
@@ -188,6 +194,8 @@ func NewStatCommand() *cobra.Command {
 	}
 }
 
+// NewCopyCommand는 로컬과 VFS 간, 혹은 VFS 내부의 파일 및 디렉토리를 복사하는 커맨드를 반환합니다.
+// vfs: prefix를 사용하여 대상이 로컬인지 VFS환경인지 구분합니다.
 func NewCopyCommand() *cobra.Command {
 	var recursive bool
 
@@ -211,6 +219,7 @@ func NewCopyCommand() *cobra.Command {
 	return cpCmd
 }
 
+// NewMkdirCommand는 VFS 환경에 새로운 디렉토리를 생성하는 커맨드를 반환합니다.
 func NewMkdirCommand() *cobra.Command {
 	var mkdirParentsFlag bool
 	cmd := &cobra.Command{
@@ -232,6 +241,7 @@ func NewMkdirCommand() *cobra.Command {
 	return cmd
 }
 
+// NewRemoveCommand는 VFS 환경의 특정 파일 또는 디렉토리를 삭제하는 커맨드를 반환합니다.
 func NewRemoveCommand() *cobra.Command {
 	var recursive bool
 	cmd := &cobra.Command{

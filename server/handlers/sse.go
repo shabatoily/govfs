@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	// HeartbeatInterval은 SSE 연결 유지를 위해 주기적으로 하트비트를 전송하는 간격입니다.
 	HeartbeatInterval = 15 * time.Second
 )
 

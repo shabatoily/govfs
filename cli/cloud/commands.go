@@ -20,6 +20,7 @@ func NewCloudCmd() *cobra.Command {
 	}
 }
 
+// NewListCmd는 클라우드 저장소의 최상위 또는 지정된 경로의 파일 목록을 조회하는 커맨드를 반환합니다.
 func NewListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use: "list",
@@ -34,6 +35,7 @@ func NewListCmd() *cobra.Command {
 	}
 }
 
+// NewUploadCmd는 로컬에 존재하는 파일을 클라우드 저장소 특정 경로로 업로드하는 커맨드를 반환합니다.
 func NewUploadCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "upload <upload path>",
@@ -51,6 +53,7 @@ func NewUploadCmd() *cobra.Command {
 	}
 }
 
+// NewDownloadCmd는 클라우드 저장소에 있는 파일을 로컬 지정 경로로 다운로드하는 커맨드를 반환합니다.
 func NewDownloadCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "download <path in google drive> <download path in local, default: ./>",

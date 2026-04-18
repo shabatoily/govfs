@@ -14,6 +14,7 @@ import (
 	"github.com/meteormin/govfs/server/types"
 )
 
+// VFSClient는 가상 파일 시스템(VFS) 연산 및 파일 전송 API 통신을 담당하는 클라이언트입니다.
 type VFSClient struct {
 	*baseClient
 }
