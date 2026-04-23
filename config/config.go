@@ -96,6 +96,9 @@ type Config struct {
 var DefaultConfig = &Config{
 	Server: ServerConfig{
 		Port: 3000,
+		Fiber: fiber.Config{
+			BodyLimit: 100 * 1024 * 1024,
+		},
 	},
 	VFS: VfsConfig{
 		Driver: drivers.Config{

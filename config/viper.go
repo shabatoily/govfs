@@ -61,6 +61,7 @@ func resolveConfigPath(in string) string {
 }
 
 func resolveConfig(cfg *Config) error {
+	cfg.Server.Fiber = DefaultConfig.Server.Fiber
 	if cfg.Server.Fiber.AppName == "" {
 		cfg.Server.Fiber.AppName = cfg.App.Name + " v" + cfg.App.Version
 	}

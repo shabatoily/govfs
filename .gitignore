@@ -6,3 +6,4 @@ release/
 *credentials*
 logs/
 *.bakconfig.json
+*.bak
