@@ -27,7 +27,7 @@ const banner = `
 `
 
 // InitServer는 Fiber 애플리케이션을 생성하고 라우트, 미들웨어, 이벤트 후크를 설정합니다.
-func InitServer(fs vfs.VFS, cfg *config.ServerConfig) *fiber.App {
+func InitServer(fs vfs.VFS, storage cloud.Storage, cfg *config.ServerConfig) *fiber.App {
 	// 에러 핸들러 설정
 	cfg.Fiber.ErrorHandler = middlewares.ErrorHandler
 	// JSON 인코더 및 디코더 설정
@@ -53,6 +53,7 @@ func InitServer(fs vfs.VFS, cfg *config.ServerConfig) *fiber.App {
 		Context:      cfg.Context,
 		VFS:          fs,
 		Auth:         cfg.Auth,
+		Cloud:        storage,
 		WebUIEnabled: cfg.WebUI.Enabled,
 	})
 

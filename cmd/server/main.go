@@ -67,9 +67,14 @@ func main() {
 		log.Panic(err)
 	}
 
+	storage, err := bootstrap.InitCloud(&cfg.Cloud)
+	if err != nil {
+		log.Printf("skip init cloud: %s", err.Error())
+	}
+
 	cfg.Server.Context = ctx
 	// init server
-	app := bootstrap.InitServer(vfs, &cfg.Server)
+	app := bootstrap.InitServer(vfs, storage, &cfg.Server)
 	// set host to config and set swagger info on listen
 	app.Hooks().OnListen(func(listenData fiber.ListenData) error {
 		cfg.Server.Host = listenData.Host

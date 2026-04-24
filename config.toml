@@ -43,7 +43,10 @@ path = "./logs/vfs.log"
 # log-level: trace=-1, debug=0, info=1, warn=2, error=3, fatal=4, panic=5, noLevel=6, disabled=7
 level = -1
 
-[cloud.googleDrive]
+[cloud.config]
+clientType = "googleDrive"
+
+[cloud.config.googleDrive]
 tokenPath = ".googledrive"
 clientID = "${CLOUD_GOOGLEDRIVE_CLIENT_ID}"
 clientSecret = "${CLOUD_GOOGLEDRIVE_CLIENT_SECRET}"

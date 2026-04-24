@@ -94,6 +94,11 @@ type Config struct {
 
 // DefaultConfig는 기본적인 운용이 가능하도록 미리 정의된 초기 설정 파일 템플릿 역할을 합니다.
 var DefaultConfig = &Config{
+	Cloud: CloudConfig{
+		Config: cloud.Config{
+			ClientType: "googleDrive",
+		},
+	},
 	Server: ServerConfig{
 		Port: 3000,
 		Fiber: fiber.Config{

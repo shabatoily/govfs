@@ -10,11 +10,8 @@ import (
 
 	"github.com/jedib0t/go-pretty/v6/list"
 	vfs "github.com/meteormin/govfs"
-	"github.com/meteormin/govfs/bootstrap"
 	"github.com/meteormin/govfs/cli"
 	"github.com/meteormin/govfs/client"
-	"github.com/meteormin/govfs/cloud"
-	"github.com/meteormin/govfs/config"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +23,7 @@ type Handler struct {
 
 // NewHandler는 컨텍스트의 설정을 기반으로 새로운 클라우드 핸들러를 생성합니다.
 func NewHandler(cmd *cobra.Command) (*Handler, error) {
-	u, ok := cmd.Context().Value(cli.ContextKeyUserConfig{}).(cli.UserConfig)
+	u, ok := cmd.Context().Value(cli.ContextKeyUserConfig{}).(*cli.UserConfig)
 	if !ok {
 		return nil, fmt.Errorf("not found user config in context")
 	}
@@ -45,7 +42,7 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 		c.SetToken(t.Token)
 
 		u.TokenInfo = cli.TokenInfo{TokenResponse: t}
-		err = cli.SetUserConfig(&u)
+		err = cli.SetUserConfig(u)
 		if err != nil {
 			return nil, err
 		}
@@ -55,10 +52,6 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 		cmd:    cmd,
 		client: c,
 	}, nil
-}
-
-func NewStorage(cfg *config.CloudConfig) (cloud.Storage, error) {
-	return bootstrap.InitCloud(cfg)
 }
 
 // List는 클라우드 저장소의 파일 목록을 출력합니다.

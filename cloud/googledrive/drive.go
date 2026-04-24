@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	tokenDirMode         = 0600
-	tokenFileMode        = 0600
+	tokenDirMode         = 0o600
+	tokenFileMode        = 0o600
 	defaultTokenFilename = "token.json"
 )
 
@@ -65,14 +65,14 @@ func New(cfg *ClientConfig) (*Adapter, error) {
 	}
 
 	if cfg.TokenPath == "" {
-		tokenPath := ".googledrive"
-		if _, err := os.Stat(tokenPath); errors.Is(err, os.ErrNotExist) {
-			err = os.Mkdir(tokenPath, tokenDirMode)
-			if err != nil {
-				return nil, err
-			}
+		cfg.TokenPath = ".googledrive"
+	}
+
+	if _, err := os.Stat(cfg.TokenPath); errors.Is(err, os.ErrNotExist) {
+		err = os.Mkdir(cfg.TokenPath, tokenDirMode)
+		if err != nil {
+			return nil, err
 		}
-		cfg.TokenPath = tokenPath
 	}
 
 	t, err := d.getTokenFromFile()
