@@ -185,8 +185,6 @@ func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 		// OR creates `/vfs/path/file` if `/vfs/path` is the target name.
 
 		// Let's implement simpler semantic:
-		// Always require user to specify full target path or directory.
-		// Actually, let's look at `findMetaByPath`.
 
 		targetPath := filepath.Join(dstVfs, relPath)
 		// On windows filepath.Join uses backslash. We must ensure VFS paths are slashed.
@@ -208,7 +206,7 @@ func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 			return nil
 		}
 
-		f, err := root.Open(path)
+		f, err := root.Open(relPath)
 		if err != nil {
 			return err
 		}
