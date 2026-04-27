@@ -586,6 +586,42 @@ const docTemplate = `{
                 ]
             }
         },
+        "/cloud/is-authorized": {
+            "get": {
+                "description": "Checks if the cloud storage is authorized.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "content": {
+                            "application/json": {}
+                        },
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    }
+                },
+                "summary": "Is Authorized",
+                "tags": [
+                    "cloud"
+                ]
+            }
+        },
         "/cloud/list": {
             "get": {
                 "description": "Lists the files in the cloud storage.",

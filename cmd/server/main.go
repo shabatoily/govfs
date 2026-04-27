@@ -69,7 +69,7 @@ func main() {
 
 	storage, err := bootstrap.InitCloud(&cfg.Cloud)
 	if err != nil {
-		log.Printf("skip init cloud: %s", err.Error())
+		log.Panic(err)
 	}
 
 	cfg.Server.Context = ctx

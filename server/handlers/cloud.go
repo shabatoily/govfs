@@ -69,6 +69,26 @@ func (h *CloudHandler) GoogleDriveCallback(c fiber.Ctx) error {
 	return c.SendString("google drive authentication success! you can close this window.")
 }
 
+// IsAuthorized checks if the cloud storage is authorized.
+// @Summary      Is Authorized
+// @Description  Checks if the cloud storage is authorized.
+// @Tags         cloud
+// @Accept       json
+// @Produce      json
+// @Success      204  {object}  nil
+// @Failure      400  {object}  string
+// @Router       /cloud/is-authorized [get]
+func (h *CloudHandler) IsAuthorized(c fiber.Ctx) error {
+	if _, ok := h.storage.(*googledrive.Adapter); !ok {
+		return fiber.NewError(fiber.StatusBadRequest, "not a googledrive adapter")
+	}
+	if !h.storage.(*googledrive.Adapter).IsAuthorized() {
+		return fiber.NewError(fiber.StatusUnauthorized, "not authorized")
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
 // List lists the files in the cloud storage.
 // @Summary      List files
 // @Description  Lists the files in the cloud storage.

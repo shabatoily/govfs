@@ -2,7 +2,6 @@
 package cloud
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -45,6 +44,24 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 		err = cli.SetUserConfig(u)
 		if err != nil {
 			return nil, err
+		}
+	}
+
+	// Check cloud authorization
+	if err := c.Cloud().IsAuthorized(); err != nil {
+		code, err := c.Cloud().GoogleDriveAuthCodeURL()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get auth code URL: %w", err)
+		}
+
+		cmd.Printf("Please authorize by visiting the following URL: %s\n", code)
+		cmd.Println("After authorization, please press Enter to continue.")
+
+		_, _ = os.Stdin.Read(make([]byte, 1))
+
+		// Check again
+		if err := c.Cloud().IsAuthorized(); err != nil {
+			return nil, fmt.Errorf("still not authorized after user action: %w", err)
 		}
 	}
 
@@ -117,7 +134,7 @@ func (h *Handler) Download(src, dst string) error {
 		return err
 	}
 
-	if stat, osErr := os.Stat(p); errors.Is(osErr, os.ErrNotExist) {
+	if stat, osErr := os.Stat(p); osErr == nil {
 		if stat.IsDir() {
 			p = filepath.Join(p, filepath.Base(src))
 		}

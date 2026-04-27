@@ -96,6 +96,7 @@ func Web(app *fiber.App, deps *DepsWeb) {
 	app.Route("/cloud", func(router fiber.Router) {
 		router.Get(handlers.GoogleAuthCodeCallbackURL, cloudHandler.GoogleDriveCallback).Name("googledrive-callback")
 		router.Use(jwtAuth)
+		router.Get("/googledrive/auth", cloudHandler.IsAuthorized).Name("googledrive-auth-status")
 		router.Post("/googledrive/auth", cloudHandler.GoogleDriveAuthCodeURL).Name("googledrive-auth")
 		router.Get("/", cloudHandler.List).Name("list")
 		router.Post("/", cloudHandler.Upload).Name("upload")

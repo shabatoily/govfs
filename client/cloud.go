@@ -35,6 +35,19 @@ func (c *CloudClient) GoogleDriveAuthCodeURL() (string, error) {
 	return payload["url"], nil
 }
 
+func (c *CloudClient) IsAuthorized() error {
+	resp, err := c.c.Get("/cloud/googledrive/auth")
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode() != fiber.StatusNoContent {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+	}
+
+	return nil
+}
+
 // List는 클라우드 저장소의 특정 경로에 있는 파일 목록을 조회합니다.
 func (c *CloudClient) List(path string) ([]string, error) {
 	u := fmt.Sprintf("/cloud?path=%s", path)

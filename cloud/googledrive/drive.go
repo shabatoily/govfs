@@ -77,7 +77,7 @@ func New(cfg *ClientConfig) (*Adapter, error) {
 
 	t, err := d.getTokenFromFile()
 	if err != nil {
-		return d, ErrUnauthorized
+		return d, nil
 	}
 
 	if err := d.Init(t); err != nil {
@@ -85,6 +85,10 @@ func New(cfg *ClientConfig) (*Adapter, error) {
 	}
 
 	return d, nil
+}
+
+func (d *Adapter) IsAuthorized() bool {
+	return d.service != nil
 }
 
 // Init은 지정된 OAuth2 토큰을 사용하여 내부 Google Drive 서비스 클라이언트를 초기화합니다.
@@ -129,6 +133,10 @@ func (d *Adapter) IssueToken(code string) (*oauth2.Token, error) {
 // findOrCreateFolder finds a folder by name in the root of the drive, or creates it if it doesn't exist.
 // It returns the ID of the folder.
 func (d *Adapter) findOrCreateFolder(name string) (string, error) {
+	if !d.IsAuthorized() {
+		return "", ErrUnauthorized
+	}
+
 	query := fmt.Sprintf("name = '%s' and 'root' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
 		escape(name))
 	resp, err := d.service.Files.List().Q(query).Fields("files(id)").PageSize(1).Do()
@@ -155,6 +163,10 @@ func (d *Adapter) findOrCreateFolder(name string) (string, error) {
 // findOrCreatePath ensures the folder structure for a given path exists, creating it if necessary.
 // It returns the ID of the immediate parent folder for the given path.
 func (d *Adapter) findOrCreatePath(filePath string) (string, error) {
+	if !d.IsAuthorized() {
+		return "", ErrUnauthorized
+	}
+
 	dir := path.Dir(filePath)
 	if dir == "." || dir == "" {
 		return d.cfg.ParentFolder, nil
@@ -269,6 +281,10 @@ func (d *Adapter) List(prefix string) ([]string, error) {
 }
 
 func (d *Adapter) recursiveList(folderID, currentPath string, allFiles *[]string) error {
+	if !d.IsAuthorized() {
+		return ErrUnauthorized
+	}
+
 	var pageToken string
 	var pageSize int64 = 1000
 
@@ -299,6 +315,10 @@ func (d *Adapter) recursiveList(folderID, currentPath string, allFiles *[]string
 }
 
 func (d *Adapter) findFolderIDByPath(p string) (string, error) {
+	if !d.IsAuthorized() {
+		return "", ErrUnauthorized
+	}
+
 	p = strings.Trim(p, "/")
 	if p == "" {
 		return d.cfg.ParentFolder, nil
@@ -323,6 +343,10 @@ func (d *Adapter) findFolderIDByPath(p string) (string, error) {
 }
 
 func (d *Adapter) findFileIDByPath(p string) (string, error) {
+	if !d.IsAuthorized() {
+		return "", ErrUnauthorized
+	}
+
 	dir, name := path.Split(p)
 	parentFolderID := d.cfg.ParentFolder
 	if dir != "" {
