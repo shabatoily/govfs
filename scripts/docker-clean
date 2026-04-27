@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 
-filter=${1:-"until=2h"}
+# 1. 24시간 이상 된 빌드 캐시 삭제
+echo "[1/3] Cleaning up build cache (older than 24h)..."
+docker builder prune -f --filter "until=24h"
 
-echo "[Clean up images] '<none>'"
-docker image rm "$(docker image list -f 'dangling=true' -q --no-trunc)"
-echo ""
+# 2. 이름 없는(dangling) 이미지 우선 삭제
+echo "[2/3] Cleaning up dangling images..."
+docker image prune -f
 
-echo "[Clean up builder] filter $filter"
-docker builder prune --filter "$filter"
-echo ""
+# 3. [선택] 실행 중인 컨테이너가 사용하지 않는 모든 이미지 삭제
+# 배포 직후에 실행하면 '이전 버전' 이미지들이 모두 삭제되어 용량 확보에 가장 효과적입니다.
+echo "[3/3] Cleaning up all unused images..."
+docker image prune -af --filter "until=24h"
+
+echo "Disk usage after cleanup:"
+docker system df

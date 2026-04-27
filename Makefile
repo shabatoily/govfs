@@ -20,37 +20,37 @@ ARCH=$(shell go env GOARCH)
 ##help: helps (default)
 .PHONY: help
 help: Makefile
-	echo ""
-	echo " $(PRJ_DESC)"
-	echo ""
-	echo " Author: $(AUTHOR)"
-	echo ""
-	echo " OS: $(OS)"
-	echo " ARCH: $(ARCH)"
-	echo ""
-	echo " Usage:"
-	echo ""
-	echo "	make {command}"
-	echo ""
-	echo " Commands:"
-	echo ""
-	sed -n 's/^##/	/p' $< | column -t -s ':' |  sed -e 's/^/ /'
-	echo ""
+	@echo ""
+	@echo " $(PRJ_DESC)"
+	@echo ""
+	@echo " Author: $(AUTHOR)"
+	@echo ""
+	@echo " OS: $(OS)"
+	@echo " ARCH: $(ARCH)"
+	@echo ""
+	@echo " Usage:"
+	@echo ""
+	@echo "	make {command}"
+	@echo ""
+	@echo " Commands:"
+	@echo ""
+	@sed -n 's/^##/	/p' $< | column -t -s ':' |  sed -e 's/^/ /'
+	@echo ""
 
 ##audit: 🚀 Conduct quality checks
 .PHONY: audit
 audit:
 	@echo "[audit] starting audit"
-	go mod verify
-	go vet ./...
-	GOTOOLCHAIN=$(GOVERSION) go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+	@go mod verify
+	@go vet ./...
+	@GOTOOLCHAIN=$(GOVERSION) go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 	@echo "[audit] complete audit"
 
 ##benchmark: 📈 Benchmark code performance
 .PHONY: benchmark
 benchmark:
 	@echo "[benchmark] starting benchmark $(PRJ_NAME)"
-	go test ./... -benchmem -bench=. -run=^Benchmark$
+	@go test ./... -benchmem -bench=. -run=^Benchmark$
 	@echo "[benchmark] complete benchmark"
 
 ##build os={os [linux, darwin]} arch={arch [amd64, arm64]} tag={tag [v1.0.0]}: build application
@@ -64,9 +64,9 @@ build:
 	@echo "[build] building for $(os)/$(arch) at $(DATE_UTC)"
 	@echo "[build] tag: $(tag)"
 	@echo "[build] target: bin/$(PRJ_NAME)-$(os)-$(arch)"
-	GOOS=$(os) GOARCH=$(arch) go build -trimpath -ldflags="-X 'main.version=$(tag)' -X 'main.buildTime=$(DATE_UTC)'" -o bin/$(PRJ_NAME)-$(os)-$(arch) cmd/server/main.go 
+	@GOOS=$(os) GOARCH=$(arch) go build -trimpath -ldflags="-X 'main.version=$(tag)' -X 'main.buildTime=$(DATE_UTC)'" -o bin/$(PRJ_NAME)-$(os)-$(arch) cmd/server/main.go 
 	@echo "[build] target: bin/$(PRJ_NAME)-cli-$(os)-$(arch)"
-	GOOS=$(os) GOARCH=$(arch) go build -trimpath -ldflags="-X 'main.version=$(tag)' -X 'main.buildTime=$(DATE_UTC)'" -o bin/$(PRJ_NAME)-cli-$(os)-$(arch) cmd/cli/main.go 
+	@GOOS=$(os) GOARCH=$(arch) go build -trimpath -ldflags="-X 'main.version=$(tag)' -X 'main.buildTime=$(DATE_UTC)'" -o bin/$(PRJ_NAME)-cli-$(os)-$(arch) cmd/cli/main.go 
 	@echo "[build] Complete build"
 
 ##build-docker tag={tag [v1.0.0]}: build docker image
@@ -77,7 +77,7 @@ build-docker:
 	@echo "[build-docker] building docker image at $(DATE_UTC)"
 	@echo "[build-docker] tag: $(tag)"
 	@echo "[build-docker] image: ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):$(tag)"
-	docker build -t ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):$(tag) --build-arg "VERSION=$(tag)" --build-arg "BUILD_TIME=$(DATE_UTC)" .
+	@docker build -t ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):$(tag) --build-arg "VERSION=$(tag)" --build-arg "BUILD_TIME=$(DATE_UTC)" .
 	@echo "[build-docker] complete build-docker"
 
 ##build-webui
@@ -85,7 +85,7 @@ build-docker:
 build-webui:
 	@echo "[build-webui] building webui"
 	@echo "[build-webui] yarn build"
-	yarn --cwd webui build
+	@yarn --cwd webui build
 	@echo "[build-webui] complete build-webui"
 
 ##clean: clean project build and cache
@@ -93,32 +93,32 @@ build-webui:
 clean:
 	@echo "[clean] Cleaning project build and cache"
 	@echo "[clean] remove build output directory"
-	rm -rf bin/*
-	rm -rf webui/dist/*
+	@rm -rf bin/*
+	@rm -rf webui/dist/*
 	@echo "[clean] clean go cache"
-	go clean -cache
-	go clean -modcache
+	@go clean -cache
+	@go clean -modcache
 	@echo "[clean] clean yarn cache"
-	yarn --cwd webui cache clean
+	@yarn --cwd webui cache clean
 	@echo "[clean] clear node_modules"
-	rm -rf webui/node_modules
+	@rm -rf webui/node_modules
 	@echo "[clean] complete clean"
 
 ##clean-docker: clean docker
 .PHONY: clean-docker
 clean-docker:
 	@echo "[clean-docker] cleaning docker"
-	rm -rf .docker/*
-	./scripts/docker-clean
+	@rm -rf .docker/*
+	@./scripts/docker-clean
 	@echo "[clean-docker] complete clean-docker"
 
 ##coverage: ☂️  Generate coverage report
 .PHONY: coverage
 coverage:
 	@echo "[coverage] starting coverage"
-	go test ./... -coverprofile=/tmp/coverage.out
+	@go test ./... -coverprofile=/tmp/coverage.out
 	@echo "[coverage] generating coverage report"
-	go tool cover -html=/tmp/coverage.out
+	@go tool cover -html=/tmp/coverage.out
 	@echo "[coverage] complete coverage"
 
 ##install: install development packages
@@ -126,18 +126,18 @@ coverage:
 install:
 	@echo "[install] installing development packages"
 	@echo "[install] go mod download"
-	go mod download
+	@go mod download
 	@echo "[install] go mod tidy"
-	go mod tidy -v
+	@go mod tidy -v
 	@echo "[install] yarn install"
-	yarn --cwd webui install
+	@yarn --cwd webui install
 	@echo "[install] complete install"
 
 ##lint: 🚨 Run lint checks
 .PHONY: lint
 lint:
 	@echo "[lint] starting lint"
-	GOTOOLCHAIN=$(GOVERSION) go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4 run ./...
+	@GOTOOLCHAIN=$(GOVERSION) go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4 run ./...
 	@echo "[lint] complete lint"
 
 ## release tag={tag [v1.0.0]}: release application
@@ -147,8 +147,8 @@ release:
 	@echo "[release] releasing at $(DATE_UTC)"
 	@echo "[release] tag: $(tag)"
 	@echo "[release] target: release/"
-	rm -rf release/*
-	mkdir -p release
+	@rm -rf release/*
+	@mkdir -p release
 	$(foreach os, $(SUPPORTED_OS), \
 		$(foreach arch, $(SUPPORTED_ARCH), \
 			$(MAKE) build os=$(os) arch=$(arch); \
@@ -156,7 +156,7 @@ release:
 			cp bin/$(PRJ_NAME)-cli-$(os)-$(arch) release/; \
 		) \
 	)
-	cp config.toml release/config.toml
+	@cp config.toml release/config.toml
 
 ##release-docker tag={tag [v1.0.0]}: release application
 .PHONY: release-docker
