@@ -2,7 +2,7 @@ FROM alpine AS base
 
 LABEL maintainer="meteormin"
 
-FROM node:24.12-alpine AS node
+FROM node:24.15-alpine AS node
 
 WORKDIR /webui
 
