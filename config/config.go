@@ -86,10 +86,21 @@ type CloudConfig struct {
 
 // Config는 govfs 서비스 전체를 구성하는 최상위 설정 구조체입니다.
 type Config struct {
-	App    AppInfo      `json:"app"`
-	Server ServerConfig `json:"server"`
-	VFS    VfsConfig    `json:"vfs"`
-	Cloud  CloudConfig  `json:"cloud"`
+	ctx    context.Context `json:"-"`
+	App    AppInfo         `json:"app"`
+	Server ServerConfig    `json:"server"`
+	VFS    VfsConfig       `json:"vfs"`
+	Cloud  CloudConfig     `json:"cloud"`
+}
+
+func (c *Config) SetContext(ctx context.Context) {
+	c.ctx = ctx
+	c.Server.Context = ctx
+	c.VFS.Driver.Badger.Context = ctx
+}
+
+func (c *Config) Context() context.Context {
+	return c.ctx
 }
 
 // DefaultConfig는 기본적인 운용이 가능하도록 미리 정의된 초기 설정 파일 템플릿 역할을 합니다.

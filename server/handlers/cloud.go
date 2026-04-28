@@ -2,13 +2,13 @@
 package handlers
 
 import (
+	"net/url"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/meteormin/govfs/cloud"
 	"github.com/meteormin/govfs/cloud/googledrive"
 	"github.com/meteormin/govfs/server/types"
 )
-
-const GoogleAuthCodeCallbackURL = "/cloud/googledrive/callback"
 
 // CloudHandler는 외부 클라우드 저장소와의 상호작용을 처리하는 핸들러입니다.
 type CloudHandler struct {
@@ -18,6 +18,14 @@ type CloudHandler struct {
 // NewCloudHandler는 새로운 CloudHandler 인스턴스를 생성합니다.
 func NewCloudHandler(storage cloud.Storage) *CloudHandler {
 	return &CloudHandler{storage: storage}
+}
+
+func (h *CloudHandler) Prefix() string {
+	return "/cloud"
+}
+
+func (h *CloudHandler) GoogleDriveCallbackURL() string {
+	return "/googledrive/callback"
 }
 
 // GoogleDriveAuthCodeURL returns the authentication URL for Google Drive.
@@ -36,8 +44,13 @@ func (h *CloudHandler) GoogleDriveAuthCodeURL(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "not a googledrive adapter")
 	}
 
+	redirectURL, err := url.JoinPath(c.BaseURL(), h.Prefix(), h.GoogleDriveCallbackURL())
+	if err != nil {
+		return err
+	}
+
 	return c.JSON(types.CloudAuthResponse{
-		URL: googledriveAdaper.AuthCodeURL(GoogleAuthCodeCallbackURL, "state-token"),
+		URL: googledriveAdaper.AuthCodeURL(redirectURL, "state-token"),
 	})
 }
 

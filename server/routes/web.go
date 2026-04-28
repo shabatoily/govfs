@@ -43,7 +43,9 @@ func Web(app *fiber.App, deps *DepsWeb) {
 		MaxMessageBuffer: 100,
 	})
 
-	jwtAuth := middlewares.JWTAuthMiddleware(deps.Auth)
+	authHandler := handlers.NewAuthHandler(deps.Auth)
+
+	cloudHandler := handlers.NewCloudHandler(deps.Cloud)
 
 	sseHandler := handlers.NewSSEHandler(sseBroker)
 
@@ -51,7 +53,7 @@ func Web(app *fiber.App, deps *DepsWeb) {
 
 	vfsHandler := handlers.NewVfsHandler(vfsService, sseBroker)
 
-	authHandler := handlers.NewAuthHandler(deps.Auth)
+	jwtAuth := middlewares.JWTAuthMiddleware(deps.Auth)
 
 	app.Route("/auth", func(router fiber.Router) {
 		router.Post("/login", authHandler.Login).Name("login")
@@ -92,9 +94,8 @@ func Web(app *fiber.App, deps *DepsWeb) {
 		}, "badger.")
 	}
 
-	cloudHandler := handlers.NewCloudHandler(deps.Cloud)
-	app.Route("/cloud", func(router fiber.Router) {
-		router.Get(handlers.GoogleAuthCodeCallbackURL, cloudHandler.GoogleDriveCallback).Name("googledrive-callback")
+	app.Route(cloudHandler.Prefix(), func(router fiber.Router) {
+		router.Get(cloudHandler.GoogleDriveCallbackURL(), cloudHandler.GoogleDriveCallback).Name("googledrive-callback")
 		router.Use(jwtAuth)
 		router.Get("/googledrive/auth", cloudHandler.IsAuthorized).Name("googledrive-auth-status")
 		router.Post("/googledrive/auth", cloudHandler.GoogleDriveAuthCodeURL).Name("googledrive-auth")

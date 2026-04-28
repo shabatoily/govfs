@@ -59,22 +59,15 @@ func main() {
 		log.Panic(err)
 	}
 
-	// set context to badger config
-	cfg.VFS.Driver.Badger.Context = ctx
-	// init vfs
-	vfs, err := bootstrap.InitVFS(&cfg.VFS)
-	if err != nil {
-		log.Panic(err)
-	}
+	// set context
+	cfg.SetContext(ctx)
 
-	storage, err := bootstrap.InitCloud(&cfg.Cloud)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	cfg.Server.Context = ctx
 	// init server
-	app := bootstrap.InitServer(vfs, storage, &cfg.Server)
+	app, err := bootstrap.Init(cfg)
+	if err != nil {
+		log.Panic(err)
+	}
+
 	// set host to config and set swagger info on listen
 	app.Hooks().OnListen(func(listenData fiber.ListenData) error {
 		cfg.Server.Host = listenData.Host

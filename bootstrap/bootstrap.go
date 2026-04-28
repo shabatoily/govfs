@@ -26,8 +26,38 @@ const banner = `
   \____|\___/ \_/ |_| |___/
 `
 
-// InitServer는 Fiber 애플리케이션을 생성하고 라우트, 미들웨어, 이벤트 후크를 설정합니다.
-func InitServer(fs vfs.VFS, storage cloud.Storage, cfg *config.ServerConfig) *fiber.App {
+type serverContext struct {
+	Config  *config.ServerConfig
+	Storage cloud.Storage
+	VFS     vfs.VFS
+}
+
+func Init(cfg *config.Config) (*fiber.App, error) {
+	storage, err := initCloud(&cfg.Cloud)
+	if err != nil {
+		return nil, err
+	}
+
+	fs, err := initVFS(&cfg.VFS)
+	if err != nil {
+		return nil, err
+	}
+
+	server := initServer(serverContext{
+		Config:  &cfg.Server,
+		Storage: storage,
+		VFS:     fs,
+	})
+
+	return server, nil
+}
+
+// initServer는 Fiber 애플리케이션을 생성하고 라우트, 미들웨어, 이벤트 후크를 설정합니다.
+func initServer(ctx serverContext) *fiber.App {
+	cfg := ctx.Config
+	fs := ctx.VFS
+	storage := ctx.Storage
+
 	// 에러 핸들러 설정
 	cfg.Fiber.ErrorHandler = middlewares.ErrorHandler
 	// JSON 인코더 및 디코더 설정
@@ -77,8 +107,8 @@ func InitServer(fs vfs.VFS, storage cloud.Storage, cfg *config.ServerConfig) *fi
 	return app
 }
 
-// InitVFS는 주어진 설정을 기반으로 적절한 드라이버(Badger, LocalStorage 등)를 사용하여 VFS를 초기화합니다.
-func InitVFS(cfg *config.VfsConfig) (vfs.VFS, error) {
+// initVFS는 주어진 설정을 기반으로 적절한 드라이버(Badger, LocalStorage 등)를 사용하여 VFS를 초기화합니다.
+func initVFS(cfg *config.VfsConfig) (vfs.VFS, error) {
 	vfsLogger, err := vfs.NewLogger(cfg.Logger)
 	if err != nil {
 		return nil, err
@@ -94,7 +124,7 @@ func InitVFS(cfg *config.VfsConfig) (vfs.VFS, error) {
 	return drivers.New(&cfg.Driver)
 }
 
-// InitCloud는 클라우드 스토리지 인터페이스를 초기화합니다.
-func InitCloud(cfg *config.CloudConfig) (cloud.Storage, error) {
+// initCloud는 클라우드 스토리지 인터페이스를 초기화합니다.
+func initCloud(cfg *config.CloudConfig) (cloud.Storage, error) {
 	return cloud.New(&cfg.Config)
 }
