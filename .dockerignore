@@ -1,11 +1,12 @@
 webui/node_modules
 .git
-logs
-data
-build
+.github
 .vscode
 .idea
 .docker
+logs
+data
+bin
 release
 tools
 scripts

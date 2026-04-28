@@ -70,16 +70,17 @@ func NewGenerateHashCmd() *cobra.Command {
 		Use:   "generate",
 		Short: "Generate a random hashed secret",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			secret := make([]byte, secretLength)
-			_, err := rand.Read(secret)
+			secretBytes := make([]byte, secretLength)
+			_, err := rand.Read(secretBytes)
 			if err != nil {
 				return err
 			}
-			hashed, err := bcrypt.GenerateFromPassword(secret, bcrypt.DefaultCost)
+			secret := base64.RawURLEncoding.EncodeToString(secretBytes)
+			hashed, err := bcrypt.GenerateFromPassword([]byte(secret), bcrypt.DefaultCost)
 			if err != nil {
 				return err
 			}
-			cmd.Printf("Raw: %s\n", base64.RawURLEncoding.EncodeToString(secret))
+			cmd.Printf("Raw: %s\n", secret)
 			cmd.Printf("Hashed: %s\n", string(hashed))
 			return nil
 		},
