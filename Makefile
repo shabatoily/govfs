@@ -14,6 +14,8 @@ DATE_UTC=$(shell date +"%Y-%m-%dT%H:%M:%S%z")
 OS=$(shell go env GOOS)
 ARCH=$(shell go env GOARCH)
 
+SWAGGO_VERSION=v2.0.0-rc5
+
 .DEFAULT: help
 .SILENT:;
 
@@ -129,6 +131,8 @@ install:
 	@go mod download
 	@echo "[install] go mod tidy"
 	@go mod tidy -v
+	@echo "[install] go get -u github.com/swaggo/swag/v2@$(SWAGGO_VERSION)"
+	@go get -u github.com/swaggo/swag/v2@$(SWAGGO_VERSION)
 	@echo "[install] yarn install"
 	@yarn --cwd webui install
 	@echo "[install] complete install"
