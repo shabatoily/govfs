@@ -48,6 +48,6 @@ clientType = "googleDrive"
 
 [cloud.config.googleDrive]
 tokenPath = ".googledrive"
-clientID = "${CLOUD_GOOGLEDRIVE_CLIENT_ID}"
-clientSecret = "${CLOUD_GOOGLEDRIVE_CLIENT_SECRET}"
+clientID = "${CLOUD_CONFIG_GOOGLEDRIVE_CLIENTID}"
+clientSecret = "${CLOUD_CONFIG_GOOGLEDRIVE_CLIENTSECRET}"
 parentFolderID = "govfs"
