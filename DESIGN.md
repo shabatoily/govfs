@@ -9,24 +9,30 @@
 ```text
 /
 ├── bootstrap/         # 애플리케이션 초기화 로직 (VFS, Server)
-├── cli/               # CLI 명령어 구현체 (cloud, vfs)
+├── cli/               # CLI 명령어 구현체 (cloud, secret, vfs)
 │   ├── cloud/         # 클라우드 관련 명령어
+│   ├── secret/        # Secret 관리 관련 명령어
 │   └── vfs/           # VFS 조작 명령어
+├── client/            # govfs 서버와 통신하기 위한 API 클라이언트
 ├── cloud/             # 클라우드 스토리지 연동 (Google Drive)
 ├── cmd/               # 메인 진입점
 │   ├── cli/           # CLI 애플리케이션 (main.go)
 │   └── server/        # 웹 서버 애플리케이션 (main.go)
 ├── config/            # 설정 로직 (Viper, TOML)
+├── data/              # 로컬 데이터 저장소 (BadgerDB 등 기본 경로)
+├── docs/              # Swagger API 문서
 ├── drivers/           # VFS 스토리지 드라이버 인터페이스 및 구현체
 │   ├── badger/        # BadgerDB (Key-Value) 드라이버
 │   ├── localstorage/  # LocalStorage (Native FS) 드라이버
 │   └── driver.go      # 드라이버 팩토리 및 공통 인터페이스
+├── scripts/           # 유틸리티 및 배포 쉘 스크립트
 ├── server/            # 웹 서버 및 API 라우팅 로직
 │   ├── handlers/      # HTTP 핸들러 (VFS, SSE)
 │   ├── middlewares/   # 미들웨어 (Logger, CORS 등)
 │   ├── routes/        # 라우터 설정 (Web, API)
 │   ├── services/      # 비즈니스 로직 (VFS Service, SSE Broker)
 │   └── types/         # API 요청/응답 타입 정의
+├── tools/             # 개발 및 데이터 마이그레이션 도구
 ├── vfs.go             # VFS 인터페이스 및 코어 타입 (Meta, File, TreeNode)
 ├── webui/             # Svelte 5 + Vite 기반 웹 프론트엔드
 ├── go.mod             # Go 모듈 의존성 관리
@@ -70,8 +76,73 @@
     - `govfs cloud [command]`: 클라우드 스토리지 관리
       - `list`: 파일 목록 조회
       - `upload`, `download`: 파일 전송
+    - `govfs secret [command]`: Secret 관리 명령어
+      - `set`, `get`: 키/값 기반 시크릿 설정 및 조회
+
+### 3.1 주요 동작 시퀀스 (Operation Sequence)
+
+다음은 CLI 또는 Web UI에서 비동기 파일 조작(예: 복사)을 요청하고, SSE를 통해 실시간으로 작업 진행 상황을 응답받는 대표적인 기능 흐름 시퀀스 다이어그램입니다.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as CLI / Web UI
+    participant Server as Fiber Server (API)
+    participant SSE as SSE Broker
+    participant VFS as VFS Driver (Badger/Local)
+
+    Client->>Server: POST /vfs/{id}/copy (복사 요청)
+    Server->>SSE: 비동기 작업 등록 (AsyncExecute)
+    Server-->>Client: 202 Accepted (HTTP 응답)
+    
+    Client->>Server: GET /sse/subscribe (진행률 구독)
+    Server-->>Client: SSE 연결 수립 (Stream)
+    
+    par 백그라운드 작업
+        SSE->>VFS: 데이터 청크(Chunk) 단위 복사 시작
+        loop 청크 처리 중
+            VFS-->>SSE: 청크 처리 완료
+            SSE-->>Client: SSE Event (Progress 업데이트)
+        end
+        VFS-->>SSE: 최종 복사 완료
+        SSE-->>Client: SSE Event (Success 완료 알림)
+    end
+```
 
 ## 4. 아키텍처 상세 (Architecture Details)
+
+```mermaid
+flowchart TB
+    subgraph ClientLayer ["Client Layer"]
+        CLI("govfs CLI\n(cmd/cli)")
+        WebUI("Web UI\n(webui, Svelte/Vite)")
+    end
+
+    subgraph ServerLayer ["Server Layer (Daemon)"]
+        Router("Fiber Router\n(server/routes)")
+        Handlers("HTTP Handlers\n(server/handlers)")
+        Services("Services\n(VfsService, SSEBroker)")
+    end
+
+    subgraph StorageLayer ["Storage Layer"]
+        VFS["VFS Interface\n(vfs.VFS)"]
+        DriverBadger[("BadgerDB\n(drivers/badger)")]
+        DriverLocal[("Local Storage\n(drivers/localstorage)")]
+        CloudDrive(("Google Drive\n(cloud/googledrive)"))
+    end
+
+    CLI -- "HTTP API / client pkg" --> Router
+    WebUI -- "HTTP API / SSE" --> Router
+
+    Router --> Handlers
+    Handlers --> Services
+
+    Services -- "File I/O" --> VFS
+    Services -- "Cloud API" --> CloudDrive
+
+    VFS -. "Implementation" .-> DriverBadger
+    VFS -. "Implementation" .-> DriverLocal
+```
 
 ### 4.1 클라이언트-서버 모델 (Client-Server Model)
 
@@ -96,9 +167,3 @@
 | **Backend** | BadgerDB (LSM Tree Key-Value Store) | Native OS Filesystem (`os`, `io` 패키지) |
 | **Data Model** | Key: UUID / Value: Metadata + Content | File System Path |
 | **Pros** | **Single File**: 운반 용이성.<br>**Encryption**: 데이터 암호화 내장.<br>**Transaction**:  ACID 보장. | **Performance**: OS 커널 캐시 활용.<br>**Accessibility**: 파일 직접 열람 가능.<br>**Debug**: 디버깅 용이. |
-
-### 4.4 서버 아키텍처 (Server Architecture)
-
-- **Handlers**: HTTP 요청을 처리하고 적절한 Service 메서드를 호출합니다. Fiber Context를 통해 요청 파라미터를 파싱합니다.
-- **Services**: 비즈니스 로직을 수행합니다. `VfsService`는 `vfs.VFS` 인터페이스를 사용하여 실제 파일 작업을 수행합니다. `SSEBroker`는 클라이언트에게 실시간 이벤트를 브로드캐스트합니다.
-- **Async Execution**: `Write`, `Copy`, `Move` 등 시간이 걸릴 수 있는 작업은 `SSEBroker.AsyncExcute`를 통해 별도 고루틴에서 실행되며, 완료 시 클라이언트에게 SSE 이벤트를 발송합니다.
