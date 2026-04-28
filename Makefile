@@ -131,8 +131,8 @@ install:
 	@go mod download
 	@echo "[install] go mod tidy"
 	@go mod tidy -v
-	@echo "[install] go get -u github.com/swaggo/swag/v2@$(SWAGGO_VERSION)"
-	@go get -u github.com/swaggo/swag/v2@$(SWAGGO_VERSION)
+	@echo "[install] go install github.com/swaggo/swag/v2/cmd/swag@$(SWAGGO_VERSION)"
+	@go install github.com/swaggo/swag/v2/cmd/swag@$(SWAGGO_VERSION)
 	@echo "[install] yarn install"
 	@yarn --cwd webui install
 	@echo "[install] complete install"
@@ -155,9 +155,9 @@ release:
 	@mkdir -p release
 	$(foreach os, $(SUPPORTED_OS), \
 		$(foreach arch, $(SUPPORTED_ARCH), \
-			$(MAKE) build os=$(os) arch=$(arch); \
-			cp bin/$(PRJ_NAME)-$(os)-$(arch) release/; \
-			cp bin/$(PRJ_NAME)-cli-$(os)-$(arch) release/; \
+			$(MAKE) build os=$(os) arch=$(arch) && \
+			cp bin/$(PRJ_NAME)-$(os)-$(arch) release/ && \
+			cp bin/$(PRJ_NAME)-cli-$(os)-$(arch) release/ ; \
 		) \
 	)
 	@cp config.toml release/config.toml
@@ -178,7 +178,7 @@ release-docker:
 .PHONY: swag
 swag:
 	@echo "[swag] generating api docs"
-	swag init -g cmd/server/main.go --parseDependency --parseInternal --v3.1
+	go run github.com/swaggo/swag/v2/cmd/swag@$(SWAGGO_VERSION) init -g cmd/server/main.go --parseDependency --parseInternal --v3.1
 	@echo "[swag] complete swag"
 
 ##test report={[0=inactive, 1=active]}: test
