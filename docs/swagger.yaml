@@ -45,12 +45,12 @@ components:
           description: 조회 시 사용한 접두사
           type: string
       type: object
-    types.CloudAuthResponse:
+    types.CloudAuthRes:
       properties:
         url:
           type: string
       type: object
-    types.CloudListResponse:
+    types.CloudListRes:
       properties:
         items:
           items:
@@ -65,7 +65,7 @@ components:
         name:
           type: string
       type: object
-    types.LoginRequest:
+    types.LoginReq:
       properties:
         password:
           type: string
@@ -150,7 +150,7 @@ components:
           description: 관련 리소스 경로
           type: string
       type: object
-    types.TokenResponse:
+    types.TokenRes:
       properties:
         expiresAt:
           type: string
@@ -213,7 +213,7 @@ paths:
             schema:
               oneOf:
               - type: object
-              - $ref: '#/components/schemas/types.LoginRequest'
+              - $ref: '#/components/schemas/types.LoginReq'
                 description: login request
                 summary: request
         description: login request
@@ -223,7 +223,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/types.TokenResponse'
+                $ref: '#/components/schemas/types.TokenRes'
           description: OK
         "400":
           content:
@@ -273,7 +273,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/types.TokenResponse'
+                $ref: '#/components/schemas/types.TokenRes'
           description: OK
         "500":
           content:
@@ -342,7 +342,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/types.CloudAuthResponse'
+                $ref: '#/components/schemas/types.CloudAuthRes'
           description: OK
         "400":
           content:
@@ -412,7 +412,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/types.CloudListResponse'
+                $ref: '#/components/schemas/types.CloudListRes'
           description: OK
         "400":
           content:

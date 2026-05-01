@@ -68,7 +68,7 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
-            "types.CloudAuthResponse": {
+            "types.CloudAuthRes": {
                 "properties": {
                     "url": {
                         "type": "string"
@@ -76,7 +76,7 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
-            "types.CloudListResponse": {
+            "types.CloudListRes": {
                 "properties": {
                     "items": {
                         "items": {
@@ -99,7 +99,7 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
-            "types.LoginRequest": {
+            "types.LoginReq": {
                 "properties": {
                     "password": {
                         "type": "string"
@@ -219,7 +219,7 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
-            "types.TokenResponse": {
+            "types.TokenRes": {
                 "properties": {
                     "expiresAt": {
                         "type": "string"
@@ -311,7 +311,7 @@ const docTemplate = `{
                                         "type": "object"
                                     },
                                     {
-                                        "$ref": "#/components/schemas/types.LoginRequest",
+                                        "$ref": "#/components/schemas/types.LoginReq",
                                         "summary": "request",
                                         "description": "login request"
                                     }
@@ -327,7 +327,7 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/types.TokenResponse"
+                                    "$ref": "#/components/schemas/types.TokenRes"
                                 }
                             }
                         },
@@ -409,7 +409,7 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/types.TokenResponse"
+                                    "$ref": "#/components/schemas/types.TokenRes"
                                 }
                             }
                         },
@@ -523,7 +523,7 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/types.CloudAuthResponse"
+                                    "$ref": "#/components/schemas/types.CloudAuthRes"
                                 }
                             }
                         },
@@ -639,7 +639,7 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/types.CloudListResponse"
+                                    "$ref": "#/components/schemas/types.CloudListRes"
                                 }
                             }
                         },

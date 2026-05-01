@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/dgraph-io/badger/v4"
-	badgervfs "github.com/meteormin/govfs/drivers/badger"
+	badgervfs "github.com/meteormin/govfs/pkg/drivers/badger"
 	"github.com/meteormin/govfs/tools/badger/migrations"
 )
 

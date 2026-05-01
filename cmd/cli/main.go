@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/meteormin/govfs/cli"
-	"github.com/meteormin/govfs/cli/cloud"
-	"github.com/meteormin/govfs/cli/secret"
-	"github.com/meteormin/govfs/cli/vfs"
-	"github.com/meteormin/govfs/config"
+	"github.com/meteormin/govfs/internal/cli"
+	"github.com/meteormin/govfs/internal/cli/cloud"
+	"github.com/meteormin/govfs/internal/cli/secret"
+	"github.com/meteormin/govfs/internal/cli/vfs"
+	"github.com/meteormin/govfs/internal/config"
 )
 
 var (
