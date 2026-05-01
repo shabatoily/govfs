@@ -144,7 +144,7 @@ lint:
 	@GOTOOLCHAIN=$(GOVERSION) go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4 run ./...
 	@echo "[lint] complete lint"
 
-## release tag={tag [v1.0.0]}: release application
+##release tag={tag [v1.0.0]}: release application
 .PHONY: release
 release: tag ?= "0.0.1"
 release:
