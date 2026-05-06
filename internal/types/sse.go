@@ -30,6 +30,17 @@ func (e SSEEvent) String() string {
 	return string(e)
 }
 
+type ClientInfo struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	Addr      string
+	User      string
+}
+
+type ClientList struct {
+	Clients []ClientInfo `json:"clients"`
+}
+
 // SSEMeta는 SSE 이벤트와 관련된 부가적인 메타데이터를 담고 있는 구조체입니다.
 type SSEMeta struct {
 	ID     uuid.UUID `json:"id,omitempty"`     // 관련 리소스 ID

@@ -271,7 +271,7 @@ func (h *VfsHandler) Write(ctx fiber.Ctx) error {
 	clientID := ctx.Get("X-Client-ID")
 	cid, parseErr := uuid.Parse(clientID)
 	if parseErr == nil {
-		h.broker.AsyncExcute(cid, func() (types.SSEMeta, error) {
+		h.broker.AsyncExecute(cid, func() (types.SSEMeta, error) {
 			meta, err := h.srv.Write(parsedID, bytes.NewBufferString(content))
 			return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.write"}, err
 		})
@@ -337,7 +337,7 @@ func (h *VfsHandler) Delete(ctx fiber.Ctx) error {
 	clientID := ctx.Get("X-Client-ID")
 	cid, parseErr := uuid.Parse(clientID)
 	if parseErr == nil {
-		h.broker.AsyncExcute(cid, func() (types.SSEMeta, error) {
+		h.broker.AsyncExecute(cid, func() (types.SSEMeta, error) {
 			err := h.srv.Delete(parsedID)
 			return types.SSEMeta{ID: parsedID, Path: "", Action: "vfs.delete"}, err
 		})
@@ -377,7 +377,7 @@ func (h *VfsHandler) WriteComments(ctx fiber.Ctx) error {
 	clientID := ctx.Get("X-Client-ID")
 	cid, parseErr := uuid.Parse(clientID)
 	if parseErr == nil {
-		h.broker.AsyncExcute(cid, func() (types.SSEMeta, error) {
+		h.broker.AsyncExecute(cid, func() (types.SSEMeta, error) {
 			meta, err := h.srv.WriteComments(parsedID, comment)
 			return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.write-comments"}, err
 		})
@@ -470,7 +470,7 @@ func (h *VfsHandler) Rotate(ctx fiber.Ctx) error {
 	clientID := ctx.Get("X-Client-ID")
 	cid, parseErr := uuid.Parse(clientID)
 	if parseErr == nil {
-		h.broker.AsyncExcute(cid, func() (types.SSEMeta, error) {
+		h.broker.AsyncExecute(cid, func() (types.SSEMeta, error) {
 			return types.SSEMeta{Action: "vfs.rotate"}, h.srv.Rotate(newKey)
 		})
 	}
@@ -509,7 +509,7 @@ func (h *VfsHandler) asyncModify(ctx fiber.Ctx, fn ModifyFunc) error {
 	clientID := ctx.Get("X-Client-ID")
 	cid, parseErr := uuid.Parse(clientID)
 	if parseErr == nil {
-		h.broker.AsyncExcute(cid, func() (types.SSEMeta, error) {
+		h.broker.AsyncExecute(cid, func() (types.SSEMeta, error) {
 			m, err := fn(parsedID, req.Name)
 			return types.SSEMeta{ID: m.ID, Path: m.Path, Action: "vfs.move"}, err
 		})

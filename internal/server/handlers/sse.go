@@ -112,6 +112,12 @@ func (h *SSEHandler) Publish(ctx fiber.Ctx) error {
 	return ctx.SendStatus(fiber.StatusNoContent)
 }
 
+func (h *SSEHandler) Clients(ctx fiber.Ctx) error {
+	return ctx.JSON(types.ClientList{
+		Clients: h.broker.Clients(),
+	})
+}
+
 // NewSSEHandler는 새로운 SSEHandler 인스턴스를 생성합니다.
 func NewSSEHandler(broker *services.SSEBroker) *SSEHandler {
 	return &SSEHandler{broker: broker}
