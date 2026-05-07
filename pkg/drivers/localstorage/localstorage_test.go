@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/pkg/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +21,7 @@ func setupVFS(t *testing.T) (*LocalStorage, func()) {
 	dir, err := os.MkdirTemp("", "vfs-local-test-*")
 	require.NoError(t, err)
 
-	ls, err := New(&Config{Path: dir, Logger: vfs.DefaultLogger})
+	ls, err := New(&Config{Path: dir, Logger: log.Default})
 	require.NoError(t, err)
 
 	return ls, func() {

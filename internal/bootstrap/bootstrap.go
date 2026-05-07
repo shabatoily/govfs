@@ -16,6 +16,7 @@ import (
 	"github.com/meteormin/govfs/internal/server/middlewares"
 	"github.com/meteormin/govfs/internal/server/routes"
 	"github.com/meteormin/govfs/pkg/drivers"
+	vfsLog "github.com/meteormin/govfs/pkg/log"
 )
 
 const banner = `
@@ -109,7 +110,7 @@ func initServer(ctx serverContext) *fiber.App {
 
 // initVFS는 주어진 설정을 기반으로 적절한 드라이버(Badger, LocalStorage 등)를 사용하여 VFS를 초기화합니다.
 func initVFS(cfg *config.VfsConfig) (vfs.VFS, error) {
-	vfsLogger, err := vfs.NewLogger(cfg.Logger)
+	vfsLogger, err := vfsLog.NewLogger(cfg.Logger)
 	if err != nil {
 		return nil, err
 	}

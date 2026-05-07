@@ -1,4 +1,4 @@
-package vfs
+package log
 
 import (
 	"errors"
@@ -7,14 +7,15 @@ import (
 	"path/filepath"
 	"time"
 
+	vfs "github.com/meteormin/govfs"
 	"github.com/rs/zerolog"
 )
 
-var DefaultLogger = &Logger{
+var Default = &Logger{
 	Logger: zerolog.New(os.Stdout).Level(zerolog.InfoLevel).With().Timestamp().Logger(),
 }
 
-type LoggerConfig struct {
+type Config struct {
 	Path  string        `json:"path"`
 	Level zerolog.Level `json:"level"`
 }
@@ -31,7 +32,7 @@ func (l *Logger) Close() error {
 	return nil
 }
 
-func NewLogger(cfg LoggerConfig) (*Logger, error) {
+func NewLogger(cfg Config) (*Logger, error) {
 	ws := make([]io.Writer, 0, 2)
 
 	closer := func() error {
@@ -47,13 +48,13 @@ func NewLogger(cfg LoggerConfig) (*Logger, error) {
 
 	if cfg.Path != "" {
 		if _, err := os.Stat(filepath.Dir(cfg.Path)); errors.Is(err, os.ErrNotExist) {
-			err = os.MkdirAll(filepath.Dir(cfg.Path), DefaultDirMode)
+			err = os.MkdirAll(filepath.Dir(cfg.Path), vfs.DefaultDirMode)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		f, err := os.OpenFile(cfg.Path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, DefaultFileMode)
+		f, err := os.OpenFile(cfg.Path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, vfs.DefaultFileMode)
 		if err != nil {
 			return nil, err
 		}

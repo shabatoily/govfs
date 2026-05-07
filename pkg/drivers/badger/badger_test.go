@@ -13,11 +13,12 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"
 	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/pkg/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var logger, _ = vfs.NewLogger(vfs.LoggerConfig{})
+var logger = log.Default
 
 func Test_NewBadgerVFS(t *testing.T) {
 	tests := []struct {

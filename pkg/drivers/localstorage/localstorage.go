@@ -17,6 +17,7 @@ import (
 
 	"github.com/google/uuid"
 	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/pkg/log"
 )
 
 // IndexFileName은 메타데이터 인덱스를 저장하는 파일명입니다.
@@ -25,9 +26,9 @@ const IndexFileName = ".vfs_index.json"
 // Config는 LocalStorage 드라이버의 설정을 정의합니다.
 type Config struct {
 	// Path는 실제 파일들이 저장될 루트 경로입니다.
-	Path   string      `json:"path"`
+	Path string `json:"path"`
 	// Logger는 VFS 로거 인스턴스입니다.
-	Logger *vfs.Logger `json:"-"`
+	Logger *log.Logger `json:"-"`
 }
 
 // LocalStorage는 로컬 파일 시스템을 시스템의 VFS 인터페이스로 매핑하는 구현체입니다.
@@ -36,13 +37,13 @@ type LocalStorage struct {
 	mu       sync.RWMutex
 	idMap    map[uuid.UUID]vfs.Meta // ID -> Meta 매핑
 	pathMap  map[string]vfs.Meta    // Path -> Meta 매핑 (빠른 조회를 위함)
-	logger   *vfs.Logger
+	logger   *log.Logger
 }
 
 // New는 주어진 설정을 기반으로 새로운 LocalStorage 드라이버 인스턴스를 생성합니다.
 func New(cfg *Config) (*LocalStorage, error) {
 	if cfg.Logger == nil {
-		cfg.Logger = vfs.DefaultLogger
+		cfg.Logger = log.Default
 	}
 
 	// 1. basePath를 미리 깔끔하게 정리하고 구분자를 붙여 경계를 명확히 합니다.
@@ -520,7 +521,7 @@ func (ls *LocalStorage) Backup(w io.Writer, _ uint64) (uint64, error) {
 	// Write Index to Tar
 	hdr := &tar.Header{
 		Name: IndexFileName,
-		Mode: 0644,
+		Mode: 0o644,
 		Size: int64(len(indexData)),
 	}
 	if err := tw.WriteHeader(hdr); err != nil {

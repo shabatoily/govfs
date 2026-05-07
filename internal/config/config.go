@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/log"
-	vfs "github.com/meteormin/govfs"
+	fiberLog "github.com/gofiber/fiber/v3/log"
 	"github.com/meteormin/govfs/docs"
 	"github.com/meteormin/govfs/internal/cloud"
 	"github.com/meteormin/govfs/pkg/drivers"
 	"github.com/meteormin/govfs/pkg/drivers/badger"
+	vfsLog "github.com/meteormin/govfs/pkg/log"
 )
 
 // AppInfo는 애플리케이션의 이름, 버전, 빌드 시간 등의 메타데이터를 보관하는 구조체입니다.
@@ -39,9 +39,9 @@ type ServerConfig struct {
 
 // FiberLoggerConfig는 Fiber 웹 프레임워크 로거의 출력 파일 경로 및 로그 레벨을 정의합니다.
 type FiberLoggerConfig struct {
-	Path          string    `json:"path"`
-	Level         log.Level `json:"level"`
-	AccessLogPath string    `json:"accessLogPath"`
+	Path          string         `json:"path"`
+	Level         fiberLog.Level `json:"level"`
+	AccessLogPath string         `json:"accessLogPath"`
 }
 
 // AuthConfig는 서버 인증 기능의 사용 여부와 계정, JWT 암호화 정보를 설정합니다.
@@ -75,8 +75,8 @@ type JWTConfig struct {
 
 // VfsConfig는 VFS에서 사용할 백업, 로깅 경로 및 실제 데이터를 저장할 드라이버를 설정합니다.
 type VfsConfig struct {
-	Driver drivers.Config   `json:"driver"`
-	Logger vfs.LoggerConfig `json:"logger"`
+	Driver drivers.Config `json:"driver"`
+	Logger vfsLog.Config  `json:"logger"`
 }
 
 // CloudConfig는 외부 클라우드 백엔드 연동을 위한 상세 설정을 포함합니다.

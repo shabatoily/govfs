@@ -15,6 +15,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"
 	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/pkg/log"
 )
 
 const (
@@ -71,8 +72,8 @@ type Config struct {
 	GCDiscardRatio float64 `json:"gcRatio"`
 	// InMemory는 DB를 메모리 내에서만 운용할지 여부입니다.
 	InMemory bool `json:"inMemory"`
-	// Logger는 VFS 로거 인스턴스입니다.
-	Logger *vfs.Logger `json:"-"`
+	// Logger 로거 인스턴스입니다.
+	Logger *log.Logger `json:"-"`
 }
 
 // Options는 Config를 기반으로 BadgerDB의 실행 옵션을 생성합니다.
@@ -117,7 +118,7 @@ type BadgerVFS struct {
 	cancel              context.CancelFunc
 	once                sync.Once
 	db                  *badger.DB
-	logger              *vfs.Logger
+	logger              *log.Logger
 	path                string
 	key                 []byte
 	keyRotationDuration time.Duration
@@ -132,7 +133,7 @@ func New(cfg *Config) (*BadgerVFS, error) {
 	}
 
 	if cfg.Logger == nil {
-		cfg.Logger = vfs.DefaultLogger
+		cfg.Logger = log.Default
 	}
 
 	if cfg.Context == nil {
