@@ -15,8 +15,6 @@ type AuthClient struct {
 
 // Login은 서버에 인증을 요청하고, 성공 시 발급받은 토큰을 클라이언트에 설정합니다.
 func (c *AuthClient) Login(username, password string) (types.TokenRes, error) {
-	var res types.TokenRes
-
 	req := types.LoginReq{
 		Username: username,
 		Password: password,
@@ -24,21 +22,22 @@ func (c *AuthClient) Login(username, password string) (types.TokenRes, error) {
 
 	cfg, err := createJSONConfig(req)
 	if err != nil {
-		return res, err
+		return types.TokenRes{}, err
 	}
 
 	resp, err := c.c.Post("/auth/login", cfg)
 	if err != nil {
-		return res, err
+		return types.TokenRes{}, err
 	}
 
 	status := resp.StatusCode()
 	if status != fiber.StatusOK && status != fiber.StatusNoContent {
-		return res, fmt.Errorf("login failed: %v", resp.StatusCode())
+		return types.TokenRes{}, fmt.Errorf("login failed: %v", resp.StatusCode())
 	} else if status == fiber.StatusNoContent {
-		return res, nil
+		return types.TokenRes{}, nil
 	}
 
+	var res types.TokenRes
 	if err := resp.JSON(&res); err != nil {
 		return res, err
 	}

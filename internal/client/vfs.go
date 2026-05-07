@@ -23,10 +23,15 @@ type VFSClient struct {
 func (c *VFSClient) List(q string) ([]types.MetaRes, error) {
 	u := fmt.Sprintf("/vfs?q=%s", q)
 	resp, err := c.c.Get(u)
+	if err != nil {
+		return nil, err
+	}
+
 	var res types.VfsRes[[]types.MetaRes]
-	if checkErr := checkResponse(resp, err, fiber.StatusOK, &res); checkErr != nil {
+	if checkErr := checkResponse(resp, fiber.StatusOK, &res); checkErr != nil {
 		return nil, checkErr
 	}
+
 	return res.Payload, nil
 }
 
@@ -54,10 +59,15 @@ func (c *VFSClient) Read(id uuid.UUID) (io.Reader, types.MetaRes, error) {
 func (c *VFSClient) Stat(id uuid.UUID) (types.MetaRes, error) {
 	u := fmt.Sprintf("/vfs/%s/stat", id.String())
 	resp, err := c.c.Get(u)
+	if err != nil {
+		return types.MetaRes{}, err
+	}
+
 	var meta types.MetaRes
-	if checkErr := checkResponse(resp, err, fiber.StatusOK, &meta); checkErr != nil {
+	if checkErr := checkResponse(resp, fiber.StatusOK, &meta); checkErr != nil {
 		return types.MetaRes{}, checkErr
 	}
+
 	return meta, nil
 }
 
@@ -65,10 +75,15 @@ func (c *VFSClient) Stat(id uuid.UUID) (types.MetaRes, error) {
 func (c *VFSClient) Tree(path string) (*types.TreeNodeRes, error) {
 	u := fmt.Sprintf("/vfs?q=%s&viewType=tree", path)
 	resp, err := c.c.Get(u)
+	if err != nil {
+		return nil, err
+	}
+
 	var res types.VfsRes[*types.TreeNodeRes]
-	if checkErr := checkResponse(resp, err, fiber.StatusOK, &res); checkErr != nil {
+	if checkErr := checkResponse(resp, fiber.StatusOK, &res); checkErr != nil {
 		return nil, checkErr
 	}
+
 	return res.Payload, nil
 }
 
@@ -90,11 +105,15 @@ func (c *VFSClient) CreateDir(name string) (types.MetaRes, error) {
 		SetHeader("Content-Type", writer.FormDataContentType()).
 		SetRawBody(body.Bytes()).
 		Post("/vfs")
+	if err != nil {
+		return types.MetaRes{}, err
+	}
 
 	var meta types.MetaRes
-	if checkErr := checkResponse(resp, err, fiber.StatusCreated, &meta); checkErr != nil {
+	if checkErr := checkResponse(resp, fiber.StatusCreated, &meta); checkErr != nil {
 		return types.MetaRes{}, checkErr
 	}
+
 	return meta, nil
 }
 
@@ -125,11 +144,15 @@ func (c *VFSClient) CreateFile(name string, r io.ReadCloser) (types.MetaRes, err
 		SetHeader("Content-Type", writer.FormDataContentType()).
 		SetRawBody(body.Bytes()).
 		Post("/vfs")
+	if err != nil {
+		return types.MetaRes{}, err
+	}
 
 	var meta types.MetaRes
-	if checkErr := checkResponse(resp, err, fiber.StatusCreated, &meta); checkErr != nil {
+	if checkErr := checkResponse(resp, fiber.StatusCreated, &meta); checkErr != nil {
 		return types.MetaRes{}, checkErr
 	}
+
 	return meta, nil
 }
 
@@ -141,8 +164,12 @@ func (c *VFSClient) Write(id uuid.UUID, content string) error {
 	}
 
 	resp, err := c.c.Put("/vfs/"+id.String(), cfg)
+	if err != nil {
+		return err
+	}
+
 	var meta types.MetaRes
-	return checkResponse(resp, err, fiber.StatusAccepted, &meta)
+	return checkResponse(resp, fiber.StatusAccepted, &meta)
 }
 
 // Move는 파일 또는 디렉토리의 이름을 변경하거나 다른 경로로 이동시킵니다. (비동기 처리)
@@ -151,9 +178,14 @@ func (c *VFSClient) Move(id uuid.UUID, dstName string) error {
 	if err != nil {
 		return err
 	}
+
 	// Move doesn't return a body we need to parse, passing nil
 	resp, err := c.c.Patch("/vfs/"+id.String(), cfg)
-	return checkResponse[*any](resp, err, fiber.StatusAccepted, nil)
+	if err != nil {
+		return err
+	}
+
+	return checkResponse[*any](resp, fiber.StatusAccepted, nil)
 }
 
 // Copy는 파일 또는 디렉토리를 지정된 경로로 복사합니다. (비동기 처리)
@@ -162,14 +194,23 @@ func (c *VFSClient) Copy(id uuid.UUID, dstName string) error {
 	if err != nil {
 		return err
 	}
+
 	resp, err := c.c.Post("/vfs/"+id.String(), cfg)
-	return checkResponse[*any](resp, err, fiber.StatusAccepted, nil)
+	if err != nil {
+		return err
+	}
+
+	return checkResponse[*any](resp, fiber.StatusAccepted, nil)
 }
 
 // Delete는 파일 또는 디렉토리를 삭제합니다. (비동기 처리)
 func (c *VFSClient) Delete(id uuid.UUID) error {
 	resp, err := c.c.Delete("/vfs/" + id.String())
-	return checkResponse[*any](resp, err, fiber.StatusAccepted, nil)
+	if err != nil {
+		return err
+	}
+
+	return checkResponse[*any](resp, fiber.StatusAccepted, nil)
 }
 
 // WriteComments는 항목에 대한 부가 설명을 추가합니다. (비동기 처리)
@@ -178,8 +219,13 @@ func (c *VFSClient) WriteComments(id uuid.UUID, comment string) error {
 	if err != nil {
 		return err
 	}
+
 	resp, err := c.c.Patch("/vfs/"+id.String()+"/comments", cfg)
-	return checkResponse[*any](resp, err, fiber.StatusAccepted, nil)
+	if err != nil {
+		return err
+	}
+
+	return checkResponse[*any](resp, fiber.StatusAccepted, nil)
 }
 
 // Backup은 전체 VFS 데이터를 백업 파일로 받아옵니다.
@@ -214,8 +260,11 @@ func (c *VFSClient) Restore(file io.ReadCloser) error {
 	resp, err := c.c.Post("/vfs/restore", client.Config{
 		File: []*client.File{f},
 	})
+	if err != nil {
+		return err
+	}
 
-	return checkResponse[*any](resp, err, fiber.StatusOK, nil)
+	return checkResponse[*any](resp, fiber.StatusOK, nil)
 }
 
 // Rotate는 데이터 암호화 키를 교체합니다. (비동기 처리)
@@ -224,6 +273,11 @@ func (c *VFSClient) Rotate(newKey string) error {
 	if err != nil {
 		return err
 	}
+
 	resp, err := c.c.Post("/vfs/rotate", cfg)
-	return checkResponse[*any](resp, err, fiber.StatusAccepted, nil)
+	if err != nil {
+		return err
+	}
+
+	return checkResponse[*any](resp, fiber.StatusAccepted, nil)
 }

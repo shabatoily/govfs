@@ -112,6 +112,13 @@ func (h *SSEHandler) Publish(ctx fiber.Ctx) error {
 	return ctx.SendStatus(fiber.StatusNoContent)
 }
 
+// Clients returns the list of SSE clients.
+// @Summary List SSE Clients
+// @Description List all SSE clients
+// @Tags SSE
+// @Produce json
+// @Success 200 {object} types.ClientList
+// @Router /sse/clients [get]
 func (h *SSEHandler) Clients(ctx fiber.Ctx) error {
 	return ctx.JSON(types.ClientList{
 		Clients: h.broker.Clients(),

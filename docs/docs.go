@@ -68,6 +68,35 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
+            "types.ClientInfo": {
+                "properties": {
+                    "addr": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "user": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "types.ClientList": {
+                "properties": {
+                    "clients": {
+                        "items": {
+                            "$ref": "#/components/schemas/types.ClientInfo"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "type": "object"
+            },
             "types.CloudAuthRes": {
                 "properties": {
                     "url": {
@@ -737,6 +766,27 @@ const docTemplate = `{
                     }
                 },
                 "summary": "Publish SSE Message",
+                "tags": [
+                    "SSE"
+                ]
+            }
+        },
+        "/sse/clients": {
+            "get": {
+                "description": "List all SSE clients",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.ClientList"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "List SSE Clients",
                 "tags": [
                     "SSE"
                 ]

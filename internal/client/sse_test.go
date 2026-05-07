@@ -48,8 +48,7 @@ func TestSSEClient_Publish(t *testing.T) {
 		defer server.Close()
 
 		c := client.New(server.URL)
-		resp, err := c.SSE().Publish(id, data)
+		err := c.SSE().Publish(id, data)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusOK, resp.StatusCode())
 	})
 }

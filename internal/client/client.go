@@ -97,10 +97,7 @@ func createJSONConfig(data any) (client.Config, error) {
 }
 
 // checkResponse는 응답 상태 코드를 확인하고 본문을 구조체로 언마샬링하는 공통 처리 함수입니다.
-func checkResponse[T any](resp *client.Response, err error, expectedStatus int, out *T) error {
-	if err != nil {
-		return err
-	}
+func checkResponse[T any](resp *client.Response, expectedStatus int, out *T) error {
 	if resp.StatusCode() != expectedStatus {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}
