@@ -330,7 +330,7 @@ const docTemplate = `{
     "paths": {
         "/auth/login": {
             "post": {
-                "description": "login",
+                "description": "사용자 자격 증명을 확인하고 JWT 토큰을 발급합니다.",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -393,7 +393,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Login",
+                "summary": "로그인",
                 "tags": [
                     "auth"
                 ]
@@ -401,7 +401,7 @@ const docTemplate = `{
         },
         "/auth/logout": {
             "post": {
-                "description": "logout",
+                "description": "클라이언트의 JWT 토큰 쿠키를 삭제하여 로그아웃 처리합니다.",
                 "responses": {
                     "204": {
                         "content": {
@@ -424,7 +424,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Logout",
+                "summary": "로그아웃",
                 "tags": [
                     "auth"
                 ]
@@ -432,7 +432,7 @@ const docTemplate = `{
         },
         "/auth/me": {
             "get": {
-                "description": "is logged in",
+                "description": "현재 토큰의 유효성을 검증하고 사용자 정보를 반환합니다.",
                 "responses": {
                     "200": {
                         "content": {
@@ -455,7 +455,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "IsLoggedIn",
+                "summary": "로그인 상태 확인",
                 "tags": [
                     "auth"
                 ]
@@ -463,7 +463,7 @@ const docTemplate = `{
         },
         "/cloud/delete": {
             "delete": {
-                "description": "Deletes a file from the cloud storage.",
+                "description": "클라우드 저장소에서 지정된 파일을 삭제합니다.",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -491,7 +491,7 @@ const docTemplate = `{
                         "description": "Bad Request"
                     }
                 },
-                "summary": "Delete file",
+                "summary": "파일 삭제",
                 "tags": [
                     "cloud"
                 ]
@@ -499,7 +499,7 @@ const docTemplate = `{
         },
         "/cloud/download": {
             "post": {
-                "description": "Downloads a file from the cloud storage.",
+                "description": "클라우드 저장소에서 지정된 파일을 다운로드합니다.",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -529,7 +529,7 @@ const docTemplate = `{
                         "description": "Bad Request"
                     }
                 },
-                "summary": "Download file",
+                "summary": "파일 다운로드",
                 "tags": [
                     "cloud"
                 ]
@@ -537,7 +537,7 @@ const docTemplate = `{
         },
         "/cloud/googledrive/auth-code-url": {
             "get": {
-                "description": "Returns the authentication URL for Google Drive.",
+                "description": "Google Drive OAuth 인증을 위한 URL을 반환합니다.",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -569,7 +569,7 @@ const docTemplate = `{
                         "description": "Bad Request"
                     }
                 },
-                "summary": "Google Drive Auth Code URL",
+                "summary": "Google Drive 인증 URL",
                 "tags": [
                     "cloud"
                 ]
@@ -577,7 +577,7 @@ const docTemplate = `{
         },
         "/cloud/googledrive/callback": {
             "get": {
-                "description": "Handles the callback from the Google Drive authentication.",
+                "description": "Google Drive 인증 콜백을 처리하고 토큰을 발급받습니다.",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -609,7 +609,7 @@ const docTemplate = `{
                         "description": "Bad Request"
                     }
                 },
-                "summary": "Google Drive Callback",
+                "summary": "Google Drive 콜백",
                 "tags": [
                     "cloud"
                 ]
@@ -617,7 +617,7 @@ const docTemplate = `{
         },
         "/cloud/is-authorized": {
             "get": {
-                "description": "Checks if the cloud storage is authorized.",
+                "description": "클라우드 저장소의 인증(인가) 여부를 확인합니다.",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -645,7 +645,7 @@ const docTemplate = `{
                         "description": "Bad Request"
                     }
                 },
-                "summary": "Is Authorized",
+                "summary": "인증 상태 확인",
                 "tags": [
                     "cloud"
                 ]
@@ -653,7 +653,7 @@ const docTemplate = `{
         },
         "/cloud/list": {
             "get": {
-                "description": "Lists the files in the cloud storage.",
+                "description": "클라우드 저장소의 특정 경로에 있는 파일 목록을 가져옵니다.",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -685,7 +685,7 @@ const docTemplate = `{
                         "description": "Bad Request"
                     }
                 },
-                "summary": "List files",
+                "summary": "파일 목록 조회",
                 "tags": [
                     "cloud"
                 ]
@@ -693,7 +693,7 @@ const docTemplate = `{
         },
         "/cloud/upload": {
             "post": {
-                "description": "Uploads a file to the cloud storage.",
+                "description": "클라우드 저장소에 파일을 업로드합니다.",
                 "requestBody": {
                     "content": {
                         "multipart/form-data": {
@@ -721,7 +721,7 @@ const docTemplate = `{
                         "description": "Bad Request"
                     }
                 },
-                "summary": "Upload file",
+                "summary": "파일 업로드",
                 "tags": [
                     "cloud"
                 ]
@@ -729,7 +729,7 @@ const docTemplate = `{
         },
         "/sse/:id/publish": {
             "post": {
-                "description": "Publish a Server-Sent Event message",
+                "description": "지정된 클라이언트(또는 전체)에 Server-Sent Event 메시지를 발행합니다.",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -765,7 +765,7 @@ const docTemplate = `{
                         "description": "Bad Request"
                     }
                 },
-                "summary": "Publish SSE Message",
+                "summary": "SSE 메시지 발행",
                 "tags": [
                     "SSE"
                 ]
@@ -773,7 +773,7 @@ const docTemplate = `{
         },
         "/sse/clients": {
             "get": {
-                "description": "List all SSE clients",
+                "description": "연결된 모든 SSE 클라이언트의 정보를 반환합니다.",
                 "responses": {
                     "200": {
                         "content": {
@@ -786,7 +786,7 @@ const docTemplate = `{
                         "description": "OK"
                     }
                 },
-                "summary": "List SSE Clients",
+                "summary": "SSE 클라이언트 목록 조회",
                 "tags": [
                     "SSE"
                 ]
@@ -794,7 +794,7 @@ const docTemplate = `{
         },
         "/sse/subscribe": {
             "get": {
-                "description": "Subscribe to Server-Sent Events",
+                "description": "Server-Sent Events 스트림에 클라이언트를 구독시킵니다.",
                 "responses": {
                     "200": {
                         "content": {
@@ -817,7 +817,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "SSE Subscribe",
+                "summary": "SSE 구독",
                 "tags": [
                     "SSE"
                 ]
@@ -825,7 +825,7 @@ const docTemplate = `{
         },
         "/vfs": {
             "get": {
-                "description": "get files and directories",
+                "description": "지정된 경로의 하위 파일 및 디렉터리 목록을 가져옵니다.",
                 "parameters": [
                     {
                         "description": "name search by q",
@@ -943,13 +943,13 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "List files and directories",
+                "summary": "파일 및 디렉터리 목록 조회",
                 "tags": [
                     "vfs"
                 ]
             },
             "post": {
-                "description": "create file or directory",
+                "description": "새로운 파일이나 디렉터리를 생성합니다.",
                 "requestBody": {
                     "content": {
                         "application/x-www-form-urlencoded": {
@@ -1021,7 +1021,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Create file or directory",
+                "summary": "생성 (파일/디렉터리)",
                 "tags": [
                     "vfs"
                 ]
@@ -1029,7 +1029,7 @@ const docTemplate = `{
         },
         "/vfs/:id": {
             "delete": {
-                "description": "delete file or directory",
+                "description": "지정된 파일 또는 디렉터리를 삭제합니다.",
                 "parameters": [
                     {
                         "description": "file id",
@@ -1083,13 +1083,13 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Delete file or directory",
+                "summary": "삭제",
                 "tags": [
                     "vfs"
                 ]
             },
             "get": {
-                "description": "read file",
+                "description": "파일의 바이너리 데이터를 다운로드(스트리밍)합니다.",
                 "parameters": [
                     {
                         "description": "file id",
@@ -1143,13 +1143,13 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Read file",
+                "summary": "파일 읽기",
                 "tags": [
                     "vfs"
                 ]
             },
             "patch": {
-                "description": "move file or directory",
+                "description": "파일 또는 디렉터리를 새로운 경로로 이동시키거나 이름을 변경합니다.",
                 "parameters": [
                     {
                         "description": "file id",
@@ -1223,13 +1223,13 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Move file or directory",
+                "summary": "이동 및 이름 변경",
                 "tags": [
                     "vfs"
                 ]
             },
             "put": {
-                "description": "write content to a file",
+                "description": "파일의 내용을 새로운 데이터로 덮어씁니다.",
                 "parameters": [
                     {
                         "description": "file id",
@@ -1303,7 +1303,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Write content to a file",
+                "summary": "파일 쓰기",
                 "tags": [
                     "vfs"
                 ]
@@ -1311,7 +1311,7 @@ const docTemplate = `{
         },
         "/vfs/:id/comments": {
             "patch": {
-                "description": "write comments to a file",
+                "description": "파일 또는 디렉터리에 부가적인 코멘트를 작성합니다.",
                 "parameters": [
                     {
                         "description": "file id",
@@ -1383,7 +1383,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Write comments to a file",
+                "summary": "주석(코멘트) 작성",
                 "tags": [
                     "vfs"
                 ]
@@ -1391,7 +1391,7 @@ const docTemplate = `{
         },
         "/vfs/:id/copy": {
             "post": {
-                "description": "copy file or directory",
+                "description": "파일 또는 디렉터리를 새로운 경로로 복사합니다.",
                 "parameters": [
                     {
                         "description": "file id",
@@ -1465,7 +1465,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Copy file or directory",
+                "summary": "복사",
                 "tags": [
                     "vfs"
                 ]
@@ -1473,7 +1473,7 @@ const docTemplate = `{
         },
         "/vfs/:id/stat": {
             "get": {
-                "description": "stat file",
+                "description": "파일 또는 디렉터리의 메타데이터를 조회합니다.",
                 "parameters": [
                     {
                         "description": "file id",
@@ -1527,7 +1527,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Stat file",
+                "summary": "메타데이터 조회",
                 "tags": [
                     "vfs"
                 ]
@@ -1535,7 +1535,7 @@ const docTemplate = `{
         },
         "/vfs/backup": {
             "post": {
-                "description": "backup all file",
+                "description": "전체 가상 파일 시스템의 데이터를 백업 파일(tar.gz)로 다운로드합니다.",
                 "responses": {
                     "200": {
                         "content": {
@@ -1558,7 +1558,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Backup all file",
+                "summary": "전체 백업",
                 "tags": [
                     "vfs"
                 ]
@@ -1566,7 +1566,7 @@ const docTemplate = `{
         },
         "/vfs/badger/keys": {
             "get": {
-                "description": "all keys",
+                "description": "데이터베이스 내의 모든 키를 조회합니다.",
                 "parameters": [
                     {
                         "description": "prefix",
@@ -1599,7 +1599,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "AllKeys",
+                "summary": "키 목록 조회",
                 "tags": [
                     "vfs"
                 ]
@@ -1607,7 +1607,7 @@ const docTemplate = `{
         },
         "/vfs/restore": {
             "post": {
-                "description": "restore all file",
+                "description": "업로드된 백업 파일을 통해 파일 시스템을 복구합니다.",
                 "requestBody": {
                     "content": {
                         "application/x-www-form-urlencoded": {
@@ -1657,7 +1657,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Restore all file",
+                "summary": "전체 복구",
                 "tags": [
                     "vfs"
                 ]
@@ -1665,7 +1665,7 @@ const docTemplate = `{
         },
         "/vfs/rotate": {
             "post": {
-                "description": "rotate encryption key",
+                "description": "데이터베이스의 암호화 키를 교체(Rotate)합니다.",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -1715,7 +1715,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Rotate encryption key",
+                "summary": "암호화 키 교체",
                 "tags": [
                     "vfs"
                 ]
