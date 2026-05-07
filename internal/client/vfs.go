@@ -179,7 +179,7 @@ func (c *VFSClient) Move(id uuid.UUID, dstName string) error {
 		return err
 	}
 
-	// Move doesn't return a body we need to parse, passing nil
+	// Move는 파싱할 응답 본문을 반환하지 않으므로 nil을 전달합니다.
 	resp, err := c.c.Patch("/vfs/"+id.String(), cfg)
 	if err != nil {
 		return err
@@ -253,9 +253,8 @@ func (c *VFSClient) Restore(file io.ReadCloser) error {
 	f.SetReader(file)
 	f.SetName("backup")
 
-	// We don't need to manually read the file here.
-	// The client.Client will handle reading from f.Reader (which is `file`)
-	// and constructing the multipart request.
+	// 여기서 파일을 수동으로 읽을 필요가 없습니다.
+	// client.Client가 f.Reader(`file`)로부터 읽기와 멀티파트 요청 구성을 자동으로 처리합니다.
 
 	resp, err := c.c.Post("/vfs/restore", client.Config{
 		File: []*client.File{f},

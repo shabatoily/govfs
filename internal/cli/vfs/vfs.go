@@ -161,47 +161,47 @@ func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 			return err
 		}
 		if relPath == "." {
-			// Base directory itself
-			// Create dstVfs directory?
-			// If srcLocal is "foo", and dstVfs is "/bar", we want "bar/foo/..."
-			// Or if dstVfs is "/bar/", we want "/bar/foo/..."
-			// If dstVfs is "/bar" (exists), we want "/bar/foo/..."
-			// If dstVfs is "/bar" (does not exist), we want "/bar/..." (rename behavior)
+			// 베이스 디렉토리 자체
+			// dstVfs 디렉토리 생성 여부 판별:
+			// srcLocal이 "foo"이고 dstVfs가 "/bar"일 때, "bar/foo/..." 구조를 원함.
+			// 또는 dstVfs가 "/bar/"인 경우, "/bar/foo/..." 구조가 됨.
+			// 만약 dstVfs가 "/bar" (이미 존재)인 경우, "/bar/foo/..." 구조가 됨.
+			// 만약 dstVfs가 "/bar" (존재하지 않음)인 경우, "/bar/..." 구조 (이름 변경 방식)가 됨.
 
-			// Let's adopt cp -r behavior:
-			// If dstVfs exists and is dir: Upload into it (create dir `basename(srcLocal)`)
-			// If dstVfs does not exist: Create it (copy `srcLocal` to `dstVfs`)
+			// cp -r 명령어의 동작 방식을 채택:
+			// dstVfs가 존재하고 디렉토리인 경우: 그 안으로 업로드 (`basename(srcLocal)` 폴더 생성)
+			// dstVfs가 존재하지 않는 경우: 새로 생성 (`srcLocal`을 `dstVfs`로 복사)
 
-			// But filepath.Walk starts at root.
-			// Checking dstVfs once outside loop is better.
+			// 하지만 filepath.Walk는 루트부터 탐색을 시작합니다.
+			// 루프 외부에서 dstVfs를 한 번 확인하는 것이 더 효율적입니다.
 			return nil
 		}
 
-		// Simplified logic: If dstVfs ends with /, append RelPath directly.
-		// If dstVfs does not exist (or is target name), verify interaction.
+		// 단순화된 로직: dstVfs가 /로 끝나면 RelPath를 바로 이어붙임.
+		// dstVfs가 존재하지 않으면 (또는 타겟 이름인 경우), 동작 방식을 확인.
 
-		// To replicate `cp -r src dst` semantics fully is complex.
-		// Let's assume simpler: `cp -r src_dir /vfs/path` -> creates `/vfs/path/src_dir/file` IF /vfs/path exists
-		// OR creates `/vfs/path/file` if `/vfs/path` is the target name.
+		// `cp -r src dst`의 동작을 완벽하게 구현하는 것은 복잡함.
+		// 더 단순한 방식으로 가정: `cp -r src_dir /vfs/path` 호출 시,
+		// /vfs/path가 존재한다면 `/vfs/path/src_dir/file`을 생성하고,
+		// 존재하지 않는 타겟 이름이라면 `/vfs/path/file`을 생성함.
 
-		// Let's implement simpler semantic:
+		// 보다 간단한 의미론(semantic) 적용:
 
 		targetPath := filepath.Join(dstVfs, relPath)
-		// On windows filepath.Join uses backslash. We must ensure VFS paths are slashed.
+		// Windows 환경에서 filepath.Join은 백슬래시(\)를 사용하지만, VFS 경로는 항상 슬래시(/)를 사용해야 함.
 		targetPath = filepath.ToSlash(targetPath)
 
 		if info.IsDir() {
 			_, err = h.client.VFS().CreateDir(targetPath)
 			if err != nil {
-				// Ignore "already exists" error if possible, or client should handle
-				// Client CreateDir returns error on existing.
-				// We can check existence first or ignore error.
-				// For now, let's catch error and ignore if "file exists" string?
-				// Better: check existence.
+				// Client의 CreateDir은 디렉토리가 이미 존재하면 에러를 반환함.
+				// 여기서는 미리 존재 여부를 확인하거나 에러를 무시하는 방식으로 처리.
+				// 현재는 에러를 잡아서 "파일이 존재함" 텍스트가 포함된 경우 무시할 수 있으나,
+				// 명시적으로 존재 여부를 체크하는 것이 더 바람직함.
 				if _, err = h.findMetaByPath(targetPath); err != nil {
-					return err // Real error
+					return err // 실제 에러 발생
 				}
-				// If exists, continue
+				// 이미 존재한다면 계속 진행
 			}
 			return nil
 		}
@@ -232,8 +232,8 @@ func (h *Handler) handleDownload(srcVfs, dstLocal string) error {
 		return fmt.Errorf("'%s' is a directory (use -r to copy directories)", srcVfs)
 	}
 
-	// ParseID logic? Client Read takes UUID using 'id'.
-	// We need to resolve Path to ID first.
+	// ID 파싱 처리? Client의 Read는 'id'로 UUID를 받음.
+	// 따라서 경로(Path)를 먼저 ID로 변환해야 함.
 	meta, err := h.findMetaByPath(srcVfs)
 	if err != nil {
 		return err
@@ -248,7 +248,7 @@ func (h *Handler) handleDownload(srcVfs, dstLocal string) error {
 		return err
 	}
 
-	// Handle destination
+	// 목적지(대상) 경로 처리
 	destPath := dstLocal
 	info, err := os.Stat(dstLocal)
 	if err == nil && info.IsDir() {
@@ -282,25 +282,24 @@ func (h *Handler) handleRecursiveDownload(srcVfs, dstLocal string) error {
 	var totalBytes int64
 	startTime := time.Now()
 
-	// Use Tree API
+	// 트리(Tree) API 사용
 	tree, err := h.client.VFS().Tree(srcVfs)
 	if err != nil {
 		return err
 	}
 
-	// Determine target root path
+	// 목적지 최상위 경로 결정
 	targetRoot := dstLocal
 	info, err := os.Stat(dstLocal)
 	if err == nil && info.IsDir() {
-		// If dstLocal exists and is directory, download INTO it using source name
+		// dstLocal이 이미 존재하고 디렉토리인 경우, 원본 이름을 사용하여 해당 폴더 내부로 다운로드
 		targetRoot = filepath.Join(dstLocal, tree.Meta.Name)
 	}
 
 	var walker func(node *types.TreeNodeRes, currentLocalPath string) error
 	walker = func(node *types.TreeNodeRes, currentLocalPath string) error {
 		fullLocalPath := currentLocalPath
-		// If this is not the root of recursion (or if we changed logic),
-		// actually walker is called with full path for THIS node.
+		// 이곳이 재귀 탐색의 루트가 아니거나, 현재 노드에 대한 완전한 로컬 경로로 호출된 경우
 
 		if node.Meta.IsDir {
 			if mkdirErr := os.MkdirAll(fullLocalPath, vfs.DefaultDirMode); mkdirErr != nil {
@@ -429,11 +428,11 @@ func (h *Handler) Mkdir(path string, parents bool) error {
 				_, err := h.client.VFS().CreateDir(target)
 				parent = target
 				if err != nil {
-					// Client CreateDir returns error if exists or failed.
-					// If parents is true, we tolerate "exists" errors implicitly by continuing?
-					// Or strictly check? The command implementation ignored error if it wasn't the last one?
-					// Actually command impl: `if err != nil { if i == lastIdx { return err } }`
-					// This implies ignoring intermediate errors (assuming they might be "already exists").
+					// Client의 CreateDir은 디렉토리가 이미 존재하거나 실패하면 에러를 반환함.
+					// 부모 폴더 생성을 옵션으로 둔 경우, "이미 존재함" 에러는 묵시적으로 무시하고 진행할 수 있음.
+					// 커맨드 구현체에서는 루프의 마지막 요소가 아니면 에러를 무시하는 로직이었음:
+					// `if err != nil { if i == lastIdx { return err } }`
+					// 이는 중간 경로에 대해서는 "이미 존재함"을 전제로 에러를 넘긴다는 뜻임.
 					if i == lastIdx {
 						return err
 					}
@@ -508,18 +507,18 @@ func (h *Handler) Copy(src, dst string, recursive bool) error {
 	// 1. Local -> VFS (Upload)
 	case !srcIsVfs && dstIsVfs:
 		if recursive {
-			// Check if src is dir
+			// 원본(src)이 디렉토리인지 확인
 			info, err := os.Stat(srcRaw)
 			if err != nil {
 				return err
 			}
 			if !info.IsDir() {
-				// Recursive flag on file? Just upload file.
+				// 파일에 대해서 재귀(recursive) 플래그가 주어졌다면, 단순 파일 업로드로 처리
 				return h.handleUpload(srcRaw, dstRaw)
 			}
 
-			// Determine actual destination root
-			// If dstVfs exists and is dir, append basename(srcRaw)
+			// 실제 대상 위치의 최상위 경로를 결정
+			// 대상(dstVfs)이 존재하고 디렉토리라면, 원본 이름(basename)을 덧붙임
 			meta, err := h.findMetaByPath(dstRaw)
 			if err == nil && meta.IsDir {
 				dstRaw = strings.TrimSuffix(dstRaw, "/") + "/" + filepath.Base(srcRaw)

@@ -11,20 +11,24 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// Default는 애플리케이션 시작 시 사용되는 기본 로거 인스턴스입니다.
 var Default = &Logger{
 	Logger: zerolog.New(os.Stdout).Level(zerolog.InfoLevel).With().Timestamp().Logger(),
 }
 
+// Config는 로거 생성을 위한 설정 정보를 정의합니다.
 type Config struct {
 	Path  string        `json:"path"`
 	Level zerolog.Level `json:"level"`
 }
 
+// Logger는 zerolog 로거와 리소스 정리를 위한 클로저를 포함하는 구조체입니다.
 type Logger struct {
 	zerolog.Logger
 	close func() error
 }
 
+// Close는 로거가 사용 중인 파일 핸들 등의 리소스를 안전하게 닫습니다.
 func (l *Logger) Close() error {
 	if l.close != nil {
 		return l.close()
@@ -32,6 +36,7 @@ func (l *Logger) Close() error {
 	return nil
 }
 
+// NewLogger는 설정을 바탕으로 새로운 로거 인스턴스를 생성하여 반환합니다.
 func NewLogger(cfg Config) (*Logger, error) {
 	ws := make([]io.Writer, 0, 2)
 

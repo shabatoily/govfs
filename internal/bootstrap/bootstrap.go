@@ -33,6 +33,7 @@ type serverContext struct {
 	VFS     vfs.VFS
 }
 
+// Init은 전체 설정을 읽어 클라우드, VFS를 초기화하고 최종적으로 Fiber 애플리케이션 인스턴스를 반환합니다.
 func Init(cfg *config.Config) (*fiber.App, error) {
 	storage, err := initCloud(&cfg.Cloud)
 	if err != nil {

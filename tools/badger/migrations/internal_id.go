@@ -11,20 +11,21 @@ import (
 	vfs "github.com/meteormin/govfs"
 )
 
-// internalMeta is a copy of the unexported internalMeta struct from drivers/badger.
+// internalMeta는 drivers/badger 패키지의 비공개 구조체 internalMeta의 복사본입니다.
 type internalMeta struct {
 	vfs.Meta
 	InternalID uuid.UUID `json:"internalId,omitempty"`
 }
 
-// fallbackMeta allows us to capture both the old and new JSON keys
-// because uuid.UUID custom unmarshaller skips standard case-insensitive fallback.
+// fallbackMeta는 uuid.UUID의 커스텀 Unmarshal이 표준 대소문자 무시 대체 동작을 건너뛰기 때문에,
+// 이전 JSON 키와 새로운 JSON 키를 모두 캡처할 수 있도록 해줍니다.
 type fallbackMeta struct {
 	vfs.Meta
 	InternalIDv1 uuid.UUID `json:"InternalID"`
 	InternalIDv2 uuid.UUID `json:"internalId"`
 }
 
+// InternalIDMigrator는 메타데이터의 InternalID 필드 마이그레이션을 처리합니다.
 type InternalIDMigrator struct{}
 
 func (InternalIDMigrator) Migrate(db *badger.DB) error {
@@ -43,10 +44,10 @@ func (InternalIDMigrator) Migrate(db *badger.DB) error {
 				var fallback fallbackMeta
 				if unmarshalErr := json.Unmarshal(v, &fallback); unmarshalErr != nil {
 					log.Printf("Failed to unmarshal meta into struct for key %s: %v", string(key), unmarshalErr)
-					return nil // Skip this record, try the next
+					return nil // 현재 레코드를 건너뛰고 다음 레코드로 진행
 				}
 
-				// If internalId wasn't found, use the old InternalID
+				// internalId를 찾지 못했다면, 예전 방식의 InternalID를 사용합니다.
 				targetUUID := fallback.InternalIDv2
 				if targetUUID == uuid.Nil {
 					targetUUID = fallback.InternalIDv1
@@ -63,7 +64,7 @@ func (InternalIDMigrator) Migrate(db *badger.DB) error {
 					return nil
 				}
 
-				// Only write to DB if the JSON bytes have changed
+				// JSON 바이트가 변경된 경우에만 DB에 덮어씁니다.
 				if !bytes.Equal(v, newBytes) {
 					if setErr := txn.Set(key, newBytes); setErr != nil {
 						return fmt.Errorf("failed to set new meta for key %s: %w", string(key), setErr)

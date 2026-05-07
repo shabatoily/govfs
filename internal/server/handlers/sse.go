@@ -23,15 +23,15 @@ type SSEHandler struct {
 	broker *services.SSEBroker
 }
 
-// Subscribe handles SSE subscription requests.
-// @Summary SSE Subscribe
-// @Description Subscribe to Server-Sent Events
+// Subscribe는 클라이언트의 SSE 연결 요청을 처리하고 이벤트 스트림을 시작합니다.
+// @Summary      SSE 구독
+// @Description  Server-Sent Events 스트림에 클라이언트를 구독시킵니다.
 // @Tags SSE
 // @Produce text/event-stream
 // @Success 200 {object} types.SSEMessage
 // @Failure 500 {object} any
 // @Router /sse/subscribe [get]
-// Subscribe는 클라이언트의 SSE 연결 요청을 처리하고 이벤트 스트림을 시작합니다.
+// @Router       /sse/subscribe [get]
 func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 	ctx.Set(fiber.HeaderContentType, "text/event-stream")
 	ctx.Set(fiber.HeaderCacheControl, "no-cache")
@@ -75,9 +75,9 @@ func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 	})
 }
 
-// Publish publishes an SSE message.
-// @Summary Publish SSE Message
-// @Description Publish a Server-Sent Event message
+// Publish는 외부 요청을 통해 특정 클라이언트에게 SSE 메시지를 전송합니다.
+// @Summary      SSE 메시지 발행
+// @Description  지정된 클라이언트(또는 전체)에 Server-Sent Event 메시지를 발행합니다.
 // @Tags SSE
 // @Accept json
 // @Produce json
@@ -85,7 +85,7 @@ func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 // @Success 204
 // @Failure 400 {object} fiber.Error
 // @Router /sse/:id/publish [post]
-// Publish는 외부 요청을 통해 특정 클라이언트에게 SSE 메시지를 전송합니다.
+// @Router       /sse/:id/publish [post]
 func (h *SSEHandler) Publish(ctx fiber.Ctx) error {
 	var metaData types.SSEMeta
 	if err := ctx.Bind().Body(&metaData); err != nil {
@@ -112,9 +112,9 @@ func (h *SSEHandler) Publish(ctx fiber.Ctx) error {
 	return ctx.SendStatus(fiber.StatusNoContent)
 }
 
-// Clients returns the list of SSE clients.
-// @Summary List SSE Clients
-// @Description List all SSE clients
+// Clients는 현재 연결된 모든 SSE 클라이언트 목록을 반환합니다.
+// @Summary      SSE 클라이언트 목록 조회
+// @Description  연결된 모든 SSE 클라이언트의 정보를 반환합니다.
 // @Tags SSE
 // @Produce json
 // @Success 200 {object} types.ClientList

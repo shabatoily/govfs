@@ -28,8 +28,8 @@ func (h *VfsHandler) Prefix() string {
 
 // List lists files and directories
 //
-//	@Summary      List files and directories
-//	@Description  get files and directories
+//	@Summary      파일 및 디렉터리 목록 조회
+//	@Description  지정된 경로의 하위 파일 및 디렉터리 목록을 가져옵니다.
 //	@Tags         vfs
 //	@Produce      json
 //	@Param        q    query     string  false  "name search by q"
@@ -77,8 +77,8 @@ func (h *VfsHandler) List(ctx fiber.Ctx) error {
 
 // Read response file binary
 //
-//	@Summary      Read file
-//	@Description  read file
+//	@Summary      파일 읽기
+//	@Description  파일의 바이너리 데이터를 다운로드(스트리밍)합니다.
 //	@Tags         vfs
 //	@Produce      octet-stream
 //	@Param        id    path     string  true  "file id"
@@ -143,8 +143,8 @@ func (h *VfsHandler) Read(ctx fiber.Ctx) error {
 }
 
 // Stat stat a file or directory
-// @Summary      Stat file
-// @Description  stat file
+// @Summary      메타데이터 조회
+// @Description  파일 또는 디렉터리의 메타데이터를 조회합니다.
 // @Tags         vfs
 // @Produce      json
 // @Param        id    path     string  true  "file id"
@@ -169,8 +169,8 @@ func (h *VfsHandler) Stat(ctx fiber.Ctx) error {
 }
 
 // Create creates a new file or directory
-// @Summary      Create file or directory
-// @Description  create file or directory
+// @Summary      생성 (파일/디렉터리)
+// @Description  새로운 파일이나 디렉터리를 생성합니다.
 // @Tags         vfs
 // @Accept       multipart/form-data
 // @Produce      json
@@ -241,8 +241,8 @@ func (h *VfsHandler) Create(ctx fiber.Ctx) error {
 }
 
 // Write write content to a file
-// @Summary      Write content to a file
-// @Description  write content to a file
+// @Summary      파일 쓰기
+// @Description  파일의 내용을 새로운 데이터로 덮어씁니다.
 // @Tags         vfs
 // @Accept       json
 // @Produce      json
@@ -281,8 +281,8 @@ func (h *VfsHandler) Write(ctx fiber.Ctx) error {
 }
 
 // Move rename or move a file or directory
-// @Summary      Move file or directory
-// @Description  move file or directory
+// @Summary      이동 및 이름 변경
+// @Description  파일 또는 디렉터리를 새로운 경로로 이동시키거나 이름을 변경합니다.
 // @Tags         vfs
 // @Accept       json
 // @Produce      json
@@ -299,8 +299,8 @@ func (h *VfsHandler) Move(ctx fiber.Ctx) error {
 }
 
 // Copy copy a file or directory
-// @Summary      Copy file or directory
-// @Description  copy file or directory
+// @Summary      복사
+// @Description  파일 또는 디렉터리를 새로운 경로로 복사합니다.
 // @Tags         vfs
 // @Accept       json
 // @Produce      json
@@ -317,8 +317,8 @@ func (h *VfsHandler) Copy(ctx fiber.Ctx) error {
 }
 
 // Delete delete a file or directory
-// @Summary      Delete file or directory
-// @Description  delete file or directory
+// @Summary      삭제
+// @Description  지정된 파일 또는 디렉터리를 삭제합니다.
 // @Tags         vfs
 // @Produce      json
 // @Param        id    path     string  true  "file id"
@@ -347,8 +347,8 @@ func (h *VfsHandler) Delete(ctx fiber.Ctx) error {
 }
 
 // WriteComments write comments to a file
-// @Summary      Write comments to a file
-// @Description  write comments to a file
+// @Summary      주석(코멘트) 작성
+// @Description  파일 또는 디렉터리에 부가적인 코멘트를 작성합니다.
 // @Tags         vfs
 // @Accept       json
 // @Produce      json
@@ -387,8 +387,8 @@ func (h *VfsHandler) WriteComments(ctx fiber.Ctx) error {
 }
 
 // Backup backup all file
-// @Summary      Backup all file
-// @Description  backup all file
+// @Summary      전체 백업
+// @Description  전체 가상 파일 시스템의 데이터를 백업 파일(tar.gz)로 다운로드합니다.
 // @Tags         vfs
 // @Produce      octet-stream
 // @Success      200  {file}	 string
@@ -414,8 +414,8 @@ func (h *VfsHandler) Backup(ctx fiber.Ctx) error {
 }
 
 // Restore restore all file
-// @Summary      Restore all file
-// @Description  restore all file
+// @Summary      전체 복구
+// @Description  업로드된 백업 파일을 통해 파일 시스템을 복구합니다.
 // @Tags         vfs
 // @Accept       multipart/form-data
 // @Produce      json
@@ -445,8 +445,8 @@ func (h *VfsHandler) Restore(ctx fiber.Ctx) error {
 }
 
 // Rotate rotate encryption key
-// @Summary      Rotate encryption key
-// @Description  rotate encryption key
+// @Summary      암호화 키 교체
+// @Description  데이터베이스의 암호화 키를 교체(Rotate)합니다.
 // @Tags         vfs
 // @Accept       json
 // @Produce      json

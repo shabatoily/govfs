@@ -1018,7 +1018,6 @@ func (bvfs *BadgerVFS) Rotate(newKey []byte) error {
 
 // Badger manage
 
-// AllKeys returns all keys in the database
 // AllKeys는 데이터베이스에 저장된 모든 키 목록을 반환합니다.
 func (bvfs *BadgerVFS) AllKeys() ([]string, error) {
 	keys := make([]string, 0)
@@ -1035,7 +1034,6 @@ func (bvfs *BadgerVFS) AllKeys() ([]string, error) {
 	return keys, err
 }
 
-// AllKeysByPrefix returns all keys with the given prefix
 // AllKeysByPrefix는 지정된 접두사로 시작하는 모든 키 목록을 반환합니다.
 func (bvfs *BadgerVFS) AllKeysByPrefix(prefix string) ([]string, error) {
 	keys := make([]string, 0)

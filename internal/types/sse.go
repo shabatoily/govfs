@@ -26,10 +26,12 @@ const (
 	SSEEventError SSEEvent = "error"
 )
 
+// String은 SSEEvent를 문자열 형태로 반환합니다.
 func (e SSEEvent) String() string {
 	return string(e)
 }
 
+// ClientInfo는 연결된 개별 SSE 클라이언트의 정보를 담고 있는 구조체입니다.
 type ClientInfo struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
@@ -37,6 +39,7 @@ type ClientInfo struct {
 	User      string
 }
 
+// ClientList는 현재 연결된 전체 SSE 클라이언트 목록을 반환할 때 사용하는 구조체입니다.
 type ClientList struct {
 	Clients []ClientInfo `json:"clients"`
 }
@@ -48,6 +51,7 @@ type SSEMeta struct {
 	Action string    `json:"action,omitempty"` // 수행된 액션
 }
 
+// Zero는 메타데이터가 비어있는 상태인지(기본값인지)를 확인하여 반환합니다.
 func (m SSEMeta) Zero() bool {
 	return m.ID == uuid.Nil && m.Path == "" && m.Action == ""
 }
@@ -60,6 +64,8 @@ type SSEData struct {
 	Meta      SSEMeta   `json:"meta"`              // 메타데이터
 }
 
+// MarshalJSON은 SSEData 구조체를 JSON으로 직렬화할 때,
+// 메타데이터가 비어있으면 생략하고, 시간 형식을 RFC3339로 지정하여 반환합니다.
 func (data *SSEData) MarshalJSON() ([]byte, error) {
 	if data.Meta.Zero() {
 		return json.Marshal(map[string]any{
@@ -85,6 +91,8 @@ type SSEMessage struct {
 	Retry time.Duration `json:"retry"` // 재연결 시도 주기
 }
 
+// MarshalJSON은 SSEMessage 구조체를 JSON으로 직렬화할 때,
+// ID를 문자열로 변환하고 밀리초 단위의 재시도 주기를 포함하여 반환합니다.
 func (msg *SSEMessage) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
 		"id":    msg.ID.String(),

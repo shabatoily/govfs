@@ -24,9 +24,9 @@ func NewAuthHandler(cfg config.AuthConfig) *AuthHandler {
 	}
 }
 
-// Login logs in the user
-// @Summary      Login
-// @Description  login
+// Login은 사용자 로그인을 처리합니다.
+// @Summary      로그인
+// @Description  사용자 자격 증명을 확인하고 JWT 토큰을 발급합니다.
 // @Tags         auth
 // @Accept       json
 // @Param request body types.LoginReq true "login request"
@@ -54,7 +54,7 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
-	// Create token
+	// 토큰 생성
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": h.cfg.Username,
 		"exp": float64(time.Now().Add(h.cfg.JWT.Exp).Unix()),
@@ -83,9 +83,9 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	})
 }
 
-// Logout logs out the user
-// @Summary      Logout
-// @Description  logout
+// Logout은 사용자 로그아웃을 처리합니다.
+// @Summary      로그아웃
+// @Description  클라이언트의 JWT 토큰 쿠키를 삭제하여 로그아웃 처리합니다.
 // @Tags         auth
 // @Success      204  {object}  fiber.Error
 // @Failure      500  {object}  fiber.Error
@@ -108,9 +108,9 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
-// IsLoggedIn checks if the user is logged in
-// @Summary      IsLoggedIn
-// @Description  is logged in
+// IsLoggedIn은 사용자의 로그인 상태를 확인합니다.
+// @Summary      로그인 상태 확인
+// @Description  현재 토큰의 유효성을 검증하고 사용자 정보를 반환합니다.
 // @Tags         auth
 // @Success      200  {object}  types.TokenRes
 // @Failure      500  {object}  fiber.Error

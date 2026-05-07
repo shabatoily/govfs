@@ -93,12 +93,14 @@ type Config struct {
 	Cloud  CloudConfig     `json:"cloud"`
 }
 
+// SetContext는 설정 객체 및 하위 속성들에 컨텍스트(context.Context)를 주입합니다.
 func (c *Config) SetContext(ctx context.Context) {
 	c.ctx = ctx
 	c.Server.Context = ctx
 	c.VFS.Driver.Badger.Context = ctx
 }
 
+// Context는 현재 설정 객체에 주입된 컨텍스트를 반환합니다.
 func (c *Config) Context() context.Context {
 	return c.ctx
 }

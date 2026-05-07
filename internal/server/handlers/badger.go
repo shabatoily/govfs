@@ -17,9 +17,9 @@ func NewBadgerHandler(bvfs *badger.BadgerVFS) *BadgerHandler {
 	return &BadgerHandler{bvfs: bvfs}
 }
 
-// AllKeys returns all file keys
-// @Summary      AllKeys
-// @Description  all keys
+// AllKeys는 데이터베이스에 저장된 모든 키를 반환합니다.
+// @Summary      키 목록 조회
+// @Description  데이터베이스 내의 모든 키를 조회합니다.
 // @Tags         vfs
 // @Produce      json
 // @Param        prefix    query     string  false  "prefix"

@@ -61,9 +61,9 @@ func Web(app *fiber.App, deps *DepsWeb) {
 		router.Get("/me", jwtAuth, authHandler.IsLoggedIn).Name("me")
 	}, "auth.")
 
-	// VFS Group with SSE Notification Middleware
-	// We want to notify AFTER the handler executes, and the middleware logic does exactly that (Next() called first).
-	// Routing /vfs/*
+	// VFS 라우트 그룹 (SSE 알림 미들웨어 포함 가능성)
+	// 핸들러가 실행된 후 상태 변경을 알리기 위해 동작하도록 설계되었습니다.
+	// 라우팅 경로: /vfs/*
 	app.Route("/vfs", func(router fiber.Router) {
 		router.Use(jwtAuth)
 		router.Post("/backup", vfsHandler.Backup).Name("backup")

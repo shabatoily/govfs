@@ -38,6 +38,7 @@ func (c *SSEClient) Publish(id uuid.UUID, data map[string]any) error {
 	return nil
 }
 
+// Clients는 현재 활성화된 모든 SSE 클라이언트 목록을 서버로부터 조회합니다.
 func (c *SSEClient) Clients() (types.ClientList, error) {
 	res, err := c.c.Get("/sse/clients")
 	if err != nil {

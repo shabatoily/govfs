@@ -35,6 +35,7 @@ func (c *CloudClient) GoogleDriveAuthCodeURL() (string, error) {
 	return payload["url"], nil
 }
 
+// IsAuthorized는 현재 클라우드 스토리지가 인증된 상태인지 확인합니다.
 func (c *CloudClient) IsAuthorized() error {
 	resp, err := c.c.Get("/cloud/googledrive/auth")
 	if err != nil {
@@ -72,8 +73,8 @@ func (c *CloudClient) List(path string) ([]string, error) {
 func (c *CloudClient) Upload(name string, r io.Reader) error {
 	f := &client.File{}
 	f.SetFieldName("file")
-	// the `r` parameter must be an io.ReadCloser for the fiber client.
-	// If it's merely an io.Reader, we need to wrap it.
+	// Fiber 클라이언트에서는 `r` 파라미터가 반드시 io.ReadCloser여야 합니다.
+	// 일반 io.Reader인 경우 NopCloser로 감싸줍니다.
 	rc, ok := r.(io.ReadCloser)
 	if !ok {
 		rc = io.NopCloser(r)

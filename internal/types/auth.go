@@ -20,6 +20,7 @@ type TokenRes struct {
 	ExpiresAt time.Time `json:"expiresAt"`
 }
 
+// MarshalJSON은 TokenRes 구조체를 JSON으로 직렬화할 때 시간 형식을 RFC3339로 지정하여 반환합니다.
 func (tr *TokenRes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
 		"username":  tr.Username,

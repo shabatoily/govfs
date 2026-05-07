@@ -87,6 +87,7 @@ func New(cfg *ClientConfig) (*Adapter, error) {
 	return d, nil
 }
 
+// IsAuthorized는 현재 드라이브 서비스가 인가되어(초기화되어) 사용 가능한 상태인지 확인합니다.
 func (d *Adapter) IsAuthorized() bool {
 	return d.service != nil
 }
@@ -130,8 +131,8 @@ func (d *Adapter) IssueToken(code string) (*oauth2.Token, error) {
 	return token, nil
 }
 
-// findOrCreateFolder finds a folder by name in the root of the drive, or creates it if it doesn't exist.
-// It returns the ID of the folder.
+// findOrCreateFolder는 드라이브 루트에서 이름으로 폴더를 검색하고, 없으면 새로 생성합니다.
+// 생성되거나 찾아낸 폴더의 ID를 반환합니다.
 func (d *Adapter) findOrCreateFolder(name string) (string, error) {
 	if !d.IsAuthorized() {
 		return "", ErrUnauthorized
@@ -160,8 +161,8 @@ func (d *Adapter) findOrCreateFolder(name string) (string, error) {
 	return createdFolder.Id, nil
 }
 
-// findOrCreatePath ensures the folder structure for a given path exists, creating it if necessary.
-// It returns the ID of the immediate parent folder for the given path.
+// findOrCreatePath는 주어진 경로에 대한 폴더 구조가 존재하는지 확인하고, 필요한 경우 생성합니다.
+// 해당 경로의 직속 부모 폴더 ID를 반환합니다.
 func (d *Adapter) findOrCreatePath(filePath string) (string, error) {
 	if !d.IsAuthorized() {
 		return "", ErrUnauthorized
@@ -213,7 +214,7 @@ func (d *Adapter) Upload(p string, r io.Reader) error {
 
 	fileName := path.Base(p)
 
-	// Check if file exists to update it, otherwise create a new one.
+	// 파일이 존재하면 업데이트를, 없으면 새로 생성합니다.
 	q := fmt.Sprintf("name = '%s' and '%s' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'",
 		escape(fileName), parentID)
 	resp, err := d.service.Files.List().Q(q).Fields("files(id)").PageSize(1).Do()
@@ -249,7 +250,7 @@ func (d *Adapter) Download(p string) (io.ReadCloser, error) {
 func (d *Adapter) Delete(p string) error {
 	fileID, err := d.findFileIDByPath(p)
 	if err != nil {
-		// If the file doesn't exist, it's not an error for a delete operation.
+		// 파일이 존재하지 않는 것은 삭제 작업에서 에러로 간주하지 않습니다.
 		if strings.Contains(err.Error(), "not found") {
 			return nil
 		}
