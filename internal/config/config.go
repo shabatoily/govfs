@@ -62,7 +62,7 @@ type MiddlewareConfig struct {
 	Swagger bool `json:"swagger"`
 }
 
-// WebUIConfig는 내장 웹 기반 관리자페이지 노출 여부를 설정합니다.
+// WebUIConfig는 내장 웹 페이지 노출 여부를 설정합니다.
 type WebUIConfig struct {
 	Enabled bool `json:"enabled"`
 }
