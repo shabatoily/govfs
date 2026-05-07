@@ -43,7 +43,7 @@ func TestSSEClient_Publish(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "value", req["key"])
 
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusNoContent)
 		}))
 		defer server.Close()
 
