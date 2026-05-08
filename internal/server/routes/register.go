@@ -91,6 +91,7 @@ func Register(app *fiber.App, deps *Deps) {
 		app.Route("/badger", func(router fiber.Router) {
 			router.Use(jwtAuth)
 			router.Get("/keys", badgerHandler.AllKeys).Name("keys")
+			router.Get("/stats", badgerHandler.Stats).Name("stats")
 		}, "badger.")
 	}
 

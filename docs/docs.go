@@ -68,6 +68,19 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
+            "types.BadgerStatRes": {
+                "properties": {
+                    "count": {
+                        "description": "개수",
+                        "type": "integer"
+                    },
+                    "size": {
+                        "description": "크기",
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
             "types.ClientInfo": {
                 "properties": {
                     "addr": {
@@ -1600,6 +1613,40 @@ const docTemplate = `{
                     }
                 },
                 "summary": "키 목록 조회",
+                "tags": [
+                    "vfs"
+                ]
+            }
+        },
+        "/vfs/badger/stats": {
+            "get": {
+                "description": "DB 내의 메타, 블롭, 인덱스 별 통계를 조회합니다.",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "$ref": "#/components/schemas/types.BadgerStatRes"
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    }
+                },
+                "summary": "DB 통계 조회",
                 "tags": [
                     "vfs"
                 ]

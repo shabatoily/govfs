@@ -54,3 +54,9 @@ type BadgerKeyRes struct {
 	Prefix string   `json:"prefix"` // 조회 시 사용한 접두사
 	Keys   []string `json:"keys"`   // 매칭된 키 목록
 }
+
+// BadgerStatRes는 BadgerDB의 통계 정보를 담고 있는 구조체입니다.
+type BadgerStatRes struct {
+	Count int   `json:"count"` // 개수
+	Size  int64 `json:"size"`  // 크기
+}

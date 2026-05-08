@@ -17,7 +17,7 @@ func NewBadgerHandler(bvfs *badger.BadgerVFS) *BadgerHandler {
 	return &BadgerHandler{bvfs: bvfs}
 }
 
-// AllKeys는 데이터베이스에 저장된 모든 키를 반환합니다.
+// AllKeys는 데이터베이스에 저장된 모든 키(또는 특정 접두사를 가진 키) 목록을 반환합니다.
 // @Summary      키 목록 조회
 // @Description  데이터베이스 내의 모든 키를 조회합니다.
 // @Tags         vfs
@@ -26,7 +26,6 @@ func NewBadgerHandler(bvfs *badger.BadgerVFS) *BadgerHandler {
 // @Success      200  {object}  types.BadgerKeyRes
 // @Failure      500  {object}  fiber.Error
 // @Router       /vfs/badger/keys [get]
-// AllKeys는 데이터베이스에 저장된 모든 키(또는 특정 접두사를 가진 키) 목록을 반환합니다.
 func (h *BadgerHandler) AllKeys(ctx fiber.Ctx) error {
 	var keys []string
 	var err error
@@ -48,4 +47,29 @@ func (h *BadgerHandler) AllKeys(ctx fiber.Ctx) error {
 		Prefix: prefix,
 		Keys:   keys,
 	})
+}
+
+// Stats는 데이터베이스의 키별 통계를 반환합니다.
+// @Summary      DB 통계 조회
+// @Description  DB 내의 메타, 블롭, 인덱스 별 통계를 조회합니다.
+// @Tags         vfs
+// @Produce      json
+// @Success      200  {object}  map[string]types.BadgerStatRes
+// @Failure      500  {object}  fiber.Error
+// @Router       /vfs/badger/stats [get]
+func (h *BadgerHandler) Stats(ctx fiber.Ctx) error {
+	stats, err := h.bvfs.Stats()
+	if err != nil {
+		return err
+	}
+
+	res := make(map[string]types.BadgerStatRes)
+	for k, v := range stats {
+		res[k] = types.BadgerStatRes{
+			Count: v.Count,
+			Size:  v.Size,
+		}
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(res)
 }

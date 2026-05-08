@@ -1050,6 +1050,46 @@ func (bvfs *BadgerVFS) AllKeysByPrefix(prefix string) ([]string, error) {
 	return keys, err
 }
 
+type Stats struct {
+	Count int   `json:"count"`
+	Size  int64 `json:"size"`
+}
+
+// Stats는 접두사(prefix)별 아이템 개수 및 용량 통계를 반환합니다.
+func (bvfs *BadgerVFS) Stats() (map[string]Stats, error) {
+	stats := make(map[string]Stats)
+
+	err := bvfs.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false // 값은 순회하지 않으므로 성능을 위해 프리패치 비활성화
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			key := item.Key()
+			
+			var prefixName string
+			if strings.HasPrefix(string(key), string(prefixMeta)) {
+				prefixName = "meta"
+			} else if strings.HasPrefix(string(key), string(prefixBlob)) {
+				prefixName = "blob"
+			} else if strings.HasPrefix(string(key), string(prefixIndex)) {
+				prefixName = "index"
+			} else {
+				prefixName = "other"
+			}
+
+			s := stats[prefixName]
+			s.Count++
+			s.Size += int64(len(key)) + item.ValueSize()
+			stats[prefixName] = s
+		}
+		return nil
+	})
+
+	return stats, err
+}
+
 func (bvfs *BadgerVFS) close() error {
 	var err error
 
