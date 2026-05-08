@@ -25,8 +25,8 @@ var (
 	PrefixWebui = "/"
 )
 
-// DepsWeb은 웹 라우트 등록 시 필요한 의존성 객체들을 묶어 전달하기 위한 구조체입니다.
-type DepsWeb struct {
+// DepsRegister는 라우트 등록 시 필요한 의존성 객체들을 묶어 전달하기 위한 구조체입니다.
+type Deps struct {
 	Context context.Context
 
 	Auth         config.AuthConfig
@@ -35,8 +35,8 @@ type DepsWeb struct {
 	WebUIEnabled bool
 }
 
-// Web은 Fiber 애플리케이션에 모든 웹 서비스 라우트를 등록합니다.
-func Web(app *fiber.App, deps *DepsWeb) {
+// Register는 Fiber 애플리케이션에 모든 웹 서비스 라우트를 등록합니다.
+func Register(app *fiber.App, deps *Deps) {
 	sseBroker := services.NewSSEBroker(services.SSEConfig{
 		Context:          deps.Context,
 		MaxClients:       10,

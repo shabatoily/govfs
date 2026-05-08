@@ -24,9 +24,8 @@ import (
 	"github.com/meteormin/govfs/internal/types"
 )
 
-// CommonMiddlewares는 애플리케이션 전반에 걸쳐 사용되는 공통 미들웨어들을 등록합니다.
-func CommonMiddlewares(app *fiber.App, cfg *config.ServerConfig) {
-	// 공통 미들웨어 설정
+// Register는 애플리케이션 전반에 걸쳐 사용되는 공통 미들웨어들을 등록합니다.
+func Register(app *fiber.App, cfg *config.ServerConfig) {
 	// 복구(recover) 미들웨어 추가
 	app.Use(recover.New(recover.Config{
 		EnableStackTrace: true,
@@ -44,7 +43,7 @@ func CommonMiddlewares(app *fiber.App, cfg *config.ServerConfig) {
 	}))
 
 	// 액세스 로그 미들웨어
-	accessLog, accessLogCloser := AccessLogWriter(cfg.Logger.AccessLogPath)
+	accessLog, accessLogCloser := accessLogWriter(cfg.Logger.AccessLogPath)
 	app.Use(logger.New(
 		logger.Config{
 			Stream: accessLog,
@@ -117,8 +116,8 @@ func CommonMiddlewares(app *fiber.App, cfg *config.ServerConfig) {
 	})
 }
 
-// AccessLogWriter는 액세스 로그 파일 기록을 위한 Writer와 리소스 정리용 함수를 반환합니다.
-func AccessLogWriter(path string) (io.Writer, func() error) {
+// accessLogWriter는 액세스 로그 파일 기록을 위한 Writer와 리소스 정리용 함수를 반환합니다.
+func accessLogWriter(path string) (io.Writer, func() error) {
 	// 파일 경로가 비어있으면 표준 출력(stdout)과 아무 작업도 하지 않는 클린업 함수를 반환합니다.
 	if path == "" {
 		return os.Stdout, func() error { return nil }

@@ -78,10 +78,11 @@ func initServer(ctx serverContext) *fiber.App {
 
 	app := fiber.New(cfg.Fiber)
 
-	middlewares.CommonMiddlewares(app, cfg)
+	// 공통 미들웨어 등록
+	middlewares.Register(app, cfg)
 
 	// 웹 라우트 설정
-	routes.Web(app, &routes.DepsWeb{
+	routes.Register(app, &routes.Deps{
 		Context:      cfg.Context,
 		VFS:          fs,
 		Auth:         cfg.Auth,
