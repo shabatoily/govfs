@@ -31,7 +31,6 @@ type SSEHandler struct {
 // @Success 200 {object} types.SSEMessage
 // @Failure 500 {object} any
 // @Router /sse/subscribe [get]
-// @Router       /sse/subscribe [get]
 func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 	ctx.Set(fiber.HeaderContentType, "text/event-stream")
 	ctx.Set(fiber.HeaderCacheControl, "no-cache")
@@ -85,7 +84,6 @@ func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 // @Success 204
 // @Failure 400 {object} fiber.Error
 // @Router /sse/:id/publish [post]
-// @Router       /sse/:id/publish [post]
 func (h *SSEHandler) Publish(ctx fiber.Ctx) error {
 	var metaData types.SSEMeta
 	if err := ctx.Bind().Body(&metaData); err != nil {
