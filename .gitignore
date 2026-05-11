@@ -1,4 +1,5 @@
 .idea
+.http
 data/
 bin/
 release/

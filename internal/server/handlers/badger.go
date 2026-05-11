@@ -63,13 +63,16 @@ func (h *BadgerHandler) Stats(ctx fiber.Ctx) error {
 		return err
 	}
 
-	res := make(map[string]types.BadgerStatRes)
-	for k, v := range stats {
-		res[k] = types.BadgerStatRes{
-			Count: v.Count,
-			Size:  v.Size,
-		}
+	var totalCount int
+	var totalSize int64
+	for _, v := range stats {
+		totalCount += v.Count
+		totalSize += v.Size
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(res)
+	return ctx.Status(fiber.StatusOK).JSON(types.BadgerStatRes{
+		TotalCount: totalCount,
+		TotalSize:  totalSize,
+		PrefixBy:   stats,
+	})
 }

@@ -3,6 +3,7 @@ package types
 
 import (
 	vfs "github.com/meteormin/govfs"
+	"github.com/meteormin/govfs/pkg/drivers/badger"
 )
 
 // ViewType은 VFS 데이터의 조회 방식을 정의합니다.
@@ -57,6 +58,7 @@ type BadgerKeyRes struct {
 
 // BadgerStatRes는 BadgerDB의 통계 정보를 담고 있는 구조체입니다.
 type BadgerStatRes struct {
-	Count int   `json:"count"` // 개수
-	Size  int64 `json:"size"`  // 크기
+	TotalCount int                     `json:"totalCount"` // 개수
+	TotalSize  int64                   `json:"totalSize"`  // 크기
+	PrefixBy   map[string]badger.Stats `json:"prefixBy"`   // 접두사별 통계
 }

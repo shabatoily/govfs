@@ -4,6 +4,7 @@ webui/node_modules
 .vscode
 .idea
 .docker
+.http
 logs
 data
 bin

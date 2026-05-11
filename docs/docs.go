@@ -8,6 +8,17 @@ const docTemplate = `{
     "schemes": {{ marshal .Schemes }},
     "components": {
         "schemas": {
+            "badger.Stats": {
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "size": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
             "fiber.Error": {
                 "properties": {
                     "code": {
@@ -70,11 +81,18 @@ const docTemplate = `{
             },
             "types.BadgerStatRes": {
                 "properties": {
-                    "count": {
+                    "prefixBy": {
+                        "additionalProperties": {
+                            "$ref": "#/components/schemas/badger.Stats"
+                        },
+                        "description": "접두사별 통계",
+                        "type": "object"
+                    },
+                    "totalCount": {
                         "description": "개수",
                         "type": "integer"
                     },
-                    "size": {
+                    "totalSize": {
                         "description": "크기",
                         "type": "integer"
                     }
