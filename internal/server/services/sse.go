@@ -19,7 +19,7 @@ const (
 // SSEConfig는 SSEBroker 생성 및 초기화 시 사용할 설정 값들을 정의하는 구조체입니다.
 type SSEConfig struct {
 	Context          context.Context
-	MaxClients       int
+	MaxClientBuffer  int
 	MaxMessageBuffer int
 }
 
@@ -199,8 +199,8 @@ func NewSSEBroker(config SSEConfig) *SSEBroker {
 	ctx, cancel := context.WithCancel(config.Context)
 
 	b := &SSEBroker{
-		newClients:     make(chan *client, config.MaxClients),
-		closingClients: make(chan uuid.UUID, config.MaxClients),
+		newClients:     make(chan *client, config.MaxClientBuffer),
+		closingClients: make(chan uuid.UUID, config.MaxClientBuffer),
 		message:        make(chan *types.SSEMessage, config.MaxMessageBuffer),
 		listClients:    make(chan chan []types.ClientInfo),
 		clients:        make(map[uuid.UUID]*client),

@@ -39,7 +39,7 @@ type Deps struct {
 func Register(app *fiber.App, deps *Deps) {
 	sseBroker := services.NewSSEBroker(services.SSEConfig{
 		Context:          deps.Context,
-		MaxClients:       10,
+		MaxClientBuffer:  10,
 		MaxMessageBuffer: 100,
 	})
 

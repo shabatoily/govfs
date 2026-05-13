@@ -1,6 +1,6 @@
 module github.com/meteormin/govfs
 
-go 1.26.0
+go 1.26.3
 
 require (
 	github.com/dgraph-io/badger/v4 v4.8.0

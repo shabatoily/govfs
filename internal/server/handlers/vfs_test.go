@@ -115,7 +115,7 @@ func TestVfsHandler_List(t *testing.T) {
 	// Setup
 	mockVFS := new(MockVFS)
 	broker := services.NewSSEBroker(services.SSEConfig{
-		MaxClients:       10,
+		MaxClientBuffer:  10,
 		MaxMessageBuffer: 100,
 	})
 	defer broker.Shutdown()
@@ -168,7 +168,7 @@ func TestVfsHandler_Stat(t *testing.T) {
 	// Setup
 	mockVFS := new(MockVFS)
 	broker := services.NewSSEBroker(services.SSEConfig{
-		MaxClients:       10,
+		MaxClientBuffer:  10,
 		MaxMessageBuffer: 100,
 	})
 	defer broker.Shutdown()
@@ -218,7 +218,7 @@ func TestVfsHandler_Create(t *testing.T) {
 	// Setup
 	mockVFS := new(MockVFS)
 	broker := services.NewSSEBroker(services.SSEConfig{
-		MaxClients:       10,
+		MaxClientBuffer:  10,
 		MaxMessageBuffer: 100,
 	})
 	defer broker.Shutdown()
@@ -277,7 +277,7 @@ func TestVfsHandler_Delete(t *testing.T) {
 	// Setup
 	mockVFS := new(MockVFS)
 	broker := services.NewSSEBroker(services.SSEConfig{
-		MaxClients:       10,
+		MaxClientBuffer:  10,
 		MaxMessageBuffer: 100,
 	})
 	defer broker.Shutdown()
@@ -314,7 +314,7 @@ func TestVfsHandler_Move(t *testing.T) {
 	// Setup
 	mockVFS := new(MockVFS)
 	broker := services.NewSSEBroker(services.SSEConfig{
-		MaxClients:       10,
+		MaxClientBuffer:  10,
 		MaxMessageBuffer: 100,
 	})
 	defer broker.Shutdown()
