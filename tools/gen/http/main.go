@@ -10,6 +10,17 @@ import (
 	"strings"
 )
 
+const (
+	defaultFileMode  = 0o644
+	defaultDirMode   = 0o755
+	multiPartBodyFmt = `--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+Hello World
+--WebAppBoundary--`
+)
+
 type Schema struct {
 	Type       string            `json:"type"`
 	Properties map[string]Schema `json:"properties"`
@@ -43,11 +54,11 @@ type Swagger struct {
 	Components Components                      `json:"components"`
 }
 
-func generateDummy(schema Schema, components Components) any {
+func generateDummy(schema *Schema, components Components) any {
 	if schema.Ref != "" {
 		refName := strings.TrimPrefix(schema.Ref, "#/components/schemas/")
 		if resolved, ok := components.Schemas[refName]; ok {
-			return generateDummy(resolved, components)
+			return generateDummy(&resolved, components)
 		}
 		return map[string]any{}
 	}
@@ -55,7 +66,7 @@ func generateDummy(schema Schema, components Components) any {
 	if len(schema.AllOf) > 0 {
 		res := map[string]any{}
 		for _, sub := range schema.AllOf {
-			if subRes, ok := generateDummy(sub, components).(map[string]any); ok {
+			if subRes, ok := generateDummy(&sub, components).(map[string]any); ok {
 				for k, v := range subRes {
 					res[k] = v
 				}
@@ -65,7 +76,7 @@ func generateDummy(schema Schema, components Components) any {
 	}
 
 	if len(schema.OneOf) > 0 {
-		return generateDummy(schema.OneOf[len(schema.OneOf)-1], components)
+		return generateDummy(&schema.OneOf[len(schema.OneOf)-1], components)
 	}
 
 	switch schema.Type {
@@ -77,16 +88,65 @@ func generateDummy(schema Schema, components Components) any {
 		return false
 	case "array":
 		if schema.Items != nil {
-			return []any{generateDummy(*schema.Items, components)}
+			return []any{generateDummy(schema.Items, components)}
 		}
 		return []any{}
 	default:
 		res := map[string]any{}
 		for name, prop := range schema.Properties {
-			res[name] = generateDummy(prop, components)
+			res[name] = generateDummy(&prop, components)
 		}
 		return res
 	}
+}
+
+func generateOperationLines(path, method string, details Operation, components Components) []string {
+	var lines []string
+
+	summary := details.Summary
+	if summary == "" {
+		summary = "No summary"
+	}
+	description := details.Description
+	if description == "" {
+		description = "No description"
+	}
+
+	summary = strings.ReplaceAll(summary, "\n", " ")
+	description = strings.ReplaceAll(description, "\n", " ")
+	url := fmt.Sprintf("http://localhost:3000%s", path)
+
+	lines = append(lines, fmt.Sprintf("### %s %s", summary, description))
+
+	// Handle request bodies
+	hasBody := false
+	bodyStr := ""
+	headers := []string{}
+
+	if details.RequestBody != nil && len(details.RequestBody.Content) > 0 {
+		hasBody = true
+		if mt, ok := details.RequestBody.Content["application/json"]; ok {
+			headers = append(headers, "Content-Type: application/json")
+			dummy := generateDummy(&mt.Schema, components)
+			b, _ := json.MarshalIndent(dummy, "", "  ")
+			bodyStr = string(b)
+		} else if _, ok := details.RequestBody.Content["multipart/form-data"]; ok {
+			headers = append(headers, "Content-Type: multipart/form-data; boundary=WebAppBoundary")
+			bodyStr = multiPartBodyFmt
+		} else {
+			// Fallback
+			headers = append(headers, "Content-Type: application/json")
+			bodyStr = "{}"
+		}
+	}
+
+	lines = append(lines, fmt.Sprintf("%s %s HTTP/1.1", strings.ToUpper(method), url))
+	lines = append(lines, headers...)
+	if hasBody {
+		lines = append(lines, "", bodyStr)
+	}
+	lines = append(lines, "")
+	return lines
 }
 
 func main() {
@@ -125,63 +185,17 @@ func main() {
 
 		for _, method := range methodNames {
 			details := methods[method]
-			summary := details.Summary
-			if summary == "" {
-				summary = "No summary"
-			}
-			description := details.Description
-			if description == "" {
-				description = "No description"
-			}
-
-			summary = strings.ReplaceAll(summary, "\n", " ")
-			description = strings.ReplaceAll(description, "\n", " ")
-			url := fmt.Sprintf("http://localhost:3000%s", path)
-
-			lines = append(lines, fmt.Sprintf("### %s %s", summary, description))
-
-			// Handle request bodies
-			hasBody := false
-			bodyStr := ""
-			headers := []string{}
-
-			if details.RequestBody != nil && len(details.RequestBody.Content) > 0 {
-				hasBody = true
-				if mt, ok := details.RequestBody.Content["application/json"]; ok {
-					headers = append(headers, "Content-Type: application/json")
-					dummy := generateDummy(mt.Schema, swagger.Components)
-					b, _ := json.MarshalIndent(dummy, "", "  ")
-					bodyStr = string(b)
-				} else if _, ok := details.RequestBody.Content["multipart/form-data"]; ok {
-					headers = append(headers, "Content-Type: multipart/form-data; boundary=WebAppBoundary")
-					bodyStr = "--WebAppBoundary\nContent-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\nContent-Type: text/plain\n\nHello World\n--WebAppBoundary--"
-				} else {
-					// Fallback
-					headers = append(headers, "Content-Type: application/json")
-					bodyStr = "{}"
-				}
-			}
-
-			lines = append(lines, fmt.Sprintf("%s %s HTTP/1.1", strings.ToUpper(method), url))
-			for _, h := range headers {
-				lines = append(lines, h)
-			}
-
-			if hasBody {
-				lines = append(lines, "")
-				lines = append(lines, bodyStr)
-			}
-			lines = append(lines, "")
+			lines = append(lines, generateOperationLines(path, method, details, swagger.Components)...)
 		}
 	}
 
-	if err := os.MkdirAll(filepath.Dir(*outputPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(*outputPath), defaultDirMode); err != nil {
 		fmt.Printf("Error creating output directory: %v\n", err)
 		os.Exit(1)
 	}
 
 	outputContent := strings.Join(lines, "\n")
-	if err := os.WriteFile(*outputPath, []byte(outputContent), 0o644); err != nil {
+	if err := os.WriteFile(*outputPath, []byte(outputContent), defaultFileMode); err != nil {
 		fmt.Printf("Error writing output file: %v\n", err)
 		os.Exit(1)
 	}
