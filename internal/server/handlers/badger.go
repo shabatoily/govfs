@@ -20,12 +20,12 @@ func NewBadgerHandler(bvfs *badger.BadgerVFS) *BadgerHandler {
 // AllKeys는 데이터베이스에 저장된 모든 키(또는 특정 접두사를 가진 키) 목록을 반환합니다.
 // @Summary      키 목록 조회
 // @Description  데이터베이스 내의 모든 키를 조회합니다.
-// @Tags         vfs
+// @Tags         badger
 // @Produce      json
 // @Param        prefix    query     string  false  "prefix"
 // @Success      200  {object}  types.BadgerKeyRes
 // @Failure      500  {object}  fiber.Error
-// @Router       /vfs/badger/keys [get]
+// @Router       /badger/keys [get]
 func (h *BadgerHandler) AllKeys(ctx fiber.Ctx) error {
 	var keys []string
 	var err error
@@ -52,11 +52,11 @@ func (h *BadgerHandler) AllKeys(ctx fiber.Ctx) error {
 // Stats는 데이터베이스의 키별 통계를 반환합니다.
 // @Summary      DB 통계 조회
 // @Description  DB 내의 메타, 블롭, 인덱스 별 통계를 조회합니다.
-// @Tags         vfs
+// @Tags         badger
 // @Produce      json
 // @Success      200  {object}  map[string]types.BadgerStatRes
 // @Failure      500  {object}  fiber.Error
-// @Router       /vfs/badger/stats [get]
+// @Router       /badger/stats [get]
 func (h *BadgerHandler) Stats(ctx fiber.Ctx) error {
 	stats, err := h.bvfs.Stats()
 	if err != nil {
@@ -75,4 +75,33 @@ func (h *BadgerHandler) Stats(ctx fiber.Ctx) error {
 		TotalSize:  totalSize,
 		PrefixBy:   stats,
 	})
+}
+
+// Rotate 데이터 암호화 키를 교체합니다. (비동기 처리)
+// @Summary      암호화 키 교체
+// @Description  데이터베이스의 암호화 키를 교체(Rotate)합니다.
+// @Tags         badger
+// @Accept       json
+// @Produce      json
+// @Param        key    body     string  true  "new key"
+// @Success      202  {string}  string "Accepted"
+// @Failure      400  {object}  fiber.Error
+// @Failure      500  {object}  fiber.Error
+// @Router       /badger/rotate [post]
+func (h *BadgerHandler) Rotate(ctx fiber.Ctx) error {
+	type rotateReq struct {
+		Key string `json:"key"`
+	}
+	req := new(rotateReq)
+	if err := ctx.Bind().JSON(req); err != nil || req.Key == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid JSON body or missing key")
+	}
+
+	// Deep Copy key for async processing
+	newKey := req.Key
+	if err := h.bvfs.Rotate([]byte(newKey)); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	return ctx.SendStatus(fiber.StatusAccepted)
 }

@@ -68,7 +68,6 @@ func Register(app *fiber.App, deps *Deps) {
 		router.Use(jwtAuth)
 		router.Post("/backup", vfsHandler.Backup).Name("backup")
 		router.Post("/restore", vfsHandler.Restore).Name("restore")
-		router.Post("/rotate", vfsHandler.Rotate).Name("rotate")
 		router.Post("/", vfsHandler.Create).Name("create")
 		router.Get("/", vfsHandler.List).Name("list")
 		router.Get("/:id", vfsHandler.Read).Name("read")
@@ -92,6 +91,7 @@ func Register(app *fiber.App, deps *Deps) {
 			router.Use(jwtAuth)
 			router.Get("/keys", badgerHandler.AllKeys).Name("keys")
 			router.Get("/stats", badgerHandler.Stats).Name("stats")
+			router.Post("/rotate", badgerHandler.Rotate).Name("rotate")
 		}, "badger.")
 	}
 

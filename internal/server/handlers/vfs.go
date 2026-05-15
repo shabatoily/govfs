@@ -444,40 +444,6 @@ func (h *VfsHandler) Restore(ctx fiber.Ctx) error {
 	return ctx.SendStatus(fiber.StatusOK)
 }
 
-// Rotate rotate encryption key
-// @Summary      암호화 키 교체
-// @Description  데이터베이스의 암호화 키를 교체(Rotate)합니다.
-// @Tags         vfs
-// @Accept       json
-// @Produce      json
-// @Param        key    body     string  true  "new key"
-// @Success      202  {string}  string "Accepted"
-// @Failure      400  {object}  fiber.Error
-// @Failure      500  {object}  fiber.Error
-// @Router       /vfs/rotate [post]
-// Rotate는 데이터 암호화 키를 교체합니다. (비동기 처리)
-func (h *VfsHandler) Rotate(ctx fiber.Ctx) error {
-	type rotateReq struct {
-		Key string `json:"key"`
-	}
-	req := new(rotateReq)
-	if err := ctx.Bind().JSON(req); err != nil || req.Key == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid JSON body or missing key")
-	}
-
-	// Deep Copy key for async processing
-	newKey := req.Key
-	clientID := ctx.Get("X-Client-ID")
-	cid, parseErr := uuid.Parse(clientID)
-	if parseErr == nil {
-		h.broker.AsyncExecute(cid, func() (types.SSEMeta, error) {
-			return types.SSEMeta{Action: "vfs.rotate"}, h.srv.Rotate(newKey)
-		})
-	}
-
-	return ctx.SendStatus(fiber.StatusAccepted)
-}
-
 // NewVfsHandler는 새로운 VfsHandler 인스턴스를 생성합니다.
 func NewVfsHandler(srv *services.VfsService, broker *services.SSEBroker) *VfsHandler {
 	return &VfsHandler{srv: srv, broker: broker}
