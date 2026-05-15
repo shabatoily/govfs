@@ -352,8 +352,8 @@ func (h *VfsHandler) Delete(ctx fiber.Ctx) error {
 // @Tags         vfs
 // @Accept       json
 // @Produce      json
-// @Param        id    path     string  true  "file id"
-// @Param        comment    query    string  true  "comment"
+// @Param        id    		path     string  true  "file id"
+// @Param        comment    body    types.WriteCommentReq  true  "comment"
 // @Success      202  {string}  string "Accepted"
 // @Failure      400  {object}  fiber.Error
 // @Failure      404  {object}  fiber.Error

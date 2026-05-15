@@ -204,6 +204,14 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
+            "types.RotateKeyReq": {
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "types.SSEData": {
                 "description": "데이터 페이로드",
                 "properties": {
@@ -330,6 +338,14 @@ const docTemplate = `{
                             "list",
                             "tree"
                         ],
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "types.WriteCommentReq": {
+                "properties": {
+                    "comment": {
                         "type": "string"
                     }
                 },
@@ -540,13 +556,16 @@ const docTemplate = `{
                     "content": {
                         "application/json": {
                             "schema": {
-                                "type": "object"
-                            }
-                        },
-                        "text/plain": {
-                            "schema": {
-                                "title": "key",
-                                "type": "string"
+                                "oneOf": [
+                                    {
+                                        "type": "object"
+                                    },
+                                    {
+                                        "$ref": "#/components/schemas/types.RotateKeyReq",
+                                        "summary": "key",
+                                        "description": "new key"
+                                    }
+                                ]
                             }
                         }
                     },
@@ -1485,25 +1504,27 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
-                    },
-                    {
-                        "description": "comment",
-                        "in": "query",
-                        "name": "comment",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 ],
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
-                                "type": "object"
+                                "oneOf": [
+                                    {
+                                        "type": "object"
+                                    },
+                                    {
+                                        "$ref": "#/components/schemas/types.WriteCommentReq",
+                                        "summary": "comment",
+                                        "description": "comment"
+                                    }
+                                ]
                             }
                         }
-                    }
+                    },
+                    "description": "comment",
+                    "required": true
                 },
                 "responses": {
                     "202": {

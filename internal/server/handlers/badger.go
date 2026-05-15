@@ -83,23 +83,17 @@ func (h *BadgerHandler) Stats(ctx fiber.Ctx) error {
 // @Tags         badger
 // @Accept       json
 // @Produce      json
-// @Param        key    body     string  true  "new key"
+// @Param        key    body    types.RotateKeyReq  true  "new key"
 // @Success      202  {string}  string "Accepted"
 // @Failure      400  {object}  fiber.Error
 // @Failure      500  {object}  fiber.Error
 // @Router       /badger/rotate [post]
 func (h *BadgerHandler) Rotate(ctx fiber.Ctx) error {
-	type rotateReq struct {
-		Key string `json:"key"`
-	}
-	req := new(rotateReq)
+	req := new(types.RotateKeyReq)
 	if err := ctx.Bind().JSON(req); err != nil || req.Key == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid JSON body or missing key")
 	}
-
-	// Deep Copy key for async processing
-	newKey := req.Key
-	if err := h.bvfs.Rotate([]byte(newKey)); err != nil {
+	if err := h.bvfs.Rotate([]byte(req.Key)); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 

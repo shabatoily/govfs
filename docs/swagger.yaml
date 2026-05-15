@@ -135,6 +135,11 @@ components:
           description: 파일 다운로드 또는 접근 URL
           type: string
       type: object
+    types.RotateKeyReq:
+      properties:
+        key:
+          type: string
+      type: object
     types.SSEData:
       description: 데이터 페이로드
       properties:
@@ -225,6 +230,11 @@ components:
           enum:
           - list
           - tree
+          type: string
+      type: object
+    types.WriteCommentReq:
+      properties:
+        comment:
           type: string
       type: object
     types.WriteReq:
@@ -356,11 +366,11 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-          text/plain:
-            schema:
-              title: key
-              type: string
+              oneOf:
+              - type: object
+              - $ref: '#/components/schemas/types.RotateKeyReq'
+                description: new key
+                summary: key
         description: new key
         required: true
       responses:
@@ -929,17 +939,17 @@ paths:
         required: true
         schema:
           type: string
-      - description: comment
-        in: query
-        name: comment
-        required: true
-        schema:
-          type: string
       requestBody:
         content:
           application/json:
             schema:
-              type: object
+              oneOf:
+              - type: object
+              - $ref: '#/components/schemas/types.WriteCommentReq'
+                description: comment
+                summary: comment
+        description: comment
+        required: true
       responses:
         "202":
           content:

@@ -20,7 +20,9 @@ GET http://localhost:3000/badger/keys HTTP/1.1
 POST http://localhost:3000/badger/rotate HTTP/1.1
 Content-Type: application/json
 
-{}
+{
+  "key": "string"
+}
 
 ### DB 통계 조회 DB 내의 메타, 블롭, 인덱스 별 통계를 조회합니다.
 GET http://localhost:3000/badger/stats HTTP/1.1
@@ -128,7 +130,9 @@ Content-Type: application/json
 PATCH http://localhost:3000/vfs/:id/comments HTTP/1.1
 Content-Type: application/json
 
-{}
+{
+  "comment": "string"
+}
 
 ### 복사 파일 또는 디렉터리를 새로운 경로로 복사합니다.
 POST http://localhost:3000/vfs/:id/copy HTTP/1.1
