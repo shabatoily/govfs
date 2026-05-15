@@ -18,6 +18,9 @@ password = "${SERVER_AUTH_PASSWORD}"
 secret = "${SERVER_AUTH_JWT_SECRET}"
 exp = "24h"
 
+[server.fiber]
+bodyLimit = 104857600
+
 [server.middlewares]
 config = true
 envvar = true

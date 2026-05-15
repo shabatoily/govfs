@@ -85,10 +85,15 @@ func Register(app *fiber.App, cfg *config.ServerConfig) {
 	// 설정 정보 노출 라우트 활성화 여부 확인
 	if cfg.Middlewares.Config {
 		app.Get("/config", jwtAuth, func(c fiber.Ctx) error {
-			return c.Status(fiber.StatusOK).JSON(types.ConfigRes{
+			res := types.ConfigRes{
 				AppName:      cfg.Fiber.AppName,
 				ServerConfig: *cfg,
-			})
+			}
+			data, err := res.MarshalJSON()
+			if err != nil {
+				return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+			}
+			return c.Status(fiber.StatusOK).Send(data)
 		}).Name("config")
 	}
 

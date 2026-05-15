@@ -27,14 +27,21 @@ type AppInfo struct {
 
 // ServerConfig는 HTTP 서버 구동 및 미들웨어 관련 설정을 포함합니다.
 type ServerConfig struct {
-	Context     context.Context   `json:"-"`
-	Fiber       fiber.Config      `json:"-" toml:"-" yaml:"-"`
-	Host        string            `json:"host"`
-	Port        int               `json:"port"`
-	Logger      FiberLoggerConfig `json:"logger"`
-	Auth        AuthConfig        `json:"auth"`
-	Middlewares MiddlewareConfig  `json:"middlewares"`
-	WebUI       WebUIConfig       `json:"webui"`
+	Auth AuthConfig `json:"auth"`
+
+	Context context.Context `json:"-"`
+
+	Fiber fiber.Config `json:"fiber"`
+
+	Host string `json:"host"`
+
+	Logger FiberLoggerConfig `json:"logger"`
+
+	Middlewares MiddlewareConfig `json:"middlewares"`
+
+	Port int `json:"port"`
+
+	WebUI WebUIConfig `json:"webui"`
 }
 
 // FiberLoggerConfig는 Fiber 웹 프레임워크 로거의 출력 파일 경로 및 로그 레벨을 정의합니다.
@@ -114,9 +121,6 @@ var DefaultConfig = &Config{
 	},
 	Server: ServerConfig{
 		Port: 3000,
-		Fiber: fiber.Config{
-			BodyLimit: 100 * 1024 * 1024,
-		},
 	},
 	VFS: VfsConfig{
 		Driver: drivers.Config{
