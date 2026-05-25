@@ -38,7 +38,7 @@ func (h *CloudHandler) GoogleDriveCallbackURL() string {
 // @Produce      json
 // @Success      200  {object}  types.CloudAuthRes
 // @Failure      400  {object}  string
-// @Router       /cloud/googledrive/auth-code-url [get]
+// @Router       /cloud/googledrive/auth [post]
 func (h *CloudHandler) GoogleDriveAuthCodeURL(c fiber.Ctx) error {
 	googledriveAdaper, ok := h.storage.(*googledrive.Adapter)
 	if !ok {

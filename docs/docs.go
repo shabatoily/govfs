@@ -718,8 +718,8 @@ const docTemplate = `{
                 ]
             }
         },
-        "/cloud/googledrive/auth-code-url": {
-            "get": {
+        "/cloud/googledrive/auth": {
+            "post": {
                 "description": "Google Drive OAuth 인증을 위한 URL을 반환합니다.",
                 "requestBody": {
                     "content": {
