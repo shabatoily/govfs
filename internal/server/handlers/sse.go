@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"time"
 
+	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/fiber/v3/log"
 
 	"github.com/gofiber/fiber/v3"
@@ -36,7 +37,11 @@ func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 	ctx.Set(fiber.HeaderCacheControl, "no-cache")
 	ctx.Set(fiber.HeaderConnection, "keep-alive")
 
-	msg, clientChan := h.broker.Subscribe(ctx.Context())
+	msg, clientChan := h.broker.Subscribe(types.SubscribeReq{
+		Context: ctx.Context(),
+		Addr:    ctx.IP(),
+		User:    usernameFromContext(ctx),
+	})
 	if clientChan == nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "SSE Broker is not available")
 	}
@@ -126,4 +131,18 @@ func (h *SSEHandler) Clients(ctx fiber.Ctx) error {
 // NewSSEHandler는 새로운 SSEHandler 인스턴스를 생성합니다.
 func NewSSEHandler(broker *services.SSEBroker) *SSEHandler {
 	return &SSEHandler{broker: broker}
+}
+
+func usernameFromContext(ctx fiber.Ctx) string {
+	token := jwtware.FromContext(ctx)
+	if token == nil {
+		return ""
+	}
+
+	sub, err := token.Claims.GetSubject()
+	if err != nil {
+		return ""
+	}
+
+	return sub
 }

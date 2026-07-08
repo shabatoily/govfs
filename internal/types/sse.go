@@ -2,6 +2,7 @@
 package types
 
 import (
+	"context"
 	"io"
 	"strconv"
 	"time"
@@ -29,6 +30,12 @@ const (
 // String은 SSEEvent를 문자열 형태로 반환합니다.
 func (e SSEEvent) String() string {
 	return string(e)
+}
+
+type SubscribeReq struct {
+	Context context.Context
+	Addr    string
+	User    string
 }
 
 // ClientInfo는 연결된 개별 SSE 클라이언트의 정보를 담고 있는 구조체입니다.

@@ -48,7 +48,7 @@ type client struct {
 }
 
 // Subscribe는 새로운 클라이언트를 브로커에 등록하고 구독 성공 메시지를 반환합니다.
-func (b *SSEBroker) Subscribe(ctx context.Context) (*types.SSEMessage, <-chan *types.SSEMessage) {
+func (b *SSEBroker) Subscribe(req types.SubscribeReq) (*types.SSEMessage, <-chan *types.SSEMessage) {
 	if !b.isRunning.Load() {
 		log.Warn("Attempted to subscribe to stopped SSE Broker")
 		return nil, nil
@@ -58,25 +58,31 @@ func (b *SSEBroker) Subscribe(ctx context.Context) (*types.SSEMessage, <-chan *t
 	// 버퍼를 두어 일시적인 블로킹을 방지합니다.
 	ch := make(chan *types.SSEMessage, defaultBufferSize)
 	id := uuid.New()
+	now := time.Now()
 	subMsg := &types.SSEMessage{
 		ID:    id,
 		Event: types.SSEEventSubscribe,
 		Data: types.SSEData{
-			Timestamp: time.Now(),
+			Timestamp: now,
 			Status:    true,
 			Message:   "Subscribed successfully",
 		},
 	}
 
 	// 클라이언트 컨텍스트가 취소(연결 끊김)되면 자동으로 Unsubscribe 호출
-	context.AfterFunc(ctx, func() {
+	context.AfterFunc(req.Context, func() {
 		b.Unsubscribe(id)
 	})
 
 	select {
 	case b.newClients <- &client{
-		ClientInfo: types.ClientInfo{ID: id, CreatedAt: time.Now()},
-		ch:         ch,
+		ClientInfo: types.ClientInfo{
+			ID:        id,
+			CreatedAt: now,
+			Addr:      req.Addr,
+			User:      req.User,
+		},
+		ch: ch,
 	}:
 		log.Infof("SSE Broker subscribed: %s", id)
 	case <-b.ctx.Done():

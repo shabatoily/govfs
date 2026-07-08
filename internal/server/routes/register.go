@@ -83,6 +83,7 @@ func Register(app *fiber.App, deps *Deps) {
 		router.Use(jwtAuth)
 		router.Get("/subscribe", sseHandler.Subscribe).Name("subscribe")
 		router.Post("/publish/:id?", sseHandler.Publish).Name("publish")
+		router.Get("/clients", sseHandler.Clients).Name("clients")
 	}, "sse.")
 
 	if bvfs, ok := deps.VFS.(*badger.BadgerVFS); ok {
