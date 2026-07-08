@@ -38,9 +38,9 @@ func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 	ctx.Set(fiber.HeaderConnection, "keep-alive")
 
 	msg, clientChan := h.broker.Subscribe(types.SubscribeReq{
-		Context: ctx.Context(),
-		Addr:    ctx.IP(),
-		User:    usernameFromContext(ctx),
+		Ctx:  ctx.Context(),
+		Addr: ctx.IP(),
+		User: usernameFromContext(ctx),
 	})
 	if clientChan == nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "SSE Broker is not available")

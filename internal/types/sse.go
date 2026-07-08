@@ -33,9 +33,9 @@ func (e SSEEvent) String() string {
 }
 
 type SubscribeReq struct {
-	Context context.Context
-	Addr    string
-	User    string
+	Ctx  context.Context
+	Addr string
+	User string
 }
 
 // ClientInfo는 연결된 개별 SSE 클라이언트의 정보를 담고 있는 구조체입니다.

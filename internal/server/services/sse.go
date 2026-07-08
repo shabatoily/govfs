@@ -70,7 +70,7 @@ func (b *SSEBroker) Subscribe(req types.SubscribeReq) (*types.SSEMessage, <-chan
 	}
 
 	// 클라이언트 컨텍스트가 취소(연결 끊김)되면 자동으로 Unsubscribe 호출
-	context.AfterFunc(req.Context, func() {
+	context.AfterFunc(req.Ctx, func() {
 		b.Unsubscribe(id)
 	})
 

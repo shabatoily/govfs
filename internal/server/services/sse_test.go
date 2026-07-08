@@ -19,9 +19,9 @@ func TestSSEBrokerClientsReturnsClientInfo(t *testing.T) {
 	defer b.Shutdown()
 
 	msg, ch := b.Subscribe(types.SubscribeReq{
-		Context: ctx,
-		Addr:    "127.0.0.1",
-		User:    "admin",
+		Ctx:  ctx,
+		Addr: "127.0.0.1",
+		User: "admin",
 	})
 	if msg == nil || ch == nil {
 		t.Fatal("subscribe failed")
