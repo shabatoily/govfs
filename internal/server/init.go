@@ -1,5 +1,4 @@
-// Package bootstrap은 서버 및 VFS, 클라우드 스토리지의 초기화를 담당합니다.
-package bootstrap
+package server
 
 import (
 	"errors"

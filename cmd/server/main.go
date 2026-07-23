@@ -4,7 +4,6 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -13,10 +12,11 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/log"
 	"github.com/joho/godotenv"
 	_ "github.com/meteormin/govfs/docs"
-	"github.com/meteormin/govfs/internal/bootstrap"
 	"github.com/meteormin/govfs/internal/config"
+	"github.com/meteormin/govfs/internal/server"
 )
 
 var (
@@ -63,7 +63,7 @@ func main() {
 	cfg.SetContext(ctx)
 
 	// init server
-	app, err := bootstrap.Init(cfg)
+	app, err := server.Init(cfg)
 	if err != nil {
 		log.Panic(err)
 	}
