@@ -30,15 +30,6 @@ const banner = `
   \____|\___/ \_/ |_| |___/
 `
 
-var (
-	// PrefixVFS는 가상 파일 시스템 관련 API의 URL 접두사입니다.
-	prefixVFS = "/vfs"
-	// PrefixSSE는 서버 전송 이벤트(SSE) 관련 API의 URL 접두사입니다.
-	prefixSSE = "/sse"
-	// PrefixWebui는 내장 웹 UI 서비스의 기본 URL 접두사입니다.
-	prefixWebui = "/"
-)
-
 type serverContext struct {
 	Config  *config.ServerConfig
 	Storage cloud.Storage
@@ -150,7 +141,7 @@ func registerRoutes(app *fiber.App, ctx serverContext) {
 
 	sseHandler := handlers.NewSSEHandler(sseBroker)
 
-	vfsService := services.NewVfsService(ctx.VFS, prefixVFS)
+	vfsService := services.NewVfsService(ctx.VFS, "/vfs")
 
 	vfsHandler := handlers.NewVfsHandler(vfsService, sseBroker)
 
@@ -209,7 +200,7 @@ func registerRoutes(app *fiber.App, ctx serverContext) {
 	}, "cloud.")
 
 	if ctx.Config.WebUI.Enabled {
-		app.Use(prefixWebui, static.New("", static.Config{
+		app.Use("/", static.New("", static.Config{
 			FS:     webui.FS,
 			Browse: true,
 		})).Name("webui")
