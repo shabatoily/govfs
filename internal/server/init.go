@@ -9,13 +9,17 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/log"
+	"github.com/gofiber/fiber/v3/middleware/static"
 	vfs "github.com/meteormin/govfs"
 	"github.com/meteormin/govfs/internal/cloud"
 	"github.com/meteormin/govfs/internal/config"
+	"github.com/meteormin/govfs/internal/server/handlers"
 	"github.com/meteormin/govfs/internal/server/middlewares"
-	"github.com/meteormin/govfs/internal/server/routes"
+	"github.com/meteormin/govfs/internal/server/services"
 	"github.com/meteormin/govfs/pkg/drivers"
+	"github.com/meteormin/govfs/pkg/drivers/badger"
 	vfsLog "github.com/meteormin/govfs/pkg/log"
+	"github.com/meteormin/govfs/webui"
 )
 
 const banner = `
@@ -25,6 +29,15 @@ const banner = `
  | |_| | (_) \ V /|  _\__ \
   \____|\___/ \_/ |_| |___/
 `
+
+var (
+	// PrefixVFS는 가상 파일 시스템 관련 API의 URL 접두사입니다.
+	prefixVFS = "/vfs"
+	// PrefixSSE는 서버 전송 이벤트(SSE) 관련 API의 URL 접두사입니다.
+	prefixSSE = "/sse"
+	// PrefixWebui는 내장 웹 UI 서비스의 기본 URL 접두사입니다.
+	prefixWebui = "/"
+)
 
 type serverContext struct {
 	Config  *config.ServerConfig
@@ -57,7 +70,6 @@ func Init(cfg *config.Config) (*fiber.App, error) {
 func initServer(ctx serverContext) *fiber.App {
 	cfg := ctx.Config
 	fs := ctx.VFS
-	storage := ctx.Storage
 
 	// 에러 핸들러 설정
 	cfg.Fiber.ErrorHandler = middlewares.ErrorHandler
@@ -81,13 +93,7 @@ func initServer(ctx serverContext) *fiber.App {
 	middlewares.Register(app, cfg)
 
 	// 웹 라우트 설정
-	routes.Register(app, &routes.Deps{
-		Context:      cfg.Context,
-		VFS:          fs,
-		Auth:         cfg.Auth,
-		Cloud:        storage,
-		WebUIEnabled: cfg.WebUI.Enabled,
-	})
+	registerRoutes(app, ctx)
 
 	app.Hooks().OnPreStartupMessage(func(preMsgData *fiber.PreStartupMessageData) error {
 		preMsgData.BannerHeader = banner
@@ -129,4 +135,88 @@ func initVFS(cfg *config.VfsConfig) (vfs.VFS, error) {
 // initCloud는 클라우드 스토리지 인터페이스를 초기화합니다.
 func initCloud(cfg *config.CloudConfig) (cloud.Storage, error) {
 	return cloud.New(&cfg.Config)
+}
+
+func registerRoutes(app *fiber.App, ctx serverContext) {
+	sseBroker := services.NewSSEBroker(services.SSEConfig{
+		Context:          ctx.Config.Context,
+		MaxClientBuffer:  10,
+		MaxMessageBuffer: 100,
+	})
+
+	authHandler := handlers.NewAuthHandler(ctx.Config.Auth)
+
+	cloudHandler := handlers.NewCloudHandler(ctx.Storage)
+
+	sseHandler := handlers.NewSSEHandler(sseBroker)
+
+	vfsService := services.NewVfsService(ctx.VFS, prefixVFS)
+
+	vfsHandler := handlers.NewVfsHandler(vfsService, sseBroker)
+
+	jwtAuth := middlewares.JWTAuthMiddleware(ctx.Config.Auth)
+
+	app.Route("/auth", func(router fiber.Router) {
+		router.Post("/login", authHandler.Login).Name("login")
+		router.Post("/logout", authHandler.Logout).Name("logout")
+		router.Get("/me", jwtAuth, authHandler.IsLoggedIn).Name("me")
+	}, "auth.")
+
+	// VFS 라우트 그룹 (SSE 알림 미들웨어 포함 가능성)
+	// 핸들러가 실행된 후 상태 변경을 알리기 위해 동작하도록 설계되었습니다.
+	// 라우팅 경로: /vfs/*
+	app.Route("/vfs", func(router fiber.Router) {
+		router.Use(jwtAuth)
+		router.Post("/backup", vfsHandler.Backup).Name("backup")
+		router.Post("/restore", vfsHandler.Restore).Name("restore")
+		router.Post("/", vfsHandler.Create).Name("create")
+		router.Get("/", vfsHandler.List).Name("list")
+		router.Get("/:id", vfsHandler.Read).Name("read")
+		router.Get("/:id/stat", vfsHandler.Stat).Name("stat")
+		router.Put("/:id", vfsHandler.Write).Name("write")
+		router.Patch("/:id", vfsHandler.Move).Name("move")
+		router.Delete("/:id", vfsHandler.Delete).Name("delete")
+		router.Post("/:id/copy", vfsHandler.Copy).Name("copy")
+		router.Patch("/:id/comments", vfsHandler.WriteComments).Name("write-comments")
+	}, "vfs.")
+
+	app.Route("/sse", func(router fiber.Router) {
+		router.Use(jwtAuth)
+		router.Get("/subscribe", sseHandler.Subscribe).Name("subscribe")
+		router.Post("/publish/:id?", sseHandler.Publish).Name("publish")
+		router.Get("/clients", sseHandler.Clients).Name("clients")
+	}, "sse.")
+
+	if bvfs, ok := ctx.VFS.(*badger.BadgerVFS); ok {
+		badgerHandler := handlers.NewBadgerHandler(bvfs)
+		app.Route("/badger", func(router fiber.Router) {
+			router.Use(jwtAuth)
+			router.Get("/keys", badgerHandler.AllKeys).Name("keys")
+			router.Get("/stats", badgerHandler.Stats).Name("stats")
+			router.Post("/rotate", badgerHandler.Rotate).Name("rotate")
+		}, "badger.")
+	}
+
+	app.Route(cloudHandler.Prefix(), func(router fiber.Router) {
+		router.Get(cloudHandler.GoogleDriveCallbackURL(), cloudHandler.GoogleDriveCallback).Name("googledrive-callback")
+		router.Use(jwtAuth)
+		router.Get("/googledrive/auth", cloudHandler.IsAuthorized).Name("googledrive-auth-status")
+		router.Post("/googledrive/auth", cloudHandler.GoogleDriveAuthCodeURL).Name("googledrive-auth")
+		router.Get("/", cloudHandler.List).Name("list")
+		router.Post("/", cloudHandler.Upload).Name("upload")
+		router.Post("/download", cloudHandler.Download).Name("download")
+		router.Delete("/", cloudHandler.Delete).Name("delete")
+	}, "cloud.")
+
+	if ctx.Config.WebUI.Enabled {
+		app.Use(prefixWebui, static.New("", static.Config{
+			FS:     webui.FS,
+			Browse: true,
+		})).Name("webui")
+	}
+
+	app.Hooks().OnPreShutdown(func() error {
+		sseBroker.Shutdown()
+		return nil
+	})
 }
