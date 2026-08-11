@@ -5,8 +5,8 @@
 port = 3000
 
 [server.logger]
-path = "./logs/server.log"
-accessLogPath = "./logs/access-log.log"
+path = "~/.govfs/logs/server.log"
+accessLogPath = "~/.govfs/logs/access-log.log"
 # log-level: debug=-4, info=0, warn=4, error=8
 level = 0
 
@@ -22,12 +22,12 @@ exp = "24h"
 bodyLimit = 104857600
 
 [server.middlewares]
-config = true
-envvar = true
-expvar = true
-pprof = true
-route = true
-swagger = true
+config = false
+envvar = false
+expvar = false
+pprof = false
+route = false
+swagger = false
 
 [server.webui]
 enabled = true
@@ -36,13 +36,13 @@ enabled = true
 type = "badger"
 
 [vfs.driver.badger]
-path = "./data"
+path = "~/.govfs/data"
 encryptKeyRotateDuration = "24h"
 gcInterval = "5m"
 gcDiscardRatio = 0.7
 
 [vfs.logger]
-path = "./logs/vfs.log"
+path = "~/.govfs/logs/vfs.log"
 # log-level: trace=-1, debug=0, info=1, warn=2, error=3, fatal=4, panic=5, noLevel=6, disabled=7
 level = -1
 
