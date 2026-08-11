@@ -6,6 +6,7 @@
     import Terminal from "./lib/components/Terminal.svelte";
     import Toast from "./lib/components/Toast.svelte";
     import ConnectionStatus from "./lib/components/ConnectionStatus.svelte";
+    import Login from "./lib/components/Login.svelte";
     import { appState } from "./lib/state.svelte";
     import vfs from "./lib/vfs";
     import sseClient, { type SSEMessage } from "./lib/sse";
@@ -68,6 +69,7 @@
             }
         }
     }
+
     onMount(() => {
         sseClient.on("subscribe", (message: SSEMessage) => {
             const { id, data } = message;
@@ -104,14 +106,28 @@
             }
         });
 
-        // Start SSE connection
-        sseClient.connect();
+        // Start SSE connection if logged in
+        appState.checkAuth().then((loggedIn) => {
+            if (loggedIn) {
+                sseClient.connect();
+            }
+        });
 
         return () => {
             sseClient.disconnect();
         };
     });
 </script>
+
+{#if !appState.authInitialized}
+    <div
+        class="h-screen w-screen flex items-center justify-center bg-gray-900 text-white z-[200]"
+    >
+        Loading...
+    </div>
+{:else if !appState.isLoggedIn}
+    <Login />
+{/if}
 
 <div class="bg-gray-900 text-gray-300 h-screen w-screen flex overflow-hidden">
     <!-- SideBar -->

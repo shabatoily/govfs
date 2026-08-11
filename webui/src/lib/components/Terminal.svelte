@@ -31,12 +31,12 @@
                     log("  ls <path> show file list");
                     log("  tree <path> show file tree");
                     log("  mkdir <name> create new dir");
-                    log("  new <name> create new file");
-                    log("  open <name> open file");
+                    log("  new <name> create new file on current path");
+                    log("  open <name> open file from current path");
                     log("  save save current file");
                     log("  rm <name> remove file");
-                    log("  cp <name> copy file");
-                    log("  mv <name> move file");
+                    log("  cp <src> <dst> copy file");
+                    log("  mv <src> <dst> move file");
                     log("  clear clear terminal");
                     log("  pwd print current path");
                     break;

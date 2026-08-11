@@ -8,6 +8,17 @@ const docTemplate = `{
     "schemes": {{ marshal .Schemes }},
     "components": {
         "schemas": {
+            "badger.Stats": {
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "size": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
             "fiber.Error": {
                 "properties": {
                     "code": {
@@ -28,6 +39,7 @@ const docTemplate = `{
                 "type": "object"
             },
             "time.Duration": {
+                "description": "재연결 시도 주기",
                 "enum": [
                     -9223372036854775808,
                     9223372036854775807,
@@ -50,6 +62,95 @@ const docTemplate = `{
                     "Hour"
                 ]
             },
+            "types.BadgerKeyRes": {
+                "properties": {
+                    "keys": {
+                        "description": "매칭된 키 목록",
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "prefix": {
+                        "description": "조회 시 사용한 접두사",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "types.BadgerStatRes": {
+                "properties": {
+                    "prefixBy": {
+                        "additionalProperties": {
+                            "$ref": "#/components/schemas/badger.Stats"
+                        },
+                        "description": "접두사별 통계",
+                        "type": "object"
+                    },
+                    "totalCount": {
+                        "description": "개수",
+                        "type": "integer"
+                    },
+                    "totalSize": {
+                        "description": "크기",
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "types.ClientInfo": {
+                "properties": {
+                    "addr": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "user": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "types.ClientList": {
+                "properties": {
+                    "clients": {
+                        "items": {
+                            "$ref": "#/components/schemas/types.ClientInfo"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "type": "object"
+            },
+            "types.CloudAuthRes": {
+                "properties": {
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "types.CloudListRes": {
+                "properties": {
+                    "items": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "path": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "types.DstReq": {
                 "properties": {
                     "name": {
@@ -58,7 +159,19 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
+            "types.LoginReq": {
+                "properties": {
+                    "password": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "types.MetaRes": {
+                "description": "노드 메타데이터",
                 "properties": {
                     "comments": {
                         "type": "string"
@@ -85,29 +198,43 @@ const docTemplate = `{
                         "type": "integer"
                     },
                     "url": {
+                        "description": "파일 다운로드 또는 접근 URL",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "types.RotateKeyReq": {
+                "properties": {
+                    "key": {
                         "type": "string"
                     }
                 },
                 "type": "object"
             },
             "types.SSEData": {
+                "description": "데이터 페이로드",
                 "properties": {
                     "message": {
+                        "description": "메시지 내용",
                         "type": "string"
                     },
                     "meta": {
                         "$ref": "#/components/schemas/types.SSEMeta"
                     },
                     "status": {
+                        "description": "성공 여부",
                         "type": "boolean"
                     },
                     "timestamp": {
+                        "description": "이벤트 발생 시간",
                         "type": "string"
                     }
                 },
                 "type": "object"
             },
             "types.SSEEvent": {
+                "description": "이벤트 유형",
                 "enum": [
                     "heartbeat",
                     "subscribe",
@@ -133,6 +260,7 @@ const docTemplate = `{
                         "$ref": "#/components/schemas/types.SSEEvent"
                     },
                     "id": {
+                        "description": "메시지 고유 ID",
                         "type": "string"
                     },
                     "retry": {
@@ -142,14 +270,32 @@ const docTemplate = `{
                 "type": "object"
             },
             "types.SSEMeta": {
+                "description": "메타데이터",
                 "properties": {
                     "action": {
+                        "description": "수행된 액션",
                         "type": "string"
                     },
                     "id": {
+                        "description": "관련 리소스 ID",
                         "type": "string"
                     },
                     "path": {
+                        "description": "관련 리소스 경로",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "types.TokenRes": {
+                "properties": {
+                    "expiresAt": {
+                        "type": "string"
+                    },
+                    "token": {
+                        "type": "string"
+                    },
+                    "username": {
                         "type": "string"
                     }
                 },
@@ -158,6 +304,7 @@ const docTemplate = `{
             "types.TreeNodeRes": {
                 "properties": {
                     "children": {
+                        "description": "하위 자식 노드 목록",
                         "items": {
                             "$ref": "#/components/schemas/types.TreeNodeRes"
                         },
@@ -178,16 +325,27 @@ const docTemplate = `{
                 ],
                 "properties": {
                     "path": {
+                        "description": "요청된 경로",
                         "type": "string"
                     },
                     "payload": {
+                        "description": "실제 데이터 페이로드",
                         "type": "object"
                     },
                     "viewType": {
+                        "description": "조회 방식",
                         "enum": [
                             "list",
                             "tree"
                         ],
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "types.WriteCommentReq": {
+                "properties": {
+                    "comment": {
                         "type": "string"
                     }
                 },
@@ -217,9 +375,544 @@ const docTemplate = `{
         "url": ""
     },
     "paths": {
+        "/auth/login": {
+            "post": {
+                "description": "사용자 자격 증명을 확인하고 JWT 토큰을 발급합니다.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "oneOf": [
+                                    {
+                                        "type": "object"
+                                    },
+                                    {
+                                        "$ref": "#/components/schemas/types.LoginReq",
+                                        "summary": "request",
+                                        "description": "login request"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "description": "login request",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.TokenRes"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    }
+                },
+                "summary": "로그인",
+                "tags": [
+                    "auth"
+                ]
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "description": "클라이언트의 JWT 토큰 쿠키를 삭제하여 로그아웃 처리합니다.",
+                "responses": {
+                    "204": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "No Content"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    }
+                },
+                "summary": "로그아웃",
+                "tags": [
+                    "auth"
+                ]
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "description": "현재 토큰의 유효성을 검증하고 사용자 정보를 반환합니다.",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.TokenRes"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    }
+                },
+                "summary": "로그인 상태 확인",
+                "tags": [
+                    "auth"
+                ]
+            }
+        },
+        "/badger/keys": {
+            "get": {
+                "description": "데이터베이스 내의 모든 키를 조회합니다.",
+                "parameters": [
+                    {
+                        "description": "prefix",
+                        "in": "query",
+                        "name": "prefix",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.BadgerKeyRes"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    }
+                },
+                "summary": "키 목록 조회",
+                "tags": [
+                    "badger"
+                ]
+            }
+        },
+        "/badger/rotate": {
+            "post": {
+                "description": "데이터베이스의 암호화 키를 교체(Rotate)합니다.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "oneOf": [
+                                    {
+                                        "type": "object"
+                                    },
+                                    {
+                                        "$ref": "#/components/schemas/types.RotateKeyReq",
+                                        "summary": "key",
+                                        "description": "new key"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "description": "new key",
+                    "required": true
+                },
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Accepted"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    }
+                },
+                "summary": "암호화 키 교체",
+                "tags": [
+                    "badger"
+                ]
+            }
+        },
+        "/badger/stats": {
+            "get": {
+                "description": "DB 내의 메타, 블롭, 인덱스 별 통계를 조회합니다.",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "$ref": "#/components/schemas/types.BadgerStatRes"
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/fiber.Error"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    }
+                },
+                "summary": "DB 통계 조회",
+                "tags": [
+                    "badger"
+                ]
+            }
+        },
+        "/cloud/delete": {
+            "delete": {
+                "description": "클라우드 저장소에서 지정된 파일을 삭제합니다.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "content": {
+                            "application/json": {}
+                        },
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    }
+                },
+                "summary": "파일 삭제",
+                "tags": [
+                    "cloud"
+                ]
+            }
+        },
+        "/cloud/download": {
+            "post": {
+                "description": "클라우드 저장소에서 지정된 파일을 다운로드합니다.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {}
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "400": {
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    }
+                },
+                "summary": "파일 다운로드",
+                "tags": [
+                    "cloud"
+                ]
+            }
+        },
+        "/cloud/googledrive/auth": {
+            "post": {
+                "description": "Google Drive OAuth 인증을 위한 URL을 반환합니다.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.CloudAuthRes"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    }
+                },
+                "summary": "Google Drive 인증 URL",
+                "tags": [
+                    "cloud"
+                ]
+            }
+        },
+        "/cloud/googledrive/callback": {
+            "get": {
+                "description": "Google Drive 인증 콜백을 처리하고 토큰을 발급받습니다.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    }
+                },
+                "summary": "Google Drive 콜백",
+                "tags": [
+                    "cloud"
+                ]
+            }
+        },
+        "/cloud/is-authorized": {
+            "get": {
+                "description": "클라우드 저장소의 인증(인가) 여부를 확인합니다.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "content": {
+                            "application/json": {}
+                        },
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    }
+                },
+                "summary": "인증 상태 확인",
+                "tags": [
+                    "cloud"
+                ]
+            }
+        },
+        "/cloud/list": {
+            "get": {
+                "description": "클라우드 저장소의 특정 경로에 있는 파일 목록을 가져옵니다.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.CloudListRes"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    }
+                },
+                "summary": "파일 목록 조회",
+                "tags": [
+                    "cloud"
+                ]
+            }
+        },
+        "/cloud/upload": {
+            "post": {
+                "description": "클라우드 저장소에 파일을 업로드합니다.",
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "content": {
+                            "application/json": {}
+                        },
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    }
+                },
+                "summary": "파일 업로드",
+                "tags": [
+                    "cloud"
+                ]
+            }
+        },
         "/sse/:id/publish": {
             "post": {
-                "description": "Publish a Server-Sent Event message",
+                "description": "지정된 클라이언트(또는 전체)에 Server-Sent Event 메시지를 발행합니다.",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -255,7 +948,28 @@ const docTemplate = `{
                         "description": "Bad Request"
                     }
                 },
-                "summary": "Publish SSE Message",
+                "summary": "SSE 메시지 발행",
+                "tags": [
+                    "SSE"
+                ]
+            }
+        },
+        "/sse/clients": {
+            "get": {
+                "description": "연결된 모든 SSE 클라이언트의 정보를 반환합니다.",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.ClientList"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "SSE 클라이언트 목록 조회",
                 "tags": [
                     "SSE"
                 ]
@@ -263,7 +977,7 @@ const docTemplate = `{
         },
         "/sse/subscribe": {
             "get": {
-                "description": "Subscribe to Server-Sent Events",
+                "description": "Server-Sent Events 스트림에 클라이언트를 구독시킵니다.",
                 "responses": {
                     "200": {
                         "content": {
@@ -286,7 +1000,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "SSE Subscribe",
+                "summary": "SSE 구독",
                 "tags": [
                     "SSE"
                 ]
@@ -294,7 +1008,7 @@ const docTemplate = `{
         },
         "/vfs": {
             "get": {
-                "description": "get files and directories",
+                "description": "지정된 경로의 하위 파일 및 디렉터리 목록을 가져옵니다.",
                 "parameters": [
                     {
                         "description": "name search by q",
@@ -331,12 +1045,15 @@ const docTemplate = `{
                                             ],
                                             "properties": {
                                                 "path": {
+                                                    "description": "요청된 경로",
                                                     "type": "string"
                                                 },
                                                 "payload": {
+                                                    "description": "실제 데이터 페이로드",
                                                     "type": "object"
                                                 },
                                                 "viewType": {
+                                                    "description": "조회 방식",
                                                     "enum": [
                                                         "list",
                                                         "tree"
@@ -354,12 +1071,15 @@ const docTemplate = `{
                                             ],
                                             "properties": {
                                                 "path": {
+                                                    "description": "요청된 경로",
                                                     "type": "string"
                                                 },
                                                 "payload": {
+                                                    "description": "실제 데이터 페이로드",
                                                     "type": "object"
                                                 },
                                                 "viewType": {
+                                                    "description": "조회 방식",
                                                     "enum": [
                                                         "list",
                                                         "tree"
@@ -406,13 +1126,13 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "List files and directories",
+                "summary": "파일 및 디렉터리 목록 조회",
                 "tags": [
                     "vfs"
                 ]
             },
             "post": {
-                "description": "create file or directory",
+                "description": "새로운 파일이나 디렉터리를 생성합니다.",
                 "requestBody": {
                     "content": {
                         "application/x-www-form-urlencoded": {
@@ -484,7 +1204,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Create file or directory",
+                "summary": "생성 (파일/디렉터리)",
                 "tags": [
                     "vfs"
                 ]
@@ -492,7 +1212,7 @@ const docTemplate = `{
         },
         "/vfs/:id": {
             "delete": {
-                "description": "delete file or directory",
+                "description": "지정된 파일 또는 디렉터리를 삭제합니다.",
                 "parameters": [
                     {
                         "description": "file id",
@@ -546,13 +1266,13 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Delete file or directory",
+                "summary": "삭제",
                 "tags": [
                     "vfs"
                 ]
             },
             "get": {
-                "description": "read file",
+                "description": "파일의 바이너리 데이터를 다운로드(스트리밍)합니다.",
                 "parameters": [
                     {
                         "description": "file id",
@@ -606,13 +1326,13 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Read file",
+                "summary": "파일 읽기",
                 "tags": [
                     "vfs"
                 ]
             },
             "patch": {
-                "description": "move file or directory",
+                "description": "파일 또는 디렉터리를 새로운 경로로 이동시키거나 이름을 변경합니다.",
                 "parameters": [
                     {
                         "description": "file id",
@@ -686,13 +1406,13 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Move file or directory",
+                "summary": "이동 및 이름 변경",
                 "tags": [
                     "vfs"
                 ]
             },
             "put": {
-                "description": "write content to a file",
+                "description": "파일의 내용을 새로운 데이터로 덮어씁니다.",
                 "parameters": [
                     {
                         "description": "file id",
@@ -766,7 +1486,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Write content to a file",
+                "summary": "파일 쓰기",
                 "tags": [
                     "vfs"
                 ]
@@ -774,21 +1494,12 @@ const docTemplate = `{
         },
         "/vfs/:id/comments": {
             "patch": {
-                "description": "write comments to a file",
+                "description": "파일 또는 디렉터리에 부가적인 코멘트를 작성합니다.",
                 "parameters": [
                     {
                         "description": "file id",
                         "in": "path",
                         "name": "id",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "comment",
-                        "in": "query",
-                        "name": "comment",
                         "required": true,
                         "schema": {
                             "type": "string"
@@ -799,10 +1510,21 @@ const docTemplate = `{
                     "content": {
                         "application/json": {
                             "schema": {
-                                "type": "object"
+                                "oneOf": [
+                                    {
+                                        "type": "object"
+                                    },
+                                    {
+                                        "$ref": "#/components/schemas/types.WriteCommentReq",
+                                        "summary": "comment",
+                                        "description": "comment"
+                                    }
+                                ]
                             }
                         }
-                    }
+                    },
+                    "description": "comment",
+                    "required": true
                 },
                 "responses": {
                     "202": {
@@ -846,7 +1568,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Write comments to a file",
+                "summary": "주석(코멘트) 작성",
                 "tags": [
                     "vfs"
                 ]
@@ -854,7 +1576,7 @@ const docTemplate = `{
         },
         "/vfs/:id/copy": {
             "post": {
-                "description": "copy file or directory",
+                "description": "파일 또는 디렉터리를 새로운 경로로 복사합니다.",
                 "parameters": [
                     {
                         "description": "file id",
@@ -928,7 +1650,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Copy file or directory",
+                "summary": "복사",
                 "tags": [
                     "vfs"
                 ]
@@ -936,7 +1658,7 @@ const docTemplate = `{
         },
         "/vfs/:id/stat": {
             "get": {
-                "description": "stat file",
+                "description": "파일 또는 디렉터리의 메타데이터를 조회합니다.",
                 "parameters": [
                     {
                         "description": "file id",
@@ -990,7 +1712,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Stat file",
+                "summary": "메타데이터 조회",
                 "tags": [
                     "vfs"
                 ]
@@ -998,7 +1720,7 @@ const docTemplate = `{
         },
         "/vfs/backup": {
             "post": {
-                "description": "backup all file",
+                "description": "전체 가상 파일 시스템의 데이터를 백업 파일(tar.gz)로 다운로드합니다.",
                 "responses": {
                     "200": {
                         "content": {
@@ -1021,7 +1743,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Backup all file",
+                "summary": "전체 백업",
                 "tags": [
                     "vfs"
                 ]
@@ -1029,7 +1751,7 @@ const docTemplate = `{
         },
         "/vfs/restore": {
             "post": {
-                "description": "restore all file",
+                "description": "업로드된 백업 파일을 통해 파일 시스템을 복구합니다.",
                 "requestBody": {
                     "content": {
                         "application/x-www-form-urlencoded": {
@@ -1079,65 +1801,7 @@ const docTemplate = `{
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "Restore all file",
-                "tags": [
-                    "vfs"
-                ]
-            }
-        },
-        "/vfs/rotate": {
-            "post": {
-                "description": "rotate encryption key",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object"
-                            }
-                        },
-                        "text/plain": {
-                            "schema": {
-                                "title": "key",
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "description": "new key",
-                    "required": true
-                },
-                "responses": {
-                    "202": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "description": "Accepted"
-                    },
-                    "400": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
-                                }
-                            }
-                        },
-                        "description": "Bad Request"
-                    },
-                    "500": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
-                                }
-                            }
-                        },
-                        "description": "Internal Server Error"
-                    }
-                },
-                "summary": "Rotate encryption key",
+                "summary": "전체 복구",
                 "tags": [
                     "vfs"
                 ]
@@ -1148,7 +1812,7 @@ const docTemplate = `{
     "servers": [
         {
             "description": "Localhost",
-            "url": "localhost:3000"
+            "url": "http://localhost:3000"
         }
     ]
 }`

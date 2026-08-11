@@ -1,8 +1,10 @@
 .idea
+.http
 data/
-build/
+bin/
 release/
 .env
 *credentials*
 logs/
+*.bakconfig.json
 *.bak

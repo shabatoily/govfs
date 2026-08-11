@@ -30,7 +30,8 @@
             "program": "${workspaceFolder}/cmd/cli/main.go",
             "cwd": "${workspaceFolder}",
             "args": [
-                "serve"
+                "info",
+                "-v"
             ]
         },
         {

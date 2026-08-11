@@ -1,6 +1,12 @@
 <script lang="ts">
     import { onMount, onDestroy } from "svelte";
-    import { FilePlus, FolderPlus, RefreshCw, Home } from "lucide-svelte";
+    import {
+        FilePlus,
+        FolderPlus,
+        RefreshCw,
+        Home,
+        LogOut,
+    } from "lucide-svelte";
     import { appState } from "../state.svelte";
     import vfs, { type FileInfo } from "../vfs";
     import { resolvePath } from "../utils";
@@ -20,6 +26,10 @@
         } finally {
             loading = false;
         }
+    }
+
+    function handleLogout() {
+        appState.logout();
     }
 
     async function loadRootFiles() {
@@ -108,6 +118,7 @@
             }
         }
     });
+    const refreshIconClass = $derived(loading ? "animate-spin" : "");
 </script>
 
 <div
@@ -145,7 +156,15 @@
                 class="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
                 title="Refresh"
             >
-                <RefreshCw size={16} class={loading ? "animate-spin" : ""} />
+                <RefreshCw size={16} class={refreshIconClass} />
+            </button>
+            <div class="w-px h-4 bg-gray-600 mx-1 self-center"></div>
+            <button
+                onclick={handleLogout}
+                class="p-1 hover:bg-red-500 rounded text-gray-400 hover:text-white transition-colors"
+                title="Logout"
+            >
+                <LogOut size={16} />
             </button>
         </div>
     </div>

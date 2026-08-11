@@ -1,28 +1,29 @@
+// Package main은 govfs 서버의 진입점입니다.
 package main
 
 import (
 	"context"
 	"flag"
-	"log"
 	"os"
 	"os/signal"
 	"runtime/debug"
 	"strconv"
 	"syscall"
-	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/log"
 	"github.com/joho/godotenv"
-	"github.com/meteormin/govfs/bootstrap"
-	"github.com/meteormin/govfs/config"
 	_ "github.com/meteormin/govfs/docs"
+	"github.com/meteormin/govfs/internal/config"
+	"github.com/meteormin/govfs/internal/server"
 )
 
 var (
 	name        = "govfs"
-	version     = "0.0.1"
-	buildTime   = time.Now().UTC().Format(time.RFC3339)
+	version     = "dev"
+	buildTime   = "unknown"
 	description = "govfs is a virtual file system server"
+	configPath  = "config.toml"
 )
 
 // @title govfs
@@ -30,16 +31,21 @@ var (
 // @description govfs is a virtual file system server
 // @contact.name meteormin
 // @contact.email miniyu97@gmail.com
-// @servers.url localhost:3000
+// @servers.url http://localhost:3000
 // @servers.description Localhost
 func main() {
-	var configPath string
+	// signal context
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
+	// load .env
 	_ = godotenv.Load()
 
+	// parse flags
 	flag.StringVar(&configPath, "config", "config.toml", "config file path")
 	flag.Parse()
 
+	// load config
 	buildInfo, _ := debug.ReadBuildInfo()
 	cfg, err := config.LoadWithViper(configPath, config.AppInfo{
 		Name:        name,
@@ -49,24 +55,26 @@ func main() {
 		BuildInfo:   buildInfo,
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
-	vfs, err := bootstrap.InitVFS(&cfg.VFS)
+	// set context
+	cfg.SetContext(ctx)
+
+	// init server
+	app, err := server.Init(cfg)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
-	app := bootstrap.InitServer(vfs, &cfg.Server)
+	// set host to config and set swagger info on listen
 	app.Hooks().OnListen(func(listenData fiber.ListenData) error {
 		cfg.Server.Host = listenData.Host
 		config.SetSwaggerInfo(cfg)
 		return nil
 	})
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
+	// listen
 	if err := app.Listen(":"+strconv.Itoa(cfg.Server.Port), fiber.ListenConfig{
 		GracefulContext: ctx,
 	}); err != nil {

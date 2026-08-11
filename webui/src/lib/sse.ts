@@ -41,6 +41,7 @@ export class SSEClient {
         }
 
         console.log(`Connecting to SSE at ${this.url}`);
+
         this.eventSource = new EventSource(this.url);
 
         this.eventSource.onopen = (event) => {

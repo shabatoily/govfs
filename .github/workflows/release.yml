@@ -1,0 +1,153 @@
+name: govfs CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - 'develop'
+      - 'v[0-9]*'
+      - 'main'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - 'develop'
+      - 'v[0-9]*'
+      - 'main'
+
+jobs:
+  # [1] 검증 단계: 모든 브랜치 및 PR에서 공통 수행
+  test:
+    name: Unit Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'yarn'
+          cache-dependency-path: 'webui/yarn.lock'
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Create webui/dist (bypass go:embed error)
+        run: mkdir -p webui/dist && touch webui/dist/index.html
+
+      - name: Run Tests
+        run: make test
+
+  # [2] 빌드 단계: (바이너리)
+  build:
+    name: Build Artifact
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'yarn'
+          cache-dependency-path: 'webui/yarn.lock'
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Build Release
+        run: make release tag=${{github.ref_name}}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: release/
+          retention-days: 5
+
+  # [3] 도커 빌드 및 베포 (바이너리 빌드와 병렬로 수행)
+  docker:
+    name: Build and Push Docker Image
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ github.ref_name }}
+
+  # [4] 릴리즈 단계: 실제 버전 태그(v1.0.0 등)가 푸시될 때만 수행
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: ./release-download
+
+      - name: Create or Update Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: ./release-download/**/*
+          generate_release_notes: true

@@ -1,5 +1,6 @@
 import vfs, { type FileInfo } from './vfs';
 import { getParentPath } from './utils';
+import sseClient from './sse';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -16,9 +17,39 @@ export class AppState {
     clientId = $state<string | null>(null);
     toasts = $state<ToastItem[]>([]); // We hold toast data here
     refreshSignal = $state<{ type: 'PATH' | 'ID'; value: string; timestamp: number } | null>(null);
+    isLoggedIn = $state<boolean>(false);
+    authInitialized = $state<boolean>(false);
 
     setClientId(id: string) {
         this.clientId = id;
+    }
+
+    async checkAuth() {
+        try {
+            const res = await fetch("/auth/me", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+            this.isLoggedIn = res.status === 200;
+        } catch (e) {
+            this.isLoggedIn = false;
+        } finally {
+            this.authInitialized = true;
+        }
+        return this.isLoggedIn;
+    }
+
+    async logout() {
+        await fetch("/auth/logout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+        this.isLoggedIn = false;
+        sseClient.disconnect();
     }
 
     triggerRefreshPath(path: string) {

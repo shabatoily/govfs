@@ -156,8 +156,12 @@ accessLogPath = "./logs/access-log.log"
 level = 0
 
 [server.basicAuth]
+# Basic Auth 사용 여부
 enabled = false
+# Basic Auth 사용 시 사용자 이름
 username = "${BASIC_AUTH_USERNAME}"
+# Basic Auth 사용 시 사용자 비밀번호 (해시된 문자열 필요)
+# ref: https://docs.gofiber.io/middleware/basicauth#password-hashes
 password = "${BASIC_AUTH_PASSWORD}"
 
 [vfs.logger]

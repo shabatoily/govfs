@@ -1,5 +1,6 @@
 services:
   govfs:
+    container_name: govfs-server
     build:
       context: .
       dockerfile: Dockerfile

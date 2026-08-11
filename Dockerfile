@@ -2,7 +2,7 @@ FROM alpine AS base
 
 LABEL maintainer="meteormin"
 
-FROM node:24.12-alpine AS node
+FROM node:24.15-alpine AS node
 
 WORKDIR /webui
 
@@ -14,9 +14,9 @@ COPY webui .
 
 RUN yarn build
 
-FROM golang:1.25-alpine AS go
+FROM golang:1.26-alpine AS go
 
-ARG VERSION=0.0.1
+ARG VERSION=dev
 ARG BUILD_TIME="unknown"
 
 WORKDIR /govfs

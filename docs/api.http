@@ -1,0 +1,160 @@
+### 로그인 사용자 자격 증명을 확인하고 JWT 토큰을 발급합니다.
+POST http://localhost:3000/auth/login HTTP/1.1
+Content-Type: application/json
+
+{
+  "password": "string",
+  "username": "string"
+}
+
+### 로그아웃 클라이언트의 JWT 토큰 쿠키를 삭제하여 로그아웃 처리합니다.
+POST http://localhost:3000/auth/logout HTTP/1.1
+
+### 로그인 상태 확인 현재 토큰의 유효성을 검증하고 사용자 정보를 반환합니다.
+GET http://localhost:3000/auth/me HTTP/1.1
+
+### 키 목록 조회 데이터베이스 내의 모든 키를 조회합니다.
+GET http://localhost:3000/badger/keys HTTP/1.1
+
+### 암호화 키 교체 데이터베이스의 암호화 키를 교체(Rotate)합니다.
+POST http://localhost:3000/badger/rotate HTTP/1.1
+Content-Type: application/json
+
+{
+  "key": "string"
+}
+
+### DB 통계 조회 DB 내의 메타, 블롭, 인덱스 별 통계를 조회합니다.
+GET http://localhost:3000/badger/stats HTTP/1.1
+
+### 파일 삭제 클라우드 저장소에서 지정된 파일을 삭제합니다.
+DELETE http://localhost:3000/cloud/delete HTTP/1.1
+Content-Type: application/json
+
+{}
+
+### 파일 다운로드 클라우드 저장소에서 지정된 파일을 다운로드합니다.
+POST http://localhost:3000/cloud/download HTTP/1.1
+Content-Type: application/json
+
+{}
+
+### Google Drive 인증 URL Google Drive OAuth 인증을 위한 URL을 반환합니다.
+GET http://localhost:3000/cloud/googledrive/auth-code-url HTTP/1.1
+Content-Type: application/json
+
+{}
+
+### Google Drive 콜백 Google Drive 인증 콜백을 처리하고 토큰을 발급받습니다.
+GET http://localhost:3000/cloud/googledrive/callback HTTP/1.1
+Content-Type: application/json
+
+{}
+
+### 인증 상태 확인 클라우드 저장소의 인증(인가) 여부를 확인합니다.
+GET http://localhost:3000/cloud/is-authorized HTTP/1.1
+Content-Type: application/json
+
+{}
+
+### 파일 목록 조회 클라우드 저장소의 특정 경로에 있는 파일 목록을 가져옵니다.
+GET http://localhost:3000/cloud/list HTTP/1.1
+Content-Type: application/json
+
+{}
+
+### 파일 업로드 클라우드 저장소에 파일을 업로드합니다.
+POST http://localhost:3000/cloud/upload HTTP/1.1
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+Hello World
+--WebAppBoundary--
+
+### SSE 메시지 발행 지정된 클라이언트(또는 전체)에 Server-Sent Event 메시지를 발행합니다.
+POST http://localhost:3000/sse/:id/publish HTTP/1.1
+Content-Type: application/json
+
+{
+  "action": "string",
+  "id": "string",
+  "path": "string"
+}
+
+### SSE 클라이언트 목록 조회 연결된 모든 SSE 클라이언트의 정보를 반환합니다.
+GET http://localhost:3000/sse/clients HTTP/1.1
+
+### SSE 구독 Server-Sent Events 스트림에 클라이언트를 구독시킵니다.
+GET http://localhost:3000/sse/subscribe HTTP/1.1
+
+### 파일 및 디렉터리 목록 조회 지정된 경로의 하위 파일 및 디렉터리 목록을 가져옵니다.
+GET http://localhost:3000/vfs HTTP/1.1
+
+### 생성 (파일/디렉터리) 새로운 파일이나 디렉터리를 생성합니다.
+POST http://localhost:3000/vfs HTTP/1.1
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+Hello World
+--WebAppBoundary--
+
+### 삭제 지정된 파일 또는 디렉터리를 삭제합니다.
+DELETE http://localhost:3000/vfs/:id HTTP/1.1
+
+### 파일 읽기 파일의 바이너리 데이터를 다운로드(스트리밍)합니다.
+GET http://localhost:3000/vfs/:id HTTP/1.1
+
+### 이동 및 이름 변경 파일 또는 디렉터리를 새로운 경로로 이동시키거나 이름을 변경합니다.
+PATCH http://localhost:3000/vfs/:id HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "string"
+}
+
+### 파일 쓰기 파일의 내용을 새로운 데이터로 덮어씁니다.
+PUT http://localhost:3000/vfs/:id HTTP/1.1
+Content-Type: application/json
+
+{
+  "content": "string"
+}
+
+### 주석(코멘트) 작성 파일 또는 디렉터리에 부가적인 코멘트를 작성합니다.
+PATCH http://localhost:3000/vfs/:id/comments HTTP/1.1
+Content-Type: application/json
+
+{
+  "comment": "string"
+}
+
+### 복사 파일 또는 디렉터리를 새로운 경로로 복사합니다.
+POST http://localhost:3000/vfs/:id/copy HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "string"
+}
+
+### 메타데이터 조회 파일 또는 디렉터리의 메타데이터를 조회합니다.
+GET http://localhost:3000/vfs/:id/stat HTTP/1.1
+
+### 전체 백업 전체 가상 파일 시스템의 데이터를 백업 파일(tar.gz)로 다운로드합니다.
+POST http://localhost:3000/vfs/backup HTTP/1.1
+
+### 전체 복구 업로드된 백업 파일을 통해 파일 시스템을 복구합니다.
+POST http://localhost:3000/vfs/restore HTTP/1.1
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+Hello World
+--WebAppBoundary--
