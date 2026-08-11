@@ -160,17 +160,17 @@ func NewRootCommand(appInfo *config.AppInfo) *cobra.Command {
 				configPath = baseDir
 			}
 
-			if cmd.Name() == "config" || (cmd.Name() == "info" && !cmd.Flag("verbose").Changed) {
-				cmd.SetContext(ctx)
-				return nil
-			}
-
 			configPath = filepath.Join(configPath, ".govfs")
 			if _, err := os.Stat(configPath); errors.Is(err, os.ErrNotExist) {
 				err = os.Mkdir(configPath, vfs.DefaultDirMode)
 				if err != nil {
 					return err
 				}
+			}
+
+			if cmd.Name() == "config" || (cmd.Name() == "info" && !cmd.Flag("verbose").Changed) {
+				cmd.SetContext(ctx)
+				return nil
 			}
 
 			u, err := GetUserConfig()

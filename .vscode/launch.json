@@ -30,9 +30,9 @@
             "program": "${workspaceFolder}/cmd/cli/main.go",
             "cwd": "${workspaceFolder}",
             "args": [
-                "info",
-                "-v"
-            ]
+                "config",
+            ],
+            "console": "integratedTerminal"
         },
         {
             "name": "Launch Server",
