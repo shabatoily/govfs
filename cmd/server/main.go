@@ -9,7 +9,6 @@ import (
 	"runtime/debug"
 	"strconv"
 	"syscall"
-	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/log"
@@ -21,8 +20,8 @@ import (
 
 var (
 	name        = "govfs"
-	version     = "0.0.0"
-	buildTime   = time.Now().UTC().Format(time.RFC3339)
+	version     = "dev"
+	buildTime   = "unknown"
 	description = "govfs is a virtual file system server"
 	configPath  = "config.toml"
 )

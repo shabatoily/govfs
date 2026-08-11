@@ -16,7 +16,7 @@ RUN yarn build
 
 FROM golang:1.26-alpine AS go
 
-ARG VERSION=0.0.1
+ARG VERSION=dev
 ARG BUILD_TIME="unknown"
 
 WORKDIR /govfs

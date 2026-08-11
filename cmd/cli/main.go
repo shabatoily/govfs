@@ -5,7 +5,6 @@ import (
 	"context"
 	"log"
 	"runtime/debug"
-	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/meteormin/govfs/internal/cli"
@@ -17,8 +16,8 @@ import (
 
 var (
 	name        = "govfs"
-	version     = "0.0.1"
-	buildTime   = time.Now().UTC().Format(time.RFC3339)
+	version     = "dev"
+	buildTime   = "unknown"
 	description = "govfs is a virtual file system server"
 )
 

@@ -1,6 +1,6 @@
 PRJ_NAME=govfs
-GITHUB_USER=meteormin
-AUTHOR="Meteormin \(miniyu97@gmail.com\)"
+GITHUB_USER=shabatoily
+AUTHOR="shabatoily \(miniyu97@gmail.com\)"
 PRJ_BASE=$(shell pwd)
 PRJ_DESC=$(PRJ_NAME) Deployment and Development Makefile.
 
@@ -8,6 +8,7 @@ SUPPORTED_OS=linux darwin
 SUPPORTED_ARCH=amd64 arm64
 
 DATE_UTC=$(shell date +"%Y-%m-%dT%H:%M:%S%z")
+VERSION=$(shell git describe --tags --always --dirty 2>/dev/null || echo devel)
 
 # OS와 ARCH가 정의되어 있지 않으면 기본값을 설정합니다.
 # go env를 통해 현재 시스템의 OS와 ARCH를 가져옵니다.
@@ -59,7 +60,7 @@ benchmark:
 .PHONY: build
 build: os ?= $(OS)
 build: arch ?= $(ARCH)
-build: tag ?= "0.0.1"
+build: tag ?= $(VERSION)
 build: build-webui
 build: swag
 build:
@@ -146,7 +147,7 @@ lint:
 
 ##release tag={tag [v1.0.0]}: release application
 .PHONY: release
-release: tag ?= "0.0.1"
+release: tag ?= $(VERSION)
 release:
 	@echo "[release] releasing at $(DATE_UTC)"
 	@echo "[release] tag: $(tag)"
@@ -155,7 +156,7 @@ release:
 	@mkdir -p release
 	$(foreach os, $(SUPPORTED_OS), \
 		$(foreach arch, $(SUPPORTED_ARCH), \
-			$(MAKE) build os=$(os) arch=$(arch) && \
+			$(MAKE) build os=$(os) arch=$(arch) tag=$(tag) && \
 			cp bin/$(PRJ_NAME)-$(os)-$(arch) release/ && \
 			cp bin/$(PRJ_NAME)-cli-$(os)-$(arch) release/ ; \
 		) \
