@@ -7,11 +7,11 @@ import (
 	"runtime/debug"
 
 	"github.com/joho/godotenv"
-	"github.com/meteormin/govfs/internal/cli"
-	"github.com/meteormin/govfs/internal/cli/cloud"
-	"github.com/meteormin/govfs/internal/cli/secret"
-	"github.com/meteormin/govfs/internal/cli/vfs"
-	"github.com/meteormin/govfs/internal/config"
+	"github.com/shabatoily/govfs/internal/cli"
+	"github.com/shabatoily/govfs/internal/cli/cloud"
+	"github.com/shabatoily/govfs/internal/cli/secret"
+	"github.com/shabatoily/govfs/internal/cli/vfs"
+	"github.com/shabatoily/govfs/internal/config"
 )
 
 var (

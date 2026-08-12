@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	vfs "github.com/meteormin/govfs"
+	vfs "github.com/shabatoily/govfs"
 	"github.com/spf13/viper"
 )
 

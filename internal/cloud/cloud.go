@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/meteormin/govfs/internal/cloud/googledrive"
+	"github.com/shabatoily/govfs/internal/cloud/googledrive"
 )
 
 // Storage는 클라우드 스토리지와 통신하기 위한 공통 인터페이스입니다.

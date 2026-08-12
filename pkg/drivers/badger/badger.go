@@ -14,8 +14,8 @@ import (
 	"github.com/dgraph-io/badger/v4"
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"
-	vfs "github.com/meteormin/govfs"
-	"github.com/meteormin/govfs/pkg/log"
+	vfs "github.com/shabatoily/govfs"
+	"github.com/shabatoily/govfs/pkg/log"
 )
 
 const (
@@ -1067,7 +1067,7 @@ func (bvfs *BadgerVFS) Stats() (map[string]Stats, error) {
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
 			key := item.Key()
-			
+
 			var prefixName string
 			if strings.HasPrefix(string(key), string(prefixMeta)) {
 				prefixName = "meta"

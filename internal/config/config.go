@@ -9,11 +9,11 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	fiberLog "github.com/gofiber/fiber/v3/log"
-	"github.com/meteormin/govfs/docs"
-	"github.com/meteormin/govfs/internal/cloud"
-	"github.com/meteormin/govfs/pkg/drivers"
-	"github.com/meteormin/govfs/pkg/drivers/badger"
-	vfsLog "github.com/meteormin/govfs/pkg/log"
+	"github.com/shabatoily/govfs/docs"
+	"github.com/shabatoily/govfs/internal/cloud"
+	"github.com/shabatoily/govfs/pkg/drivers"
+	"github.com/shabatoily/govfs/pkg/drivers/badger"
+	vfsLog "github.com/shabatoily/govfs/pkg/log"
 )
 
 // AppInfo는 애플리케이션의 이름, 버전, 빌드 시간 등의 메타데이터를 보관하는 구조체입니다.

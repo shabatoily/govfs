@@ -10,8 +10,8 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
-	"github.com/meteormin/govfs/internal/server/services"
-	"github.com/meteormin/govfs/internal/types"
+	"github.com/shabatoily/govfs/internal/server/services"
+	"github.com/shabatoily/govfs/internal/types"
 )
 
 const (

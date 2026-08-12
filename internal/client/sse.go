@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/client"
 	"github.com/google/uuid"
-	"github.com/meteormin/govfs/internal/types"
+	"github.com/shabatoily/govfs/internal/types"
 )
 
 // SSEClient는 Server-Sent Events(SSE) 스트림 연결 및 이벤트 발행을 처리하는 클라이언트입니다.

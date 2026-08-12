@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	vfs "github.com/meteormin/govfs"
-	"github.com/meteormin/govfs/pkg/log"
+	vfs "github.com/shabatoily/govfs"
+	"github.com/shabatoily/govfs/pkg/log"
 )
 
 // IndexFileName은 메타데이터 인덱스를 저장하는 파일명입니다.

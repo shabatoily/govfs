@@ -12,8 +12,8 @@ import (
 	"github.com/dgraph-io/badger/v4"
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"
-	vfs "github.com/meteormin/govfs"
-	"github.com/meteormin/govfs/pkg/log"
+	vfs "github.com/shabatoily/govfs"
+	"github.com/shabatoily/govfs/pkg/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

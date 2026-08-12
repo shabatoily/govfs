@@ -14,10 +14,10 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/jedib0t/go-pretty/v6/list"
 	"github.com/jedib0t/go-pretty/v6/table"
-	vfs "github.com/meteormin/govfs"
-	"github.com/meteormin/govfs/internal/cli"
-	"github.com/meteormin/govfs/internal/client"
-	"github.com/meteormin/govfs/internal/types"
+	vfs "github.com/shabatoily/govfs"
+	"github.com/shabatoily/govfs/internal/cli"
+	"github.com/shabatoily/govfs/internal/client"
+	"github.com/shabatoily/govfs/internal/types"
 	"github.com/spf13/cobra"
 )
 

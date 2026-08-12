@@ -2,7 +2,7 @@
 package types
 
 import (
-	vfs "github.com/meteormin/govfs"
+	vfs "github.com/shabatoily/govfs"
 )
 
 // ViewType은 VFS 데이터의 조회 방식을 정의합니다.

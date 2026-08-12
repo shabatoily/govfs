@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/meteormin/govfs/internal/config"
+	"github.com/shabatoily/govfs/internal/config"
 )
 
 // ConfigRes는 서버 설정을 클라이언트에 전달하기 위한 구조체입니다.

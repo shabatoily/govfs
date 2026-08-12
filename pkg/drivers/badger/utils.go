@@ -11,15 +11,15 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
-	vfs "github.com/meteormin/govfs"
+	vfs "github.com/shabatoily/govfs"
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/google/uuid"
 )
 
 const (
-	secretFileMode = 0600
-	secretDirMode  = 0755
+	secretFileMode = 0o600
+	secretDirMode  = 0o755
 	chunkSeqLen    = 4
 )
 

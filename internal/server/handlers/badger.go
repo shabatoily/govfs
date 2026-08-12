@@ -3,8 +3,8 @@ package handlers
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/meteormin/govfs/internal/types"
-	"github.com/meteormin/govfs/pkg/drivers/badger"
+	"github.com/shabatoily/govfs/internal/types"
+	"github.com/shabatoily/govfs/pkg/drivers/badger"
 )
 
 // BadgerHandler는 BadgerDB 전용 관리 기능을 처리하는 핸들러입니다.

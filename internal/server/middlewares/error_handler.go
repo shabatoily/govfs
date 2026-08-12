@@ -6,7 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/log"
-	vfs "github.com/meteormin/govfs"
+	vfs "github.com/shabatoily/govfs"
 )
 
 // ErrorHandler는 Fiber 애플리케이션에서 발생하는 에러를 캐치하여 공통 형식으로 응답하고 로깅합니다.

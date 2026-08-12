@@ -8,7 +8,7 @@ import (
 	"github.com/dgraph-io/badger/v4"
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"
-	vfs "github.com/meteormin/govfs"
+	vfs "github.com/shabatoily/govfs"
 )
 
 // internalMeta는 drivers/badger 패키지의 비공개 구조체 internalMeta의 복사본입니다.

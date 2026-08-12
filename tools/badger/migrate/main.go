@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/dgraph-io/badger/v4"
-	badgervfs "github.com/meteormin/govfs/pkg/drivers/badger"
-	"github.com/meteormin/govfs/tools/badger/migrations"
+	badgervfs "github.com/shabatoily/govfs/pkg/drivers/badger"
+	"github.com/shabatoily/govfs/tools/badger/migrations"
 )
 
 var migrators = []migrations.Migrator{

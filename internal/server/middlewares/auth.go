@@ -5,7 +5,7 @@ import (
 	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/extractors"
-	"github.com/meteormin/govfs/internal/config"
+	"github.com/shabatoily/govfs/internal/config"
 )
 
 // JWTAuthMiddleware는 설정된 인증 방식(활성화 여부)에 따라 JWT 인증 미들웨어를 생성합니다.

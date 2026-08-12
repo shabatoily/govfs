@@ -1,4 +1,4 @@
-module github.com/meteormin/govfs
+module github.com/shabatoily/govfs
 
 go 1.26.3
 

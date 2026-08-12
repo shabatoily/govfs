@@ -4,9 +4,9 @@ package drivers
 import (
 	"fmt"
 
-	vfs "github.com/meteormin/govfs"
-	driverBadger "github.com/meteormin/govfs/pkg/drivers/badger"
-	driverLocalStorage "github.com/meteormin/govfs/pkg/drivers/localstorage"
+	vfs "github.com/shabatoily/govfs"
+	driverBadger "github.com/shabatoily/govfs/pkg/drivers/badger"
+	driverLocalStorage "github.com/shabatoily/govfs/pkg/drivers/localstorage"
 )
 
 // DriverType은 지원되는 드라이버 유형을 정의합니다.

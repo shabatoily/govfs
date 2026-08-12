@@ -11,8 +11,8 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
-	"github.com/meteormin/govfs/internal/server/services"
-	"github.com/meteormin/govfs/internal/types"
+	"github.com/shabatoily/govfs/internal/server/services"
+	"github.com/shabatoily/govfs/internal/types"
 )
 
 // VfsHandler는 가상 파일 시스템(VFS) 관련 HTTP 요청을 처리하는 핸들러입니다.

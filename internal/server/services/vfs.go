@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
-	vfs "github.com/meteormin/govfs"
-	"github.com/meteormin/govfs/internal/types"
-	"github.com/meteormin/govfs/pkg/drivers/badger"
+	vfs "github.com/shabatoily/govfs"
+	"github.com/shabatoily/govfs/internal/types"
+	"github.com/shabatoily/govfs/pkg/drivers/badger"
 )
 
 // VfsService는 VFS 드라이버를 래핑하여 서버에 특화된 기능을 제공합니다.

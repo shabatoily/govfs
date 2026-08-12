@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 
 	"github.com/jedib0t/go-pretty/v6/list"
-	vfs "github.com/meteormin/govfs"
-	"github.com/meteormin/govfs/internal/cli"
-	"github.com/meteormin/govfs/internal/client"
+	vfs "github.com/shabatoily/govfs"
+	"github.com/shabatoily/govfs/internal/cli"
+	"github.com/shabatoily/govfs/internal/client"
 	"github.com/spf13/cobra"
 )
 

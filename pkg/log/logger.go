@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
-	vfs "github.com/meteormin/govfs"
 	"github.com/rs/zerolog"
+	vfs "github.com/shabatoily/govfs"
 )
 
 // Default는 애플리케이션 시작 시 사용되는 기본 로거 인스턴스입니다.

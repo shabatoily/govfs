@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/meteormin/govfs/internal/types"
+	"github.com/shabatoily/govfs/internal/types"
 )
 
 func TestSSEBrokerClientsReturnsClientInfo(t *testing.T) {

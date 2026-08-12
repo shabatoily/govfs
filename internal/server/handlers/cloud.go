@@ -5,9 +5,9 @@ import (
 	"net/url"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/meteormin/govfs/internal/cloud"
-	"github.com/meteormin/govfs/internal/cloud/googledrive"
-	"github.com/meteormin/govfs/internal/types"
+	"github.com/shabatoily/govfs/internal/cloud"
+	"github.com/shabatoily/govfs/internal/cloud/googledrive"
+	"github.com/shabatoily/govfs/internal/types"
 )
 
 // CloudHandler는 외부 클라우드 저장소와의 상호작용을 처리하는 핸들러입니다.

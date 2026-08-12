@@ -7,8 +7,8 @@ import (
 	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/meteormin/govfs/internal/config"
-	"github.com/meteormin/govfs/internal/types"
+	"github.com/shabatoily/govfs/internal/config"
+	"github.com/shabatoily/govfs/internal/types"
 	"golang.org/x/crypto/bcrypt"
 )
 

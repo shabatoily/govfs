@@ -1,6 +1,6 @@
 package types
 
-import "github.com/meteormin/govfs/pkg/drivers/badger"
+import "github.com/shabatoily/govfs/pkg/drivers/badger"
 
 // BadgerKeyRes는 BadgerDB의 키 목록 조회 결과를 담고 있는 구조체입니다.
 type BadgerKeyRes struct {

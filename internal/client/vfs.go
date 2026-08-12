@@ -11,7 +11,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/client"
 	"github.com/google/uuid"
-	"github.com/meteormin/govfs/internal/types"
+	"github.com/shabatoily/govfs/internal/types"
 )
 
 // VFSClient는 가상 파일 시스템(VFS) 연산 및 파일 전송 API 통신을 담당하는 클라이언트입니다.

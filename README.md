@@ -45,7 +45,7 @@ govfs는 Client-Server 아키텍처를 따릅니다.
 ## 설치 방법
 
 ```bash
-git clone https://github.com/meteormin/govfs.git
+git clone https://github.com/shabatoily/govfs.git
 cd govfs
 go mod tidy
 cd webui && yarn install

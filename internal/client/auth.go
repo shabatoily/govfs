@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/meteormin/govfs/internal/types"
+	"github.com/shabatoily/govfs/internal/types"
 )
 
 // AuthClient는 사용자 인증 및 세션 관리 API 통신을 담당하는 클라이언트입니다.

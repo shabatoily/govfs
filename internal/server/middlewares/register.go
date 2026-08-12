@@ -18,10 +18,10 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
 	"github.com/gofiber/fiber/v3/middleware/responsetime"
-	vfs "github.com/meteormin/govfs"
-	"github.com/meteormin/govfs/internal/config"
-	"github.com/meteormin/govfs/internal/server/middlewares/swaggo"
-	"github.com/meteormin/govfs/internal/types"
+	vfs "github.com/shabatoily/govfs"
+	"github.com/shabatoily/govfs/internal/config"
+	"github.com/shabatoily/govfs/internal/server/middlewares/swaggo"
+	"github.com/shabatoily/govfs/internal/types"
 )
 
 // Register는 애플리케이션 전반에 걸쳐 사용되는 공통 미들웨어들을 등록합니다.

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/goccy/go-json"
-	"github.com/meteormin/govfs/internal/client"
+	"github.com/shabatoily/govfs/internal/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

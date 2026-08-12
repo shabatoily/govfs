@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/v6/list"
 	"github.com/jedib0t/go-pretty/v6/table"
-	vfs "github.com/meteormin/govfs"
+	vfs "github.com/shabatoily/govfs"
 	"github.com/spf13/cobra"
 )
 

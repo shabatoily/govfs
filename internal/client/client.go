@@ -8,7 +8,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/client"
-	"github.com/meteormin/govfs/internal/types"
+	"github.com/shabatoily/govfs/internal/types"
 )
 
 // baseClient는 모든 세부 클라이언트(Auth, Cloud 등)에서 공통으로 사용하는 기본 클라이언트 구조체입니다.

@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	vfs "github.com/meteormin/govfs"
-	"github.com/meteormin/govfs/internal/client"
-	"github.com/meteormin/govfs/internal/config"
-	"github.com/meteormin/govfs/internal/types"
 	"github.com/pelletier/go-toml/v2"
+	vfs "github.com/shabatoily/govfs"
+	"github.com/shabatoily/govfs/internal/client"
+	"github.com/shabatoily/govfs/internal/config"
+	"github.com/shabatoily/govfs/internal/types"
 	"github.com/spf13/cobra"
 )
 

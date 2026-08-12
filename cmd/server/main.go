@@ -13,9 +13,9 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/log"
 	"github.com/joho/godotenv"
-	_ "github.com/meteormin/govfs/docs"
-	"github.com/meteormin/govfs/internal/config"
-	"github.com/meteormin/govfs/internal/server"
+	_ "github.com/shabatoily/govfs/docs"
+	"github.com/shabatoily/govfs/internal/config"
+	"github.com/shabatoily/govfs/internal/server"
 )
 
 var (

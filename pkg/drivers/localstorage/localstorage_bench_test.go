@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/meteormin/govfs/pkg/log"
+	"github.com/shabatoily/govfs/pkg/log"
 	"github.com/stretchr/testify/require"
 )
 
