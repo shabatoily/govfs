@@ -21,10 +21,22 @@
     interface Props {
         file: FileInfo;
         depth?: number;
+        selectedIds?: Set<string>;
+        focusedId?: string | null;
+        onSelect?: (file: FileInfo, event: MouseEvent) => void;
+        onDelete?: (file: FileInfo) => void;
         onRefresh?: () => void;
     }
 
-    let { file, depth = 0, onRefresh }: Props = $props();
+    let {
+        file,
+        depth = 0,
+        selectedIds = new Set(),
+        focusedId = null,
+        onSelect,
+        onDelete,
+        onRefresh,
+    }: Props = $props();
 
     let expanded = $state(false);
     let children = $state<FileInfo[]>([]);
@@ -35,6 +47,7 @@
     const paddingLeft = $derived(`${depth * 12 + 8}px`);
 
     // Derived states for styling
+    const isSelected = $derived(selectedIds.has(file.id));
     const isSelectedFile = $derived(appState.currentFile?.id === file.id);
     const isCurrentFolder = $derived(
         file.isDir && appState.currentPath === file.path,
@@ -44,7 +57,7 @@
         `
         w-full flex items-center gap-1 py-1 text-sm rounded text-left cursor-pointer group relative
         ${
-            isSelectedFile
+            isSelected
                 ? "bg-blue-600/50 text-white font-medium"
                 : isCurrentFolder
                   ? "bg-gray-800 ring-1 ring-gray-600 text-white"
@@ -92,6 +105,9 @@
 
     function handleClick(e: Event) {
         e.stopPropagation();
+        const mouseEvent = e as MouseEvent;
+        onSelect?.(file, mouseEvent);
+        if (mouseEvent.metaKey || mouseEvent.ctrlKey || mouseEvent.shiftKey) return;
         if (file.isDir) {
             toggleExpand(e);
             // Also set current path to this folder for context
@@ -133,6 +149,10 @@
 
     async function handleDelete(e: Event) {
         e.stopPropagation();
+        if (onDelete) {
+            onDelete(file);
+            return;
+        }
         if (!confirm(`Delete ${file.name}?`)) return;
         try {
             await vfs.delete(file.id);
@@ -210,16 +230,33 @@
 </script>
 
 <li>
+    <!-- 키보드 입력은 상위 tree에서 보이는 항목 순서대로 처리합니다. -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div
         class={itemClass}
         style="padding-left: {paddingLeft}; padding-right: 8px;"
-        role="button"
-        tabindex="0"
+        role="treeitem"
+        aria-selected={isSelected}
+        aria-expanded={file.isDir ? expanded : undefined}
+        tabindex={focusedId === file.id ? 0 : -1}
+        data-tree-item
+        data-file-id={file.id}
+        data-path={file.path}
+        data-name={file.name}
+        data-is-dir={file.isDir}
+        data-expanded={expanded}
+        data-depth={depth}
         onclick={handleClick}
-        onkeydown={(e) => e.key === "Enter" && handleClick(e)}
     >
         <!-- Icon / Expand Toggle -->
-        <span class="flex-shrink-0 w-4 flex justify-center text-gray-400">
+        <button
+            data-expand
+            tabindex="-1"
+            aria-label={expanded ? "Collapse folder" : "Expand folder"}
+            class="flex-shrink-0 w-4 flex justify-center text-gray-400"
+            onclick={toggleExpand}
+            disabled={!file.isDir}
+        >
             {#if file.isDir}
                 {#if loading}
                     <LoaderCircle size={12} class="animate-spin" />
@@ -229,7 +266,7 @@
                     <ChevronRight size={14} />
                 {/if}
             {/if}
-        </span>
+        </button>
 
         <!-- Type Icon -->
         {#if file.isDir}
@@ -277,6 +314,10 @@
                 <FileTreeItem
                     file={child}
                     depth={depth + 1}
+                    {selectedIds}
+                    {focusedId}
+                    {onSelect}
+                    {onDelete}
                     onRefresh={loadChildren}
                 />
             {/each}

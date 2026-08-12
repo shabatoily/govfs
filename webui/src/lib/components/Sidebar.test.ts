@@ -75,6 +75,52 @@ describe('Sidebar Component', () => {
         expect(appState.currentFile).toEqual(mockFiles[1]);
     });
 
+    it('should select multiple items and delete them together', async () => {
+        vi.spyOn(window, 'confirm').mockReturnValue(true);
+        (vfs.delete as any).mockResolvedValue(true);
+        render(Sidebar);
+
+        await waitFor(() => expect(screen.getByText('file1.txt')).toBeInTheDocument());
+        await fireEvent.click(screen.getByText('folder1'), { ctrlKey: true });
+        await fireEvent.click(screen.getByText('file1.txt'), { ctrlKey: true });
+        await fireEvent.click(screen.getByTitle('Delete Selected'));
+
+        expect(window.confirm).toHaveBeenCalledWith('Delete 2 items?');
+        expect(vfs.delete).toHaveBeenCalledTimes(2);
+        expect(vfs.delete).toHaveBeenCalledWith('1');
+        expect(vfs.delete).toHaveBeenCalledWith('2');
+    });
+
+    it('should move selection with arrow keys without opening a file', async () => {
+        render(Sidebar);
+        await waitFor(() => expect(screen.getByText('file1.txt')).toBeInTheDocument());
+
+        const tree = screen.getByRole('tree');
+        await fireEvent.keyDown(tree, { key: 'ArrowDown' });
+
+        expect(screen.getByText('file1.txt').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
+        expect(appState.currentFile).toBeNull();
+
+        await fireEvent.keyDown(tree, { key: 'Enter' });
+        expect(appState.currentFile).toEqual(mockFiles[1]);
+    });
+
+    it('should expand and collapse a folder with horizontal arrow keys', async () => {
+        const child = { ...mockFiles[1], id: '3', name: 'child.txt', path: '/folder1/child.txt' };
+        (vfs.list as any)
+            .mockResolvedValueOnce(mockFiles)
+            .mockResolvedValueOnce([child]);
+        render(Sidebar);
+
+        await waitFor(() => expect(screen.getByText('folder1')).toBeInTheDocument());
+        const tree = screen.getByRole('tree');
+        await fireEvent.keyDown(tree, { key: 'ArrowRight' });
+        await waitFor(() => expect(screen.getByText('child.txt')).toBeInTheDocument());
+
+        await fireEvent.keyDown(tree, { key: 'ArrowLeft' });
+        expect(screen.queryByText('child.txt')).not.toBeInTheDocument();
+    });
+
     it('should handle file deletion', async () => {
         // Mock confirm to return true
         vi.spyOn(window, 'confirm').mockImplementation(() => true);

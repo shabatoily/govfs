@@ -6,14 +6,159 @@
         RefreshCw,
         Home,
         LogOut,
+        Trash2,
     } from "lucide-svelte";
     import { appState } from "../state.svelte";
     import vfs, { type FileInfo } from "../vfs";
-    import { resolvePath } from "../utils";
+    import { getParentPath, isAncestorOrSame, resolvePath } from "../utils";
     import FileTreeItem from "./FileTreeItem.svelte";
 
     let rootFiles = $state<FileInfo[]>([]);
     let loading = $state(false);
+    let treeElement = $state<HTMLDivElement>();
+    let selectedItems = $state<Map<string, Pick<FileInfo, "id" | "path" | "name" | "isDir">>>(new Map());
+    let focusedId = $state<string | null>(null);
+    let selectionAnchorId = $state<string | null>(null);
+
+    const selectedIds = $derived(new Set(selectedItems.keys()));
+
+    function visibleItems() {
+        return Array.from(
+            treeElement?.querySelectorAll<HTMLElement>("[data-tree-item]") ?? [],
+        );
+    }
+
+    function itemFromElement(element: HTMLElement) {
+        return {
+            id: element.dataset.fileId!,
+            path: element.dataset.path!,
+            name: element.dataset.name!,
+            isDir: element.dataset.isDir === "true",
+        };
+    }
+
+    function focusItem(id: string) {
+        focusedId = id;
+        requestAnimationFrame(() => {
+            const item = visibleItems().find((element) => element.dataset.fileId === id);
+            item?.focus();
+            item?.scrollIntoView({ block: "nearest" });
+        });
+    }
+
+    function selectItem(file: FileInfo, event: MouseEvent) {
+        const toggle = event.metaKey || event.ctrlKey;
+
+        if (event.shiftKey && selectionAnchorId) {
+            const items = visibleItems();
+            const start = items.findIndex((item) => item.dataset.fileId === selectionAnchorId);
+            const end = items.findIndex((item) => item.dataset.fileId === file.id);
+            if (start !== -1 && end !== -1) {
+                const next = toggle ? new Map(selectedItems) : new Map();
+                for (const item of items.slice(Math.min(start, end), Math.max(start, end) + 1)) {
+                    const selected = itemFromElement(item);
+                    next.set(selected.id, selected);
+                }
+                selectedItems = next;
+            }
+        } else if (toggle) {
+            const next = new Map(selectedItems);
+            if (next.has(file.id)) next.delete(file.id);
+            else next.set(file.id, file);
+            selectedItems = next;
+            selectionAnchorId = file.id;
+        } else {
+            selectedItems = new Map([[file.id, file]]);
+            selectionAnchorId = file.id;
+        }
+
+        focusItem(file.id);
+    }
+
+    function selectElement(element: HTMLElement, extend: boolean) {
+        const item = itemFromElement(element);
+        if (extend && selectionAnchorId) {
+            const items = visibleItems();
+            const start = items.findIndex((row) => row.dataset.fileId === selectionAnchorId);
+            const end = items.indexOf(element);
+            const next = new Map<string, typeof item>();
+            for (const row of items.slice(Math.min(start, end), Math.max(start, end) + 1)) {
+                const selected = itemFromElement(row);
+                next.set(selected.id, selected);
+            }
+            selectedItems = next;
+        } else {
+            selectedItems = new Map([[item.id, item]]);
+            selectionAnchorId = item.id;
+        }
+        focusItem(item.id);
+    }
+
+    async function deleteSelected(fallback?: FileInfo) {
+        const candidates = fallback && !selectedItems.has(fallback.id)
+            ? [fallback]
+            : Array.from(selectedItems.values());
+        if (candidates.length === 0) return;
+
+        const targets = candidates.filter(
+            (item) => !candidates.some(
+                (parent) => parent.isDir && parent.id !== item.id && isAncestorOrSame(parent.path, item.path),
+            ),
+        );
+        const label = candidates.length === 1 ? candidates[0].name : `${candidates.length} items`;
+        if (!confirm(`Delete ${label}?`)) return;
+
+        try {
+            await Promise.all(targets.map((item) => vfs.delete(item.id)));
+            const deletedIds = new Set(candidates.map((item) => item.id));
+            if (appState.currentFile && deletedIds.has(appState.currentFile.id)) {
+                appState.setCurrentFile(null);
+            }
+            for (const item of targets) {
+                if (item.isDir && isAncestorOrSame(item.path, appState.currentPath)) {
+                    appState.setCurrentPath(getParentPath(item.path));
+                }
+            }
+            selectedItems = new Map();
+            focusedId = null;
+            selectionAnchorId = null;
+            await loadRootFiles();
+        } catch (error: any) {
+            appState.addToast(error.message ?? "Failed to delete items", "error");
+        }
+    }
+
+    function handleTreeKeydown(event: KeyboardEvent) {
+        const items = visibleItems();
+        if (items.length === 0) return;
+        const current = Math.max(0, items.findIndex((item) => item.dataset.fileId === focusedId));
+
+        if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+            event.preventDefault();
+            const offset = event.key === "ArrowUp" ? -1 : 1;
+            selectElement(items[Math.max(0, Math.min(items.length - 1, current + offset))], event.shiftKey);
+        } else if (event.key === "Enter") {
+            event.preventDefault();
+            items[current].click();
+        } else if (event.key === "ArrowRight") {
+            event.preventDefault();
+            if (items[current].dataset.isDir === "true" && items[current].dataset.expanded !== "true") {
+                items[current].querySelector<HTMLElement>("[data-expand]")?.click();
+            }
+        } else if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            if (items[current].dataset.expanded === "true") {
+                items[current].querySelector<HTMLElement>("[data-expand]")?.click();
+            } else {
+                const depth = Number(items[current].dataset.depth);
+                const parent = items.slice(0, current).reverse().find((item) => Number(item.dataset.depth) < depth);
+                if (parent) selectElement(parent, false);
+            }
+        } else if (event.key === "Delete" || event.key === "Backspace") {
+            event.preventDefault();
+            deleteSelected();
+        }
+    }
 
     // Track component instances to call refresh on them if needed
     // Actually, for root, we just reload rootFiles.
@@ -40,6 +185,7 @@
                 return a.isDir ? -1 : 1;
             });
             rootFiles = files;
+            if (!focusedId && files.length > 0) focusedId = files[0].id;
         } catch (e) {
             console.error(e);
             appState.addToast("Failed to load root files", "error");
@@ -158,6 +304,14 @@
             >
                 <RefreshCw size={16} class={refreshIconClass} />
             </button>
+            <button
+                onclick={() => deleteSelected()}
+                disabled={selectedItems.size === 0}
+                class="p-1 hover:bg-red-500 rounded text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                title="Delete Selected"
+            >
+                <Trash2 size={16} />
+            </button>
             <div class="w-px h-4 bg-gray-600 mx-1 self-center"></div>
             <button
                 onclick={handleLogout}
@@ -170,10 +324,17 @@
     </div>
 
     <!-- File List Tree -->
-    <div class="flex-1 overflow-y-auto p-2">
+    <div bind:this={treeElement} onkeydown={handleTreeKeydown} class="flex-1 overflow-y-auto p-2" role="tree" aria-multiselectable="true" tabindex="-1">
         <ul class="space-y-0.5">
             {#each rootFiles as file (file.id)}
-                <FileTreeItem {file} onRefresh={loadRootFiles} />
+                <FileTreeItem
+                    {file}
+                    {selectedIds}
+                    {focusedId}
+                    onSelect={selectItem}
+                    onDelete={deleteSelected}
+                    onRefresh={loadRootFiles}
+                />
             {/each}
         </ul>
 
