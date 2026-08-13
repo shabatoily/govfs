@@ -46,4 +46,4 @@ RUN mkdir -p /govfs/data
 
 EXPOSE ${SERVER_PORT}
 
-ENTRYPOINT ["./server"]
+ENTRYPOINT ["./server", "--config", "config.toml"]
