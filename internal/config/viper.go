@@ -67,7 +67,7 @@ func resolveConfig(cfg *Config) error {
 
 	cfg.Server.Fiber = DefaultConfig.Server.Fiber
 	if cfg.Server.Fiber.AppName == "" {
-		cfg.Server.Fiber.AppName = cfg.App.Name + " v" + cfg.App.Version
+		cfg.Server.Fiber.AppName = cfg.App.Name + cfg.App.Version
 	}
 	if cfg.Server.Auth.Enabled && cfg.Server.Auth.JWT.Secret == "" {
 		b := make([]byte, 32)
