@@ -70,7 +70,7 @@ func initServer(ctx serverContext) *fiber.App {
 
 	// Fiber 로거 설정
 	log.SetLevel(cfg.Logger.Level)
-	fiberLogFile, err := os.Open(cfg.Logger.Path)
+	fiberLogFile, err := os.OpenFile(cfg.Logger.Path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, vfs.DefaultFileMode)
 	if err != nil {
 		log.SetOutput(os.Stdout)
 	} else {
