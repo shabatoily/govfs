@@ -54,7 +54,7 @@ func main() {
 		configPath = baseDir
 	}
 
-	configPath = filepath.Join(configPath, ".govfs")
+	configPath = filepath.Join(configPath, ".govfs/config.toml")
 
 	// load config
 	buildInfo, _ := debug.ReadBuildInfo()
