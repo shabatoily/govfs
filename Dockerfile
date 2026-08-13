@@ -39,7 +39,7 @@ WORKDIR /govfs
 
 RUN apk add curl
 
-COPY --from=go /govfs/server ./govfs/server
+COPY --from=go /govfs/server ./server
 COPY --from=go /govfs/config.toml ./config.toml
 
 RUN mkdir -p /govfs/data
