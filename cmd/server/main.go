@@ -51,11 +51,9 @@ func main() {
 		if err != nil {
 			log.Panic(err)
 		}
-		configPath = baseDir
+		configPath = filepath.Join(baseDir, ".govfs", "config.toml")
 	}
-
-	configPath = filepath.Join(configPath, ".govfs/config.toml")
-
+	
 	// load config
 	buildInfo, _ := debug.ReadBuildInfo()
 	cfg, err := config.LoadWithViper(configPath, config.AppInfo{
