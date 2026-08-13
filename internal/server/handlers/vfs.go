@@ -15,6 +15,8 @@ import (
 	"github.com/shabatoily/govfs/internal/types"
 )
 
+const headerXClientID = "X-Client-ID"
+
 // VfsHandler는 가상 파일 시스템(VFS) 관련 HTTP 요청을 처리하는 핸들러입니다.
 type VfsHandler struct {
 	srv    *services.VfsService
@@ -225,7 +227,7 @@ func (h *VfsHandler) Create(ctx fiber.Ctx) error {
 		meta, err = h.srv.Create(name, file)
 	}
 
-	clientID := ctx.Get("X-Client-ID")
+	clientID := ctx.Get(headerXClientID)
 	cid, parseErr := uuid.Parse(clientID)
 	if parseErr == nil {
 		eventMeta := types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.create"}
@@ -268,7 +270,7 @@ func (h *VfsHandler) Write(ctx fiber.Ctx) error {
 
 	// Deep Copy content for async processing
 	content := req.Content
-	clientID := ctx.Get("X-Client-ID")
+	clientID := ctx.Get(headerXClientID)
 	cid, parseErr := uuid.Parse(clientID)
 	if parseErr == nil {
 		h.broker.AsyncExecute(cid, func() (types.SSEMeta, error) {
@@ -334,7 +336,7 @@ func (h *VfsHandler) Delete(ctx fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	clientID := ctx.Get("X-Client-ID")
+	clientID := ctx.Get(headerXClientID)
 	cid, parseErr := uuid.Parse(clientID)
 	if parseErr == nil {
 		h.broker.AsyncExecute(cid, func() (types.SSEMeta, error) {
@@ -374,7 +376,7 @@ func (h *VfsHandler) WriteComments(ctx fiber.Ctx) error {
 	// Deep Copy comment for async processing
 	comment := req.Comment
 
-	clientID := ctx.Get("X-Client-ID")
+	clientID := ctx.Get(headerXClientID)
 	cid, parseErr := uuid.Parse(clientID)
 	if parseErr == nil {
 		h.broker.AsyncExecute(cid, func() (types.SSEMeta, error) {
@@ -472,7 +474,7 @@ func (h *VfsHandler) asyncModify(ctx fiber.Ctx, fn ModifyFunc) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	clientID := ctx.Get("X-Client-ID")
+	clientID := ctx.Get(headerXClientID)
 	cid, parseErr := uuid.Parse(clientID)
 	if parseErr == nil {
 		h.broker.AsyncExecute(cid, func() (types.SSEMeta, error) {

@@ -102,7 +102,7 @@ func (c *VFSClient) CreateDir(name string) (types.MetaRes, error) {
 	}
 
 	resp, err := c.c.R().
-		SetHeader("Content-Type", writer.FormDataContentType()).
+		SetHeader(fiber.HeaderContentType, writer.FormDataContentType()).
 		SetRawBody(body.Bytes()).
 		Post("/vfs")
 	if err != nil {
@@ -141,7 +141,7 @@ func (c *VFSClient) CreateFile(name string, r io.ReadCloser) (types.MetaRes, err
 	}
 
 	resp, err := c.c.R().
-		SetHeader("Content-Type", writer.FormDataContentType()).
+		SetHeader(fiber.HeaderContentType, writer.FormDataContentType()).
 		SetRawBody(body.Bytes()).
 		Post("/vfs")
 	if err != nil {
@@ -232,7 +232,7 @@ func (c *VFSClient) WriteComments(id uuid.UUID, comment string) error {
 func (c *VFSClient) Backup() (io.Reader, error) {
 	resp, err := c.c.Post("/vfs/backup", client.Config{
 		Header: map[string]string{
-			"Content-Type": "application/json",
+			fiber.HeaderContentType: fiber.MIMEApplicationJSON,
 		},
 	})
 	if err != nil {

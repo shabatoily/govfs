@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	// HeartbeatInterval은 SSE 연결 유지를 위해 주기적으로 하트비트를 전송하는 간격입니다.
-	HeartbeatInterval = 15 * time.Second
+	// heartbeatInterval은 SSE 연결 유지를 위해 주기적으로 하트비트를 전송하는 간격입니다.
+	heartbeatInterval = 15 * time.Second
 )
 
 // SSEHandler는 서버 전송 이벤트(SSE) 통신을 처리하는 핸들러입니다.
@@ -50,7 +50,7 @@ func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 	return ctx.SendStreamWriter(func(w *bufio.Writer) {
 		log.Debugf("SSE Stream started for client: %s", msg.ID)
 
-		ticker := time.NewTicker(HeartbeatInterval)
+		ticker := time.NewTicker(heartbeatInterval)
 		defer ticker.Stop()
 
 		for {

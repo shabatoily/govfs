@@ -68,7 +68,7 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	exp := time.Now().Add(h.cfg.JWT.Exp)
 
 	c.Cookie(&fiber.Cookie{
-		Name:     "ACCESS_TOKEN",
+		Name:     types.CookieAcessToken,
 		Value:    t,
 		Expires:  exp,
 		HTTPOnly: true,
@@ -97,7 +97,7 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 	}
 
 	c.Cookie(&fiber.Cookie{
-		Name:     "ACCESS_TOKEN",
+		Name:     types.CookieAcessToken,
 		Value:    "",
 		Expires:  time.Now().Add(-time.Hour),
 		HTTPOnly: true,

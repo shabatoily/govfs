@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/extractors"
 	"github.com/shabatoily/govfs/internal/config"
+	"github.com/shabatoily/govfs/internal/types"
 )
 
 // JWTAuthMiddleware는 설정된 인증 방식(활성화 여부)에 따라 JWT 인증 미들웨어를 생성합니다.
@@ -20,7 +21,7 @@ func JWTAuthMiddleware(cfg config.AuthConfig) fiber.Handler {
 		SigningKey: jwtware.SigningKey{Key: []byte(cfg.JWT.Secret)},
 		Extractor: extractors.Chain(
 			extractors.FromAuthHeader("Bearer"),
-			extractors.FromCookie("ACCESS_TOKEN"),
+			extractors.FromCookie(types.CookieAcessToken),
 		),
 	})
 }

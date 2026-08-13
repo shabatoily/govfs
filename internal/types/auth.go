@@ -7,6 +7,10 @@ import (
 	"github.com/goccy/go-json"
 )
 
+const (
+	CookieAcessToken = "ACCESS_TOKEN"
+)
+
 // LoginReq는 인증 요청을 위한 사용자 계정 정보를 담고 있는 구조체입니다.
 type LoginReq struct {
 	Username string `json:"username"`
