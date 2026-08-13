@@ -1,6 +1,6 @@
 module github.com/shabatoily/govfs
 
-go 1.26.3
+go 1.26.6
 
 require (
 	github.com/dgraph-io/badger/v4 v4.8.0
