@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	// DefaultServerURL은 서버 접속 시 사용되는 기본 주소입니다.
-	DefaultServerURL = "http://localhost:3000"
+	// defaultServerURL은 서버 접속 시 사용되는 기본 주소입니다.
+	defaultServerURL = "http://localhost:3000"
 )
 
 var configPath string
@@ -204,7 +204,7 @@ func promptSetConfig(cmd *cobra.Command, u *UserConfig) error {
 	u.ServerURL, _ = reader.ReadString('\n')
 	u.ServerURL = strings.TrimSpace(u.ServerURL)
 	if u.ServerURL == "" {
-		u.ServerURL = DefaultServerURL
+		u.ServerURL = defaultServerURL
 	}
 
 	cmd.Print("👤 \033[36mEnter username:\033[0m\n   ")
