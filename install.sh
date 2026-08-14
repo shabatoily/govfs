@@ -26,11 +26,15 @@ echo "📍 Workspace: $APP_DIR"
 echo "📁 Setup workspace directory..."
 mkdir -p "$APP_DIR"
 
-echo "📥 Downloading config.toml from latest GitHub release..."
-if command -v curl >/dev/null 2>&1; then
-    curl -sfL "$CONFIG_URL" -o "$CONFIG_PATH" || { echo "❌ Error: Failed to download config.toml."; exit 1; }
+if [[ -e "$CONFIG_PATH" ]]; then
+    echo "ℹ️  Existing config.toml preserved: $CONFIG_PATH"
 else
-    wget -qO "$CONFIG_PATH" "$CONFIG_URL" || { echo "❌ Error: Failed to download config.toml."; exit 1; }
+    echo "📥 Downloading config.toml from latest GitHub release..."
+    if command -v curl >/dev/null 2>&1; then
+        curl -sfL "$CONFIG_URL" -o "$CONFIG_PATH" || { echo "❌ Error: Failed to download config.toml."; exit 1; }
+    else
+        wget -qO "$CONFIG_PATH" "$CONFIG_URL" || { echo "❌ Error: Failed to download config.toml."; exit 1; }
+    fi
 fi
 
 # 2. 서버 및 CLI 바이너리 다운로드 및 설치
