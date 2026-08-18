@@ -1163,15 +1163,15 @@ const docTemplate = `{
                     "required": true
                 },
                 "responses": {
-                    "201": {
+                    "202": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/types.MetaRes"
+                                    "type": "string"
                                 }
                             }
                         },
-                        "description": "Created"
+                        "description": "Accepted"
                     },
                     "400": {
                         "content": {

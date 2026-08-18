@@ -731,12 +731,12 @@ paths:
         description: is directory | name | file
         required: true
       responses:
-        "201":
+        "202":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/types.MetaRes'
-          description: Created
+                type: string
+          description: Accepted
         "400":
           content:
             application/json:

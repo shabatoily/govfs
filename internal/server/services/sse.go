@@ -169,18 +169,6 @@ func (b *SSEBroker) publish(msg *types.SSEMessage) {
 	}
 }
 
-// AsyncExecute는 함수를 비동기적으로 실행하고 결과를 SSE를 통해 클라이언트에 알립니다.
-func (b *SSEBroker) AsyncExecute(id uuid.UUID, do func() (types.SSEMeta, error)) {
-	go func() {
-		meta, err := do()
-		if err != nil {
-			b.Error(id, &types.SSEData{Timestamp: time.Now(), Status: false, Meta: meta, Message: err.Error()}, 0)
-			return
-		}
-		b.Publish(id, &types.SSEData{Timestamp: time.Now(), Status: true, Meta: meta}, 0)
-	}()
-}
-
 // Clients는 현재 활성화된 클라이언트 목록을 반환합니다.
 func (b *SSEBroker) Clients() []types.ClientInfo {
 	if !b.isRunning.Load() {

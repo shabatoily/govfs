@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -179,16 +180,13 @@ func (h *VfsHandler) Stat(ctx fiber.Ctx) error {
 // @Param        isDir    formData     string  false  "is directory"
 // @Param        name    formData     string  false  "name"
 // @Param        file    formData  file    true    "file"
-// @Success      201  {object}  types.MetaRes
+// @Success      202  {string}  string "Accepted"
 // @Failure      400  {object}  fiber.Error
 // @Failure      404  {object}  fiber.Error
 // @Failure      500  {object}  fiber.Error
 // @Router       /vfs [post]
-// Create은 새로운 파일 또는 디렉토리를 생성합니다.
+// Create은 새로운 파일 또는 디렉토리를 생성합니다. (비동기 처리)
 func (h *VfsHandler) Create(ctx fiber.Ctx) error {
-	var meta types.MetaRes
-	var err error
-
 	name := ctx.FormValue("name")
 	isDir, convErr := fiber.Convert(ctx.FormValue("isDir", "false"), strconv.ParseBool)
 	if convErr != nil {
@@ -200,10 +198,10 @@ func (h *VfsHandler) Create(ctx fiber.Ctx) error {
 			return fiber.NewError(fiber.StatusBadRequest, "missing name field for directory creation")
 		}
 
-		meta, err = h.srv.Mkdir(name)
-		if err != nil {
-			return err
-		}
+		h.asyncExecute(ctx.Get(headerXClientID), func() (types.SSEMeta, error) {
+			meta, err := h.srv.Mkdir(name)
+			return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.create"}, err
+		})
 	} else {
 		// 파일 생성 로직
 		formFile, formErr := ctx.FormFile("file")
@@ -220,26 +218,42 @@ func (h *VfsHandler) Create(ctx fiber.Ctx) error {
 		if openErr != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, openErr.Error())
 		}
-		defer func() {
+
+		tempFile, tempErr := os.CreateTemp("", "govfs-upload-*")
+		if tempErr != nil {
 			_ = file.Close()
-		}()
-
-		meta, err = h.srv.Create(name, file)
-	}
-
-	clientID := ctx.Get(headerXClientID)
-	cid, parseErr := uuid.Parse(clientID)
-	if parseErr == nil {
-		eventMeta := types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.create"}
-		if err != nil {
-			h.broker.Error(cid, &types.SSEData{Timestamp: time.Now(), Status: false, Meta: eventMeta, Message: err.Error()}, time.Second*3)
-			return err
+			return fiber.NewError(fiber.StatusInternalServerError, tempErr.Error())
+		}
+		tempPath := tempFile.Name()
+		_, copyErr := io.Copy(tempFile, file)
+		closeErr := file.Close()
+		if copyErr != nil {
+			_ = tempFile.Close()
+			_ = os.Remove(tempPath)
+			return fiber.NewError(fiber.StatusInternalServerError, copyErr.Error())
+		}
+		if closeErr != nil {
+			_ = tempFile.Close()
+			_ = os.Remove(tempPath)
+			return fiber.NewError(fiber.StatusInternalServerError, closeErr.Error())
+		}
+		if _, seekErr := tempFile.Seek(0, io.SeekStart); seekErr != nil {
+			_ = tempFile.Close()
+			_ = os.Remove(tempPath)
+			return fiber.NewError(fiber.StatusInternalServerError, seekErr.Error())
 		}
 
-		h.broker.Publish(cid, &types.SSEData{Timestamp: time.Now(), Status: true, Meta: eventMeta}, time.Second*3)
+		h.asyncExecute(ctx.Get(headerXClientID), func() (types.SSEMeta, error) {
+			defer func() {
+				_ = tempFile.Close()
+				_ = os.Remove(tempPath)
+			}()
+			meta, err := h.srv.Create(name, tempFile)
+			return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.create"}, err
+		})
 	}
 
-	return ctx.Status(fiber.StatusCreated).JSON(meta)
+	return ctx.SendStatus(fiber.StatusAccepted)
 }
 
 // Write write content to a file
@@ -270,14 +284,10 @@ func (h *VfsHandler) Write(ctx fiber.Ctx) error {
 
 	// Deep Copy content for async processing
 	content := req.Content
-	clientID := ctx.Get(headerXClientID)
-	cid, parseErr := uuid.Parse(clientID)
-	if parseErr == nil {
-		h.broker.AsyncExecute(cid, func() (types.SSEMeta, error) {
-			meta, err := h.srv.Write(parsedID, bytes.NewBufferString(content))
-			return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.write"}, err
-		})
-	}
+	h.asyncExecute(ctx.Get(headerXClientID), func() (types.SSEMeta, error) {
+		meta, err := h.srv.Write(parsedID, bytes.NewBufferString(content))
+		return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.write"}, err
+	})
 
 	return ctx.SendStatus(fiber.StatusAccepted)
 }
@@ -297,7 +307,7 @@ func (h *VfsHandler) Write(ctx fiber.Ctx) error {
 // @Router       /vfs/:id [patch]
 // Move는 파일 또는 디렉토리의 경로를 변경합니다. (비동기 처리)
 func (h *VfsHandler) Move(ctx fiber.Ctx) error {
-	return h.asyncModify(ctx, h.srv.Move)
+	return h.asyncModify(ctx, "vfs.move", h.srv.Move)
 }
 
 // Copy copy a file or directory
@@ -315,7 +325,7 @@ func (h *VfsHandler) Move(ctx fiber.Ctx) error {
 // @Router       /vfs/:id/copy [post]
 // Copy는 파일 또는 디렉토리를 지정된 경로로 복사합니다. (비동기 처리)
 func (h *VfsHandler) Copy(ctx fiber.Ctx) error {
-	return h.asyncModify(ctx, h.srv.Copy)
+	return h.asyncModify(ctx, "vfs.copy", h.srv.Copy)
 }
 
 // Delete delete a file or directory
@@ -336,14 +346,14 @@ func (h *VfsHandler) Delete(ctx fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	clientID := ctx.Get(headerXClientID)
-	cid, parseErr := uuid.Parse(clientID)
-	if parseErr == nil {
-		h.broker.AsyncExecute(cid, func() (types.SSEMeta, error) {
-			err := h.srv.Delete(parsedID)
-			return types.SSEMeta{ID: parsedID, Path: "", Action: "vfs.delete"}, err
-		})
-	}
+	h.asyncExecute(ctx.Get(headerXClientID), func() (types.SSEMeta, error) {
+		meta, statErr := h.srv.Stat(parsedID)
+		if statErr != nil {
+			return types.SSEMeta{ID: parsedID, Action: "vfs.delete"}, statErr
+		}
+		err := h.srv.Delete(parsedID)
+		return types.SSEMeta{ID: parsedID, Path: meta.Path, Action: "vfs.delete"}, err
+	})
 
 	return ctx.SendStatus(fiber.StatusAccepted)
 }
@@ -376,14 +386,10 @@ func (h *VfsHandler) WriteComments(ctx fiber.Ctx) error {
 	// Deep Copy comment for async processing
 	comment := req.Comment
 
-	clientID := ctx.Get(headerXClientID)
-	cid, parseErr := uuid.Parse(clientID)
-	if parseErr == nil {
-		h.broker.AsyncExecute(cid, func() (types.SSEMeta, error) {
-			meta, err := h.srv.WriteComments(parsedID, comment)
-			return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.write-comments"}, err
-		})
-	}
+	h.asyncExecute(ctx.Get(headerXClientID), func() (types.SSEMeta, error) {
+		meta, err := h.srv.WriteComments(parsedID, comment)
+		return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.write-comments"}, err
+	})
 
 	return ctx.SendStatus(fiber.StatusAccepted)
 }
@@ -463,7 +469,7 @@ func parseDstReq(ctx fiber.Ctx) (*types.DstReq, error) {
 // ModifyFunc는 VFS 아이템을 수정(이동, 복사 등)하는 함수의 시그니처입니다.
 type ModifyFunc func(id uuid.UUID, dst string) (types.MetaRes, error)
 
-func (h *VfsHandler) asyncModify(ctx fiber.Ctx, fn ModifyFunc) error {
+func (h *VfsHandler) asyncModify(ctx fiber.Ctx, action string, fn ModifyFunc) error {
 	parsedID, err := fiber.Convert(ctx.Params("id"), uuid.Parse)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
@@ -474,14 +480,26 @@ func (h *VfsHandler) asyncModify(ctx fiber.Ctx, fn ModifyFunc) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	clientID := ctx.Get(headerXClientID)
-	cid, parseErr := uuid.Parse(clientID)
-	if parseErr == nil {
-		h.broker.AsyncExecute(cid, func() (types.SSEMeta, error) {
-			m, err := fn(parsedID, req.Name)
-			return types.SSEMeta{ID: m.ID, Path: m.Path, Action: "vfs.move"}, err
-		})
-	}
+	h.asyncExecute(ctx.Get(headerXClientID), func() (types.SSEMeta, error) {
+		m, err := fn(parsedID, req.Name)
+		return types.SSEMeta{ID: m.ID, Path: m.Path, Action: action}, err
+	})
 
 	return ctx.SendStatus(fiber.StatusAccepted)
+}
+
+func (h *VfsHandler) asyncExecute(clientID string, do func() (types.SSEMeta, error)) {
+	cid, notifyErr := uuid.Parse(clientID)
+	go func() {
+		meta, err := do()
+		if notifyErr != nil {
+			return
+		}
+
+		data := &types.SSEData{Timestamp: time.Now(), Status: err == nil, Meta: meta}
+		if err != nil {
+			data.Message = err.Error()
+		}
+		h.broker.Publish(cid, data, 0)
+	}()
 }

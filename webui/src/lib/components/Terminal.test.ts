@@ -61,7 +61,7 @@ describe('Terminal Component', () => {
 
         await waitFor(() => {
             expect(vfs.mkdir).toHaveBeenCalledWith('/testdir');
-            expect(screen.getByText('created directory: testdir')).toBeInTheDocument();
+            expect(screen.getByText('creating directory: testdir')).toBeInTheDocument();
         });
     });
 

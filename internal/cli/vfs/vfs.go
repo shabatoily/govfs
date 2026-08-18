@@ -131,11 +131,11 @@ func (h *Handler) handleUpload(srcLocal, dstVfs string) error {
 		dstVfs = dstVfs + "/" + info.Name()
 	}
 
-	res, err := h.client.VFS().CreateFile(dstVfs, f)
+	err = h.client.VFS().CreateFile(dstVfs, f)
 	if err != nil {
 		return err
 	}
-	h.cmd.Printf("Upload: %s -> %s (%d bytes)\n", srcLocal, dstVfs, res.Size)
+	h.cmd.Printf("Upload accepted: %s -> %s\n", srcLocal, dstVfs)
 	return nil
 }
 
@@ -192,7 +192,7 @@ func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 		targetPath = filepath.ToSlash(targetPath)
 
 		if info.IsDir() {
-			_, err = h.client.VFS().CreateDir(targetPath)
+			err = h.client.VFS().CreateDir(targetPath)
 			if err != nil {
 				// Client의 CreateDir은 디렉토리가 이미 존재하면 에러를 반환함.
 				// 여기서는 미리 존재 여부를 확인하거나 에러를 무시하는 방식으로 처리.
@@ -212,13 +212,13 @@ func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 		}
 		defer f.Close()
 
-		res, err := h.client.VFS().CreateFile(targetPath, f)
+		err = h.client.VFS().CreateFile(targetPath, f)
 		if err != nil {
 			return err
 		}
-		h.cmd.Printf("Upload: %s -> %s (%d bytes)\n", path, targetPath, res.Size)
+		h.cmd.Printf("Upload accepted: %s -> %s\n", path, targetPath)
 		count++
-		totalBytes += res.Size
+		totalBytes += info.Size()
 		return nil
 	})
 	if err == nil {
@@ -425,7 +425,7 @@ func (h *Handler) Mkdir(path string, parents bool) error {
 		for i, p := range paths {
 			if p != "" {
 				target := filepath.Join(parent, p)
-				_, err := h.client.VFS().CreateDir(target)
+				err := h.client.VFS().CreateDir(target)
 				parent = target
 				if err != nil {
 					// Client의 CreateDir은 디렉토리가 이미 존재하거나 실패하면 에러를 반환함.
@@ -443,7 +443,7 @@ func (h *Handler) Mkdir(path string, parents bool) error {
 		}
 		return nil
 	}
-	_, err := h.client.VFS().CreateDir(path)
+	err := h.client.VFS().CreateDir(path)
 	if err == nil {
 		h.cmd.Printf("Created directory: %s\n", path)
 	}
@@ -523,7 +523,7 @@ func (h *Handler) Copy(src, dst string, recursive bool) error {
 			if err == nil && meta.IsDir {
 				dstRaw = strings.TrimSuffix(dstRaw, "/") + "/" + filepath.Base(srcRaw)
 			}
-			_, _ = h.client.VFS().CreateDir(dstRaw)
+			_ = h.client.VFS().CreateDir(dstRaw)
 
 			return h.handleRecursiveUpload(srcRaw, dstRaw)
 		}
