@@ -44,7 +44,8 @@ type SSEBroker struct {
 
 type client struct {
 	types.ClientInfo
-	ch chan *types.SSEMessage
+	ch    chan *types.SSEMessage
+	ready chan struct{}
 }
 
 // Subscribe는 새로운 클라이언트를 브로커에 등록하고 구독 성공 메시지를 반환합니다.
@@ -69,26 +70,34 @@ func (b *SSEBroker) Subscribe(req types.SubscribeReq) (*types.SSEMessage, <-chan
 		},
 	}
 
-	// 클라이언트 컨텍스트가 취소(연결 끊김)되면 자동으로 Unsubscribe 호출
-	context.AfterFunc(req.Ctx, func() {
-		b.Unsubscribe(id)
-	})
-
-	select {
-	case b.newClients <- &client{
+	newClient := &client{
 		ClientInfo: types.ClientInfo{
 			ID:        id,
 			CreatedAt: now,
 			Addr:      req.Addr,
 			User:      req.User,
 		},
-		ch: ch,
-	}:
-		log.Infof("SSE Broker subscribed: %s", id)
+		ch:    ch,
+		ready: make(chan struct{}),
+	}
+	select {
+	case b.newClients <- newClient:
 	case <-b.ctx.Done():
 		log.Info("SSE Broker is shutting down, cannot subscribe")
 		return nil, ch
 	}
+
+	select {
+	case <-newClient.ready:
+		log.Infof("SSE Broker subscribed: %s", id)
+	case <-b.ctx.Done():
+		return nil, ch
+	}
+
+	// 클라이언트 컨텍스트가 취소(연결 끊김)되면 자동으로 Unsubscribe 호출
+	context.AfterFunc(req.Ctx, func() {
+		b.Unsubscribe(id)
+	})
 
 	ch <- subMsg
 
@@ -231,6 +240,7 @@ func (b *SSEBroker) listen() {
 			return
 		case newClient := <-b.newClients:
 			b.clients[newClient.ID] = newClient
+			close(newClient.ready)
 			log.Infof("Client added: %s. Total clients: %d", newClient.ID, len(b.clients))
 		case clientID := <-b.closingClients:
 			if c, ok := b.clients[clientID]; ok {
