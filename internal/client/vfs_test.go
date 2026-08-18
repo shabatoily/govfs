@@ -101,8 +101,6 @@ func TestVFSClient_Read(t *testing.T) {
 
 func TestVFSClient_CreateDir(t *testing.T) {
 	dirName := "new-dir"
-	expectedMeta := types.MetaRes{}
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/vfs", r.URL.Path)
 		assert.Equal(t, http.MethodPost, r.Method)
@@ -113,14 +111,12 @@ func TestVFSClient_CreateDir(t *testing.T) {
 		assert.Equal(t, "true", r.FormValue("isDir"))
 		assert.Equal(t, dirName, r.FormValue("name"))
 
-		w.WriteHeader(http.StatusCreated)
-		err = json.NewEncoder(w).Encode(expectedMeta)
-		assert.NoError(t, err)
+		w.WriteHeader(http.StatusAccepted)
 	}))
 	defer server.Close()
 
 	c := client.New(server.URL)
-	_, err := c.VFS().CreateDir(dirName)
+	err := c.VFS().CreateDir(dirName)
 	assert.NoError(t, err)
 }
 
@@ -138,7 +134,6 @@ func TestVFSClient_CreateFile(t *testing.T) {
 	require.NoError(t, err)
 	defer file.Close()
 
-	expectedMeta := types.MetaRes{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/vfs", r.URL.Path)
 		assert.Equal(t, http.MethodPost, r.Method)
@@ -158,14 +153,12 @@ func TestVFSClient_CreateFile(t *testing.T) {
 		assert.NoError(t, copyErr)
 		assert.Equal(t, fileContent, buf.String())
 
-		w.WriteHeader(http.StatusCreated)
-		encErr := json.NewEncoder(w).Encode(expectedMeta)
-		assert.NoError(t, encErr)
+		w.WriteHeader(http.StatusAccepted)
 	}))
 	defer server.Close()
 
 	c := client.New(server.URL)
-	_, err = c.VFS().CreateFile(fileName, file)
+	err = c.VFS().CreateFile(fileName, file)
 	assert.NoError(t, err)
 }
 

@@ -74,9 +74,7 @@
                     }
                     const mkPath = resolvePath(appState.currentPath, args[0]);
                     await vfs.mkdir(mkPath);
-                    log(`created directory: ${args[0]}`);
-                    // Refresh
-                    appState.setFileList(await vfs.list(appState.currentPath));
+                    log(`creating directory: ${args[0]}`);
                     break;
                 case "rm":
                     if (!args[0]) {
@@ -94,10 +92,7 @@
                         log(`file not found: ${targetName}`);
                     } else {
                         await vfs.delete(target.id);
-                        log(`deleted: ${targetName}`);
-                        appState.setFileList(
-                            await vfs.list(appState.currentPath),
-                        );
+                        log(`deleting: ${targetName}`);
                     }
                     break;
                 case "tree":
@@ -118,13 +113,11 @@
                         appState.currentPath,
                         args[0],
                     );
-                    const newFile = await vfs.create(
+                    await vfs.create(
                         newFilePath,
                         "# New Document",
                     );
-                    log(`created file: ${args[0]}`);
-                    appState.setFileList(await vfs.list(appState.currentPath));
-                    appState.setCurrentFile(newFile);
+                    log(`creating file: ${args[0]}`);
                     break;
 
                 case "open":

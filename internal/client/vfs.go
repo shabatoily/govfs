@@ -88,17 +88,17 @@ func (c *VFSClient) Tree(path string) (*types.TreeNodeRes, error) {
 }
 
 // CreateDir은 새로운 디렉토리를 생성합니다.
-func (c *VFSClient) CreateDir(name string) (types.MetaRes, error) {
+func (c *VFSClient) CreateDir(name string) error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	if err := writer.WriteField("isDir", "true"); err != nil {
-		return types.MetaRes{}, err
+		return err
 	}
 	if err := writer.WriteField("name", name); err != nil {
-		return types.MetaRes{}, err
+		return err
 	}
 	if err := writer.Close(); err != nil {
-		return types.MetaRes{}, err
+		return err
 	}
 
 	resp, err := c.c.R().
@@ -106,38 +106,33 @@ func (c *VFSClient) CreateDir(name string) (types.MetaRes, error) {
 		SetRawBody(body.Bytes()).
 		Post("/vfs")
 	if err != nil {
-		return types.MetaRes{}, err
+		return err
 	}
 
-	var meta types.MetaRes
-	if checkErr := checkResponse(resp, fiber.StatusCreated, &meta); checkErr != nil {
-		return types.MetaRes{}, checkErr
-	}
-
-	return meta, nil
+	return checkResponse[*any](resp, fiber.StatusAccepted, nil)
 }
 
 // CreateFile은 새로운 파일을 업로드하여 생성합니다.
-func (c *VFSClient) CreateFile(name string, r io.ReadCloser) (types.MetaRes, error) {
+func (c *VFSClient) CreateFile(name string, r io.ReadCloser) error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	if err := writer.WriteField("isDir", "false"); err != nil {
-		return types.MetaRes{}, err
+		return err
 	}
 	if err := writer.WriteField("name", name); err != nil {
-		return types.MetaRes{}, err
+		return err
 	}
 
 	part, err := writer.CreateFormFile("file", filepath.Base(name))
 	if err != nil {
-		return types.MetaRes{}, err
+		return err
 	}
 	if _, copyErr := io.Copy(part, r); copyErr != nil {
-		return types.MetaRes{}, copyErr
+		return copyErr
 	}
 
 	if closeErr := writer.Close(); closeErr != nil {
-		return types.MetaRes{}, closeErr
+		return closeErr
 	}
 
 	resp, err := c.c.R().
@@ -145,15 +140,10 @@ func (c *VFSClient) CreateFile(name string, r io.ReadCloser) (types.MetaRes, err
 		SetRawBody(body.Bytes()).
 		Post("/vfs")
 	if err != nil {
-		return types.MetaRes{}, err
+		return err
 	}
 
-	var meta types.MetaRes
-	if checkErr := checkResponse(resp, fiber.StatusCreated, &meta); checkErr != nil {
-		return types.MetaRes{}, checkErr
-	}
-
-	return meta, nil
+	return checkResponse[*any](resp, fiber.StatusAccepted, nil)
 }
 
 // Write는 기존 파일의 내용을 덮어씁니다. (비동기 처리)

@@ -19,8 +19,8 @@ export interface VFS {
     tree: (path: string) => Promise<TreeNode>;
     stat: (id: string) => Promise<FileInfo | null>;
     read: (id: string) => Promise<string | Blob | null>;
-    create: (path: string, fileOrText: File | string) => Promise<FileInfo>;
-    mkdir: (path: string) => Promise<FileInfo>;
+    create: (path: string, fileOrText: File | string) => Promise<boolean>;
+    mkdir: (path: string) => Promise<boolean>;
     write: (id: string, content: string) => Promise<boolean>;
     delete: (id: string) => Promise<boolean>;
     move: (id: string, destPath: string) => Promise<boolean>;
@@ -100,7 +100,7 @@ const vfs: VFS = {
     },
 
     // 🔹 새 파일 생성 (multipart/form-data)
-    async create(path: string, fileOrText: File | string): Promise<FileInfo> {
+    async create(path: string, fileOrText: File | string): Promise<boolean> {
         const form = new FormData();
         form.append("name", path);
 
@@ -117,12 +117,11 @@ const vfs: VFS = {
             body: form,
         });
 
-        if (!res.ok) throw new Error(await res.text());
-
-        return await res.json(); // {id, name, ...}
+        if (res.status !== 202) throw new Error(await res.text());
+        return true;
     },
 
-    async mkdir(path: string): Promise<FileInfo> {
+    async mkdir(path: string): Promise<boolean> {
         const form = new FormData();
         form.append("name", path);
         form.append("isDir", "true");
@@ -133,9 +132,8 @@ const vfs: VFS = {
             body: form,
         });
 
-        if (!res.ok) throw new Error(await res.text());
-
-        return await res.json();
+        if (res.status !== 202) throw new Error(await res.text());
+        return true;
     },
 
     // 파일 쓰기

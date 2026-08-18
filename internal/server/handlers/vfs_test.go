@@ -238,7 +238,10 @@ func TestVfsHandler_Create(t *testing.T) {
 		IsDir:     false,
 		Modified:  time.Now(),
 	}
-	mockVFS.On("Create", "new.txt", mock.Anything).Return(mockMeta, nil)
+	created := make(chan struct{})
+	mockVFS.On("Create", "new.txt", mock.Anything).Run(func(mock.Arguments) {
+		close(created)
+	}).Return(mockMeta, nil)
 
 	// Create Multipart Request
 	body := new(bytes.Buffer)
@@ -252,8 +255,6 @@ func TestVfsHandler_Create(t *testing.T) {
 	reqp, err := http.NewRequestWithContext(context.Background(), "POST", "/vfs", body)
 	require.NoError(t, err)
 	reqp.Header.Set("Content-Type", writer.FormDataContentType())
-	reqp.Header.Set("X-Client-ID", uuid.NewString())
-
 	resp, err := app.Test(reqp)
 	defer func(res *http.Response) {
 		_ = res.Body.Close()
@@ -261,15 +262,13 @@ func TestVfsHandler_Create(t *testing.T) {
 
 	// Assertions
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 
-	var metaRes types.MetaRes
-	respBody, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	err = json.Unmarshal(respBody, &metaRes)
-	require.NoError(t, err)
-	assert.Equal(t, "new.txt", metaRes.Name)
-
+	select {
+	case <-created:
+	case <-time.After(time.Second):
+		t.Fatal("Create was not called")
+	}
 	mockVFS.AssertExpectations(t)
 }
 
@@ -288,14 +287,15 @@ func TestVfsHandler_Delete(t *testing.T) {
 	app.Delete("/vfs/:id", handler.Delete)
 
 	id := uuid.New()
-	// Since Delete is async via broker, expectation might be delayed.
-	// However, we are testing the Handler's response mostly.
-	// The mock call happens in a goroutine.
-	mockVFS.On("Delete", id).Return(nil)
+	mockMeta := vfs.Meta{ID: id, Name: "test.txt", Path: "/test.txt"}
+	deleted := make(chan struct{})
+	mockVFS.On("Delete", id).Run(func(mock.Arguments) {
+		close(deleted)
+	}).Return(nil)
+	mockVFS.On("Stat", id).Return(mockMeta, nil)
 
 	reqp, err := http.NewRequestWithContext(context.Background(), "DELETE", "/vfs/"+id.String(), http.NoBody)
 	require.NoError(t, err)
-	reqp.Header.Set("X-Client-ID", uuid.NewString())
 	resp, err := app.Test(reqp)
 	defer func(res *http.Response) {
 		_ = res.Body.Close()
@@ -305,8 +305,11 @@ func TestVfsHandler_Delete(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 
-	// Wait for async execution
-	time.Sleep(100 * time.Millisecond)
+	select {
+	case <-deleted:
+	case <-time.After(time.Second):
+		t.Fatal("Delete was not called")
+	}
 	mockVFS.AssertExpectations(t)
 }
 
@@ -357,4 +360,42 @@ func TestVfsHandler_Move(t *testing.T) {
 	// Wait for async execution
 	time.Sleep(100 * time.Millisecond)
 	mockVFS.AssertExpectations(t)
+}
+
+func TestVfsHandler_AsyncExecuteTargetsClient(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	broker := services.NewSSEBroker(services.SSEConfig{
+		Context:          ctx,
+		MaxClientBuffer:  2,
+		MaxMessageBuffer: 2,
+	})
+	defer broker.Shutdown()
+
+	target, targetCh := broker.Subscribe(types.SubscribeReq{Ctx: ctx})
+	_, otherCh := broker.Subscribe(types.SubscribeReq{Ctx: ctx})
+	<-targetCh
+	<-otherCh
+
+	handler := &VfsHandler{broker: broker}
+	meta := types.SSEMeta{ID: uuid.New(), Path: "/test.txt", Action: "vfs.create"}
+	handler.asyncExecute(target.ID.String(), func() (types.SSEMeta, error) {
+		return meta, nil
+	})
+
+	select {
+	case msg := <-targetCh:
+		assert.Equal(t, types.SSEEventPublish, msg.Event)
+		assert.True(t, msg.Data.Status)
+		assert.Equal(t, meta, msg.Data.Meta)
+	case <-time.After(time.Second):
+		t.Fatal("target client did not receive completion event")
+	}
+
+	select {
+	case msg := <-otherCh:
+		t.Fatalf("other client received completion event: %+v", msg)
+	case <-time.After(50 * time.Millisecond):
+	}
 }

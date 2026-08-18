@@ -47,25 +47,13 @@
         const files = Array.from(e.dataTransfer.files);
         const currentPath = appState.currentPath;
 
-        let uploadedCount = 0;
         for (const file of files) {
             const targetPath = resolvePath(currentPath, file.name);
             try {
                 await vfs.create(targetPath, file);
-                uploadedCount++;
             } catch (err: any) {
                 console.error(`Failed to upload ${file.name}:`, err);
                 alert(`업로드 실패 (${file.name}): ${err.message}`);
-            }
-        }
-
-        if (uploadedCount > 0) {
-            // Refresh file list to show new files
-            try {
-                const list = await vfs.list(currentPath);
-                appState.setFileList(list);
-            } catch (e) {
-                console.error("Failed to refresh list:", e);
             }
         }
     }
@@ -85,6 +73,13 @@
         // Handle "publish" events which now cover both subscription and VFS updates
         sseClient.on("publish", (message: SSEMessage) => {
             const data = message.data;
+            if (!data.status) {
+                appState.addToast(
+                    data.message ?? "File operation failed",
+                    "error",
+                );
+                return;
+            }
             // VFS changes
             if (data?.meta?.action?.startsWith("vfs.")) {
                 // Refresh logic

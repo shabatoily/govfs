@@ -206,17 +206,7 @@
         if (!name) return;
         const path = resolvePath(currentPath, name);
         try {
-            const file = await vfs.create(path, "# New Document");
-
-            // We need to refresh the folder where this was created.
-            // If it's root, refresh root.
-            if (currentPath === "/") {
-                await loadRootFiles();
-            } else {
-                // Trigger global refresh for specific path
-                appState.triggerRefreshPath(currentPath);
-            }
-            appState.setCurrentFile(file);
+            await vfs.create(path, "# New Document");
         } catch (e: any) {
             alert(e.message);
         }
@@ -231,11 +221,6 @@
         const path = resolvePath(currentPath, name);
         try {
             await vfs.mkdir(path);
-            if (currentPath === "/") {
-                await loadRootFiles();
-            } else {
-                appState.triggerRefreshPath(currentPath);
-            }
         } catch (e: any) {
             alert(e.message);
         }
