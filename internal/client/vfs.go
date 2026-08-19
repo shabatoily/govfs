@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/url"
 	"path/filepath"
 
 	"github.com/gofiber/fiber/v3"
@@ -21,7 +22,7 @@ type VFSClient struct {
 
 // List는 VFS의 파일 및 디렉토리 목록을 조회합니다.
 func (c *VFSClient) List(q string) ([]types.MetaRes, error) {
-	u := fmt.Sprintf("/vfs?q=%s", q)
+	u := fmt.Sprintf("/vfs?q=%s", url.QueryEscape(q))
 	resp, err := c.c.Get(u)
 	if err != nil {
 		return nil, err
@@ -73,7 +74,7 @@ func (c *VFSClient) Stat(id uuid.UUID) (types.MetaRes, error) {
 
 // Tree는 계층적인 디렉토리 구조를 트리 형태로 조회합니다.
 func (c *VFSClient) Tree(path string) (*types.TreeNodeRes, error) {
-	u := fmt.Sprintf("/vfs?q=%s&viewType=tree", path)
+	u := fmt.Sprintf("/vfs?q=%s&viewType=tree", url.QueryEscape(path))
 	resp, err := c.c.Get(u)
 	if err != nil {
 		return nil, err

@@ -4,7 +4,9 @@ package main
 import (
 	"context"
 	"log"
+	"os/signal"
 	"runtime/debug"
+	"syscall"
 
 	"github.com/joho/godotenv"
 	"github.com/shabatoily/govfs/internal/cli"
@@ -42,10 +44,14 @@ func main() {
 	// secret commands
 	secret.RegisterCommands(root)
 
-	ctx := context.Background()
+	// mcp command
+	root.AddCommand(cli.NewMCPCommand(version))
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	err := root.ExecuteContext(ctx)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 }

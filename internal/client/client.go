@@ -8,22 +8,33 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/client"
+	"github.com/google/uuid"
 	"github.com/shabatoily/govfs/internal/types"
 )
 
 // baseClient는 모든 세부 클라이언트(Auth, Cloud 등)에서 공통으로 사용하는 기본 클라이언트 구조체입니다.
 type baseClient struct {
-	mu sync.RWMutex // 읽기/쓰기 잠금 제어
-	c  *client.Client
+	mu    sync.RWMutex // 읽기/쓰기 잠금 제어
+	c     *client.Client
+	url   string
+	token string
 }
 
 // SetToken은 서버 통신에 사용할 인증 토큰을 수동으로 설정합니다.
 func (c *baseClient) SetToken(token string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.token = token
 	if token != "" && token != "disabled" {
 		c.c.AddHeader(fiber.HeaderAuthorization, "Bearer "+token)
 	}
+}
+
+// SetClientID는 비동기 작업 완료 알림을 받을 SSE 클라이언트 ID를 설정합니다.
+func (c *baseClient) SetClientID(id uuid.UUID) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.c.AddHeader("X-Client-ID", id.String())
 }
 
 // Config는 서버로부터 전체 설정 정보를 조회합니다.
@@ -74,7 +85,7 @@ func (c *Client) VFS() *VFSClient {
 func New(url string) *Client {
 	c := client.New()
 	c.SetBaseURL(url)
-	base := &baseClient{c: c}
+	base := &baseClient{c: c, url: url}
 	return &Client{
 		baseClient: base,
 		auth:       &AuthClient{baseClient: base},
