@@ -3,6 +3,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -58,8 +59,13 @@ func (c *VFSClient) Read(id uuid.UUID) (io.Reader, types.MetaRes, error) {
 
 // Stat은 파일 또는 디렉토리의 상세 정보를 조회합니다.
 func (c *VFSClient) Stat(id uuid.UUID) (types.MetaRes, error) {
+	return c.StatContext(context.Background(), id)
+}
+
+// StatContext는 요청 컨텍스트를 사용해 파일 또는 디렉토리의 상세 정보를 조회합니다.
+func (c *VFSClient) StatContext(ctx context.Context, id uuid.UUID) (types.MetaRes, error) {
 	u := fmt.Sprintf("/vfs/%s/stat", id.String())
-	resp, err := c.c.Get(u)
+	resp, err := c.c.Get(u, client.Config{Ctx: ctx})
 	if err != nil {
 		return types.MetaRes{}, err
 	}
@@ -74,8 +80,13 @@ func (c *VFSClient) Stat(id uuid.UUID) (types.MetaRes, error) {
 
 // Tree는 계층적인 디렉토리 구조를 트리 형태로 조회합니다.
 func (c *VFSClient) Tree(path string) (*types.TreeNodeRes, error) {
+	return c.TreeContext(context.Background(), path)
+}
+
+// TreeContext는 요청 컨텍스트를 사용해 계층적인 디렉토리 구조를 조회합니다.
+func (c *VFSClient) TreeContext(ctx context.Context, path string) (*types.TreeNodeRes, error) {
 	u := fmt.Sprintf("/vfs?q=%s&viewType=tree", url.QueryEscape(path))
-	resp, err := c.c.Get(u)
+	resp, err := c.c.Get(u, client.Config{Ctx: ctx})
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +101,11 @@ func (c *VFSClient) Tree(path string) (*types.TreeNodeRes, error) {
 
 // CreateDir은 새로운 디렉토리를 생성합니다.
 func (c *VFSClient) CreateDir(name string) error {
+	return c.CreateDirContext(context.Background(), name)
+}
+
+// CreateDirContext는 요청 컨텍스트를 사용해 새로운 디렉토리를 생성합니다.
+func (c *VFSClient) CreateDirContext(ctx context.Context, name string) error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	if err := writer.WriteField("isDir", "true"); err != nil {
@@ -103,6 +119,7 @@ func (c *VFSClient) CreateDir(name string) error {
 	}
 
 	resp, err := c.c.R().
+		SetContext(ctx).
 		SetHeader(fiber.HeaderContentType, writer.FormDataContentType()).
 		SetRawBody(body.Bytes()).
 		Post("/vfs")
@@ -115,6 +132,11 @@ func (c *VFSClient) CreateDir(name string) error {
 
 // CreateFile은 새로운 파일을 업로드하여 생성합니다.
 func (c *VFSClient) CreateFile(name string, r io.ReadCloser) error {
+	return c.CreateFileContext(context.Background(), name, r)
+}
+
+// CreateFileContext는 요청 컨텍스트를 사용해 새로운 파일을 업로드하여 생성합니다.
+func (c *VFSClient) CreateFileContext(ctx context.Context, name string, r io.ReadCloser) error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	if err := writer.WriteField("isDir", "false"); err != nil {
@@ -137,6 +159,7 @@ func (c *VFSClient) CreateFile(name string, r io.ReadCloser) error {
 	}
 
 	resp, err := c.c.R().
+		SetContext(ctx).
 		SetHeader(fiber.HeaderContentType, writer.FormDataContentType()).
 		SetRawBody(body.Bytes()).
 		Post("/vfs")
@@ -196,7 +219,12 @@ func (c *VFSClient) Copy(id uuid.UUID, dstName string) error {
 
 // Delete는 파일 또는 디렉토리를 삭제합니다. (비동기 처리)
 func (c *VFSClient) Delete(id uuid.UUID) error {
-	resp, err := c.c.Delete("/vfs/" + id.String())
+	return c.DeleteContext(context.Background(), id)
+}
+
+// DeleteContext는 요청 컨텍스트를 사용해 파일 또는 디렉토리를 삭제합니다.
+func (c *VFSClient) DeleteContext(ctx context.Context, id uuid.UUID) error {
+	resp, err := c.c.Delete("/vfs/"+id.String(), client.Config{Ctx: ctx})
 	if err != nil {
 		return err
 	}

@@ -2,12 +2,14 @@ package client_test
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -384,6 +386,22 @@ func TestVFSClient_Meta_Tree(t *testing.T) {
 	res, err := c.VFS().Tree("/")
 	require.NoError(t, err)
 	assert.Equal(t, "root", res.Meta.Name)
+}
+
+func TestVFSClient_TreeContext_Canceled(t *testing.T) {
+	var called atomic.Bool
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		called.Store(true)
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	c := client.New(server.URL)
+	_, err := c.VFS().TreeContext(ctx, "/")
+	require.Error(t, err)
+	assert.False(t, called.Load())
 }
 
 func TestVFSClient_Misc_WriteComments(t *testing.T) {
