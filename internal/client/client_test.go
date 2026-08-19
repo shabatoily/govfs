@@ -1,6 +1,7 @@
 package client_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -23,7 +24,7 @@ func TestClient_SetToken(t *testing.T) {
 		c.SetToken(token)
 
 		// Trigger a request to verify the token is sent
-		resp, err := c.SSE().Subscribe()
+		resp, err := c.SSE().Subscribe(context.Background())
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode())
 	})

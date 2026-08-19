@@ -28,12 +28,12 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 	}
 
 	c := client.New(u.ServerURL)
-	if _, err := c.Auth().Me(); err != nil {
+	if _, err := c.Auth().Me(cmd.Context()); err != nil {
 		if !u.TokenInfo.IsExpired() {
 			c.SetToken(u.TokenInfo.Token)
 		}
 
-		t, err := c.Auth().Login(u.Username, u.Password)
+		t, err := c.Auth().Login(cmd.Context(), u.Username, u.Password)
 		if err != nil {
 			return nil, err
 		}
@@ -48,8 +48,8 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 	}
 
 	// Check cloud authorization
-	if err := c.Cloud().IsAuthorized(); err != nil {
-		code, err := c.Cloud().GoogleDriveAuthCodeURL()
+	if err := c.Cloud().IsAuthorized(cmd.Context()); err != nil {
+		code, err := c.Cloud().GoogleDriveAuthCodeURL(cmd.Context())
 		if err != nil {
 			return nil, fmt.Errorf("failed to get auth code URL: %w", err)
 		}
@@ -60,7 +60,7 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 		_, _ = os.Stdin.Read(make([]byte, 1))
 
 		// Check again
-		if err := c.Cloud().IsAuthorized(); err != nil {
+		if err := c.Cloud().IsAuthorized(cmd.Context()); err != nil {
 			return nil, fmt.Errorf("still not authorized after user action: %w", err)
 		}
 	}
@@ -73,7 +73,7 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 
 // List는 클라우드 저장소의 파일 목록을 출력합니다.
 func (h *Handler) List(p string) error {
-	files, err := h.client.Cloud().List(p)
+	files, err := h.client.Cloud().List(h.cmd.Context(), p)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func (h *Handler) Upload(uploadFilePath string) error {
 	defer f.Close()
 
 	p := filepath.Base(uploadFilePath)
-	err = h.client.Cloud().Upload(p, f)
+	err = h.client.Cloud().Upload(h.cmd.Context(), p, f)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func (h *Handler) Download(src, dst string) error {
 		return err
 	}
 
-	r, err := h.client.Cloud().Download(src)
+	r, err := h.client.Cloud().Download(h.cmd.Context(), src)
 	if err != nil {
 		return err
 	}

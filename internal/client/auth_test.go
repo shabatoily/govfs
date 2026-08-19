@@ -1,6 +1,7 @@
 package client_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -44,11 +45,11 @@ func TestAuthClient_Login(t *testing.T) {
 		defer server.Close()
 
 		c := client.New(server.URL)
-		_, err := c.Auth().Login(username, password)
+		_, err := c.Auth().Login(context.Background(), username, password)
 		require.NoError(t, err)
 
 		// Trigger a request to verify the token is set and sent
-		resp, err := c.SSE().Subscribe()
+		resp, err := c.SSE().Subscribe(context.Background())
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode())
 	})
@@ -65,7 +66,7 @@ func TestAuthClient_Login(t *testing.T) {
 		defer server.Close()
 
 		c := client.New(server.URL)
-		_, err := c.Auth().Login(username, password)
+		_, err := c.Auth().Login(context.Background(), username, password)
 		require.NoError(t, err)
 	})
 
@@ -79,7 +80,7 @@ func TestAuthClient_Login(t *testing.T) {
 		defer server.Close()
 
 		c := client.New(server.URL)
-		_, err := c.Auth().Login(username, password)
+		_, err := c.Auth().Login(context.Background(), username, password)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "login failed: 401")
 	})
@@ -104,7 +105,7 @@ func TestAuthClient_Me(t *testing.T) {
 		defer server.Close()
 
 		c := client.New(server.URL)
-		res, err := c.Auth().Me()
+		res, err := c.Auth().Me(context.Background())
 		require.NoError(t, err)
 		assert.Equal(t, token, res.Token)
 	})
@@ -119,7 +120,7 @@ func TestAuthClient_Me(t *testing.T) {
 		defer server.Close()
 
 		c := client.New(server.URL)
-		_, err := c.Auth().Me()
+		_, err := c.Auth().Me(context.Background())
 		assert.Contains(t, err.Error(), "not logged in: 401")
 		require.Error(t, err)
 	})

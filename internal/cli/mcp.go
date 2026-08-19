@@ -26,8 +26,8 @@ func NewMCPCommand(version string) *cobra.Command {
 			if !userConfig.TokenInfo.IsExpired() {
 				c.SetToken(userConfig.TokenInfo.Token)
 			}
-			if _, err := c.Auth().Me(); err != nil {
-				token, loginErr := c.Auth().Login(userConfig.Username, userConfig.Password)
+			if _, err := c.Auth().Me(cmd.Context()); err != nil {
+				token, loginErr := c.Auth().Login(cmd.Context(), userConfig.Username, userConfig.Password)
 				if loginErr != nil {
 					return fmt.Errorf("authenticate MCP client: %w", loginErr)
 				}

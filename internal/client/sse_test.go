@@ -1,6 +1,7 @@
 package client_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -22,7 +23,7 @@ func TestSSEClient_Subscribe(t *testing.T) {
 		defer server.Close()
 
 		c := client.New(server.URL)
-		resp, err := c.SSE().Subscribe()
+		resp, err := c.SSE().Subscribe(context.Background())
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode())
 	})
@@ -48,7 +49,7 @@ func TestSSEClient_Publish(t *testing.T) {
 		defer server.Close()
 
 		c := client.New(server.URL)
-		err := c.SSE().Publish(id, data)
+		err := c.SSE().Publish(context.Background(), id, data)
 		require.NoError(t, err)
 	})
 }

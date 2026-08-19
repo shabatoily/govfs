@@ -116,13 +116,13 @@ func newInfoCommand() *cobra.Command {
 			}
 
 			c := client.New(u.ServerURL)
-			t, err := c.Auth().Login(u.Username, u.Password)
+			t, err := c.Auth().Login(cmd.Context(), u.Username, u.Password)
 			if err != nil {
 				return err
 			}
 			c.SetToken(t.Token)
 
-			cfg, err := c.Config()
+			cfg, err := c.Config(cmd.Context())
 			if err != nil {
 				return err
 			}

@@ -62,7 +62,7 @@ func (s *Server) tree(ctx context.Context, _ *mcpsdk.CallToolRequest, input path
 	if err != nil {
 		return nil, nil, err
 	}
-	tree, err := s.client.VFS().TreeContext(ctx, cleaned)
+	tree, err := s.client.VFS().Tree(ctx, cleaned)
 	return nil, tree, err
 }
 
@@ -71,7 +71,7 @@ func (s *Server) stat(ctx context.Context, _ *mcpsdk.CallToolRequest, input idIn
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid resource ID: %w", err)
 	}
-	meta, err := s.client.VFS().StatContext(ctx, id)
+	meta, err := s.client.VFS().Stat(ctx, id)
 	return nil, meta, err
 }
 
@@ -82,14 +82,14 @@ func (s *Server) mkdir(ctx context.Context, _ *mcpsdk.CallToolRequest, input pat
 	}
 	s.mutationMu.Lock()
 	defer s.mutationMu.Unlock()
-	if err := s.client.VFS().CreateDirContext(ctx, cleaned); err != nil {
+	if err := s.client.VFS().CreateDir(ctx, cleaned); err != nil {
 		return nil, nil, err
 	}
 	meta, err := s.waitForMutation(ctx, "vfs.create")
 	if err != nil {
 		return nil, nil, err
 	}
-	created, err := s.client.VFS().StatContext(ctx, meta.ID)
+	created, err := s.client.VFS().Stat(ctx, meta.ID)
 	return nil, created, err
 }
 
@@ -105,14 +105,14 @@ func (s *Server) upload(ctx context.Context, _ *mcpsdk.CallToolRequest, input up
 
 	s.mutationMu.Lock()
 	defer s.mutationMu.Unlock()
-	if err := s.client.VFS().CreateFileContext(ctx, cleaned, io.NopCloser(bytes.NewReader(content))); err != nil {
+	if err := s.client.VFS().CreateFile(ctx, cleaned, io.NopCloser(bytes.NewReader(content))); err != nil {
 		return nil, nil, err
 	}
 	meta, err := s.waitForMutation(ctx, "vfs.create")
 	if err != nil {
 		return nil, nil, err
 	}
-	created, err := s.client.VFS().StatContext(ctx, meta.ID)
+	created, err := s.client.VFS().Stat(ctx, meta.ID)
 	return nil, created, err
 }
 
@@ -123,7 +123,7 @@ func (s *Server) delete(ctx context.Context, _ *mcpsdk.CallToolRequest, input id
 	}
 	s.mutationMu.Lock()
 	defer s.mutationMu.Unlock()
-	if err := s.client.VFS().DeleteContext(ctx, id); err != nil {
+	if err := s.client.VFS().Delete(ctx, id); err != nil {
 		return nil, nil, err
 	}
 	meta, err := s.waitForMutation(ctx, "vfs.delete")

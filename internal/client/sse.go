@@ -30,8 +30,8 @@ type SSESubscription struct {
 }
 
 // Subscribe는 서버의 SSE 이벤트 스트림을 구독합니다.
-func (c *SSEClient) Subscribe() (*client.Response, error) {
-	return c.c.Get("/sse/subscribe")
+func (c *SSEClient) Subscribe(ctx context.Context) (*client.Response, error) {
+	return c.c.Get("/sse/subscribe", client.Config{Ctx: ctx})
 }
 
 // SubscribeEvents는 취소 가능한 SSE 연결을 열고 이벤트를 파싱합니다.
@@ -134,8 +134,8 @@ func readSSEMessage(reader *bufio.Reader) (types.SSEMessage, error) {
 }
 
 // Publish는 특정 ID를 대상으로 SSE 이벤트를 발행합니다.
-func (c *SSEClient) Publish(id uuid.UUID, data map[string]any) error {
-	cfg, err := createJSONConfig(data)
+func (c *SSEClient) Publish(ctx context.Context, id uuid.UUID, data map[string]any) error {
+	cfg, err := createJSONConfig(ctx, data)
 	if err != nil {
 		return err
 	}
@@ -152,8 +152,8 @@ func (c *SSEClient) Publish(id uuid.UUID, data map[string]any) error {
 }
 
 // Clients는 현재 활성화된 모든 SSE 클라이언트 목록을 서버로부터 조회합니다.
-func (c *SSEClient) Clients() (types.ClientList, error) {
-	res, err := c.c.Get("/sse/clients")
+func (c *SSEClient) Clients(ctx context.Context) (types.ClientList, error) {
+	res, err := c.c.Get("/sse/clients", client.Config{Ctx: ctx})
 	if err != nil {
 		return types.ClientList{}, err
 	}

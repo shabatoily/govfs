@@ -22,9 +22,9 @@ type VFSClient struct {
 }
 
 // List는 VFS의 파일 및 디렉토리 목록을 조회합니다.
-func (c *VFSClient) List(q string) ([]types.MetaRes, error) {
+func (c *VFSClient) List(ctx context.Context, q string) ([]types.MetaRes, error) {
 	u := fmt.Sprintf("/vfs?q=%s", url.QueryEscape(q))
-	resp, err := c.c.Get(u)
+	resp, err := c.c.Get(u, client.Config{Ctx: ctx})
 	if err != nil {
 		return nil, err
 	}
@@ -38,9 +38,9 @@ func (c *VFSClient) List(q string) ([]types.MetaRes, error) {
 }
 
 // Read는 파일의 데이터와 메타데이터를 함께 조회합니다.
-func (c *VFSClient) Read(id uuid.UUID) (io.Reader, types.MetaRes, error) {
+func (c *VFSClient) Read(ctx context.Context, id uuid.UUID) (io.Reader, types.MetaRes, error) {
 	u := fmt.Sprintf("/vfs/%s", id.String())
-	resp, err := c.c.Get(u)
+	resp, err := c.c.Get(u, client.Config{Ctx: ctx})
 	if err != nil {
 		return nil, types.MetaRes{}, err
 	}
@@ -49,7 +49,7 @@ func (c *VFSClient) Read(id uuid.UUID) (io.Reader, types.MetaRes, error) {
 		return nil, types.MetaRes{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}
 
-	meta, err := c.Stat(id)
+	meta, err := c.Stat(ctx, id)
 	if err != nil {
 		return nil, types.MetaRes{}, err
 	}
@@ -58,12 +58,7 @@ func (c *VFSClient) Read(id uuid.UUID) (io.Reader, types.MetaRes, error) {
 }
 
 // Stat은 파일 또는 디렉토리의 상세 정보를 조회합니다.
-func (c *VFSClient) Stat(id uuid.UUID) (types.MetaRes, error) {
-	return c.StatContext(context.Background(), id)
-}
-
-// StatContext는 요청 컨텍스트를 사용해 파일 또는 디렉토리의 상세 정보를 조회합니다.
-func (c *VFSClient) StatContext(ctx context.Context, id uuid.UUID) (types.MetaRes, error) {
+func (c *VFSClient) Stat(ctx context.Context, id uuid.UUID) (types.MetaRes, error) {
 	u := fmt.Sprintf("/vfs/%s/stat", id.String())
 	resp, err := c.c.Get(u, client.Config{Ctx: ctx})
 	if err != nil {
@@ -79,12 +74,7 @@ func (c *VFSClient) StatContext(ctx context.Context, id uuid.UUID) (types.MetaRe
 }
 
 // Tree는 계층적인 디렉토리 구조를 트리 형태로 조회합니다.
-func (c *VFSClient) Tree(path string) (*types.TreeNodeRes, error) {
-	return c.TreeContext(context.Background(), path)
-}
-
-// TreeContext는 요청 컨텍스트를 사용해 계층적인 디렉토리 구조를 조회합니다.
-func (c *VFSClient) TreeContext(ctx context.Context, path string) (*types.TreeNodeRes, error) {
+func (c *VFSClient) Tree(ctx context.Context, path string) (*types.TreeNodeRes, error) {
 	u := fmt.Sprintf("/vfs?q=%s&viewType=tree", url.QueryEscape(path))
 	resp, err := c.c.Get(u, client.Config{Ctx: ctx})
 	if err != nil {
@@ -100,12 +90,7 @@ func (c *VFSClient) TreeContext(ctx context.Context, path string) (*types.TreeNo
 }
 
 // CreateDir은 새로운 디렉토리를 생성합니다.
-func (c *VFSClient) CreateDir(name string) error {
-	return c.CreateDirContext(context.Background(), name)
-}
-
-// CreateDirContext는 요청 컨텍스트를 사용해 새로운 디렉토리를 생성합니다.
-func (c *VFSClient) CreateDirContext(ctx context.Context, name string) error {
+func (c *VFSClient) CreateDir(ctx context.Context, name string) error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	if err := writer.WriteField("isDir", "true"); err != nil {
@@ -131,12 +116,7 @@ func (c *VFSClient) CreateDirContext(ctx context.Context, name string) error {
 }
 
 // CreateFile은 새로운 파일을 업로드하여 생성합니다.
-func (c *VFSClient) CreateFile(name string, r io.ReadCloser) error {
-	return c.CreateFileContext(context.Background(), name, r)
-}
-
-// CreateFileContext는 요청 컨텍스트를 사용해 새로운 파일을 업로드하여 생성합니다.
-func (c *VFSClient) CreateFileContext(ctx context.Context, name string, r io.ReadCloser) error {
+func (c *VFSClient) CreateFile(ctx context.Context, name string, r io.ReadCloser) error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	if err := writer.WriteField("isDir", "false"); err != nil {
@@ -171,8 +151,8 @@ func (c *VFSClient) CreateFileContext(ctx context.Context, name string, r io.Rea
 }
 
 // Write는 기존 파일의 내용을 덮어씁니다. (비동기 처리)
-func (c *VFSClient) Write(id uuid.UUID, content string) error {
-	cfg, err := createJSONConfig(types.WriteReq{Content: content})
+func (c *VFSClient) Write(ctx context.Context, id uuid.UUID, content string) error {
+	cfg, err := createJSONConfig(ctx, types.WriteReq{Content: content})
 	if err != nil {
 		return err
 	}
@@ -187,8 +167,8 @@ func (c *VFSClient) Write(id uuid.UUID, content string) error {
 }
 
 // Move는 파일 또는 디렉토리의 이름을 변경하거나 다른 경로로 이동시킵니다. (비동기 처리)
-func (c *VFSClient) Move(id uuid.UUID, dstName string) error {
-	cfg, err := createJSONConfig(types.DstReq{Name: dstName})
+func (c *VFSClient) Move(ctx context.Context, id uuid.UUID, dstName string) error {
+	cfg, err := createJSONConfig(ctx, types.DstReq{Name: dstName})
 	if err != nil {
 		return err
 	}
@@ -203,8 +183,8 @@ func (c *VFSClient) Move(id uuid.UUID, dstName string) error {
 }
 
 // Copy는 파일 또는 디렉토리를 지정된 경로로 복사합니다. (비동기 처리)
-func (c *VFSClient) Copy(id uuid.UUID, dstName string) error {
-	cfg, err := createJSONConfig(types.DstReq{Name: dstName})
+func (c *VFSClient) Copy(ctx context.Context, id uuid.UUID, dstName string) error {
+	cfg, err := createJSONConfig(ctx, types.DstReq{Name: dstName})
 	if err != nil {
 		return err
 	}
@@ -218,12 +198,7 @@ func (c *VFSClient) Copy(id uuid.UUID, dstName string) error {
 }
 
 // Delete는 파일 또는 디렉토리를 삭제합니다. (비동기 처리)
-func (c *VFSClient) Delete(id uuid.UUID) error {
-	return c.DeleteContext(context.Background(), id)
-}
-
-// DeleteContext는 요청 컨텍스트를 사용해 파일 또는 디렉토리를 삭제합니다.
-func (c *VFSClient) DeleteContext(ctx context.Context, id uuid.UUID) error {
+func (c *VFSClient) Delete(ctx context.Context, id uuid.UUID) error {
 	resp, err := c.c.Delete("/vfs/"+id.String(), client.Config{Ctx: ctx})
 	if err != nil {
 		return err
@@ -233,8 +208,8 @@ func (c *VFSClient) DeleteContext(ctx context.Context, id uuid.UUID) error {
 }
 
 // WriteComments는 항목에 대한 부가 설명을 추가합니다. (비동기 처리)
-func (c *VFSClient) WriteComments(id uuid.UUID, comment string) error {
-	cfg, err := createJSONConfig(types.WriteCommentReq{Comment: comment})
+func (c *VFSClient) WriteComments(ctx context.Context, id uuid.UUID, comment string) error {
+	cfg, err := createJSONConfig(ctx, types.WriteCommentReq{Comment: comment})
 	if err != nil {
 		return err
 	}
@@ -248,8 +223,9 @@ func (c *VFSClient) WriteComments(id uuid.UUID, comment string) error {
 }
 
 // Backup은 전체 VFS 데이터를 백업 파일로 받아옵니다.
-func (c *VFSClient) Backup() (io.Reader, error) {
+func (c *VFSClient) Backup(ctx context.Context) (io.Reader, error) {
 	resp, err := c.c.Post("/vfs/backup", client.Config{
+		Ctx: ctx,
 		Header: map[string]string{
 			fiber.HeaderContentType: fiber.MIMEApplicationJSON,
 		},
@@ -266,7 +242,7 @@ func (c *VFSClient) Backup() (io.Reader, error) {
 }
 
 // Restore는 백업 파일로부터 VFS 데이터를 복구합니다.
-func (c *VFSClient) Restore(file io.ReadCloser) error {
+func (c *VFSClient) Restore(ctx context.Context, file io.ReadCloser) error {
 	f := &client.File{}
 	f.SetFieldName("file")
 	f.SetReader(file)
@@ -276,6 +252,7 @@ func (c *VFSClient) Restore(file io.ReadCloser) error {
 	// client.Client가 f.Reader(`file`)로부터 읽기와 멀티파트 요청 구성을 자동으로 처리합니다.
 
 	resp, err := c.c.Post("/vfs/restore", client.Config{
+		Ctx:  ctx,
 		File: []*client.File{f},
 	})
 	if err != nil {
@@ -286,8 +263,8 @@ func (c *VFSClient) Restore(file io.ReadCloser) error {
 }
 
 // Rotate는 데이터 암호화 키를 교체합니다. (비동기 처리)
-func (c *VFSClient) Rotate(newKey string) error {
-	cfg, err := createJSONConfig(map[string]string{"key": newKey})
+func (c *VFSClient) Rotate(ctx context.Context, newKey string) error {
+	cfg, err := createJSONConfig(ctx, map[string]string{"key": newKey})
 	if err != nil {
 		return err
 	}
