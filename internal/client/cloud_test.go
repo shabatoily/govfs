@@ -2,6 +2,7 @@ package client_test
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -28,7 +29,7 @@ func TestCloudClient_GoogleDriveAuthCodeURL(t *testing.T) {
 		defer server.Close()
 
 		c := client.New(server.URL)
-		url, err := c.Cloud().GoogleDriveAuthCodeURL()
+		url, err := c.Cloud().GoogleDriveAuthCodeURL(context.Background())
 		require.NoError(t, err)
 		assert.Equal(t, expectedURL, url)
 	})
@@ -49,7 +50,7 @@ func TestCloudClient_List(t *testing.T) {
 		defer server.Close()
 
 		c := client.New(server.URL)
-		files, err := c.Cloud().List("/some/path")
+		files, err := c.Cloud().List(context.Background(), "/some/path")
 		require.NoError(t, err)
 		assert.Equal(t, expectedFiles, files)
 	})
@@ -83,7 +84,7 @@ func TestCloudClient_Upload(t *testing.T) {
 		defer server.Close()
 
 		c := client.New(server.URL)
-		err := c.Cloud().Upload(fileName, strings.NewReader(fileContent))
+		err := c.Cloud().Upload(context.Background(), fileName, strings.NewReader(fileContent))
 		assert.NoError(t, err)
 	})
 }
@@ -103,7 +104,7 @@ func TestCloudClient_Download(t *testing.T) {
 		defer server.Close()
 
 		c := client.New(server.URL)
-		reader, err := c.Cloud().Download("/some/file.txt")
+		reader, err := c.Cloud().Download(context.Background(), "/some/file.txt")
 		require.NoError(t, err)
 
 		buf := new(bytes.Buffer)
@@ -125,7 +126,7 @@ func TestCloudClient_Delete(t *testing.T) {
 		defer server.Close()
 
 		c := client.New(server.URL)
-		err := c.Cloud().Delete("/some/file.txt")
+		err := c.Cloud().Delete(context.Background(), "/some/file.txt")
 		assert.NoError(t, err)
 	})
 }

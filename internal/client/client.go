@@ -2,6 +2,7 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -38,8 +39,9 @@ func (c *baseClient) SetClientID(id uuid.UUID) {
 }
 
 // Config는 서버로부터 전체 설정 정보를 조회합니다.
-func (c *baseClient) Config() (types.ConfigRes, error) {
+func (c *baseClient) Config(ctx context.Context) (types.ConfigRes, error) {
 	res, err := c.c.Get("/config", client.Config{
+		Ctx:    ctx,
 		Header: map[string]string{"Content-Type": "application/json"},
 	})
 	if err != nil {
@@ -96,12 +98,13 @@ func New(url string) *Client {
 }
 
 // createJSONConfig는 데이터를 JSON으로 직렬화하여 클라이언트 요청 설정을 생성하는 헬퍼 함수입니다.
-func createJSONConfig(data any) (client.Config, error) {
+func createJSONConfig(ctx context.Context, data any) (client.Config, error) {
 	jsonb, err := json.Marshal(data)
 	if err != nil {
 		return client.Config{}, err
 	}
 	return client.Config{
+		Ctx:    ctx,
 		Header: map[string]string{"Content-Type": "application/json"},
 		Body:   jsonb,
 	}, nil
