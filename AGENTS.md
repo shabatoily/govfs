@@ -27,6 +27,31 @@ Go 언어에서 권장하는 표준을 준수합니다.
 
 ## 워크플로우
 
+### Branch
+
+작업을 시작하기 전에 현재 브랜치와 변경 사항을 확인합니다.
+
+```bash
+git status --short --branch
+```
+
+현재 브랜치가 `main`이거나 브랜치의 목적과 작업 내용이 다르면 새 브랜치를 생성합니다.
+
+```bash
+git switch -c <type>/<description> main
+```
+
+브랜치 이름은 소문자 kebab-case로 작성합니다.
+
+- `feature/<description>`: 기능 추가
+- `fix/<description>`: 버그 수정
+- `refactor/<description>`: 동작 변경 없는 구조 개선
+- `docs/<description>`: 문서 변경
+- `test/<description>`: 테스트 변경
+- `chore/<description>`: 빌드, 설정 및 유지보수
+
+예: `feature/mcp-tools`, `fix/sse-parser`, `docs/pr-workflow`
+
 ### Commit
 
 현재 변경 사항 전체를 빠르게 검증하고, Conventional Commits 형식의 커밋 메시지로 커밋하는 워크플로우입니다.
@@ -66,6 +91,30 @@ Go 언어에서 권장하는 표준을 준수합니다.
    ```bash
    git push
    ```
+
+### Pull Request Body
+
+현재 브랜치가 `main`이 아닐 때만 `.github/pull_request_template.md` 양식으로 PR 본문을 작성합니다.
+
+1. 현재 브랜치를 확인합니다.
+
+   ```bash
+   git branch --show-current
+   ```
+
+2. `main`과 비교해 커밋 및 변경 사항을 확인합니다.
+
+   ```bash
+   git log --oneline main..HEAD
+   git diff --stat main...HEAD
+   git diff main...HEAD
+   ```
+
+3. 변경 이유와 핵심 변경 사항만 간결하게 작성하고, 실제로 수행한 검증만 표시합니다.
+
+4. PR 본문은 바로 복사할 수 있도록 하나의 Markdown 코드 블록으로 출력합니다.
+
+5. 현재 브랜치가 `main`이면 PR 본문을 작성하지 않습니다.
 
 ### Documentation Analysis and DESIGN.md Synthesis
 
