@@ -175,6 +175,9 @@ func NewRootCommand(appInfo *config.AppInfo) *cobra.Command {
 
 			u, err := GetUserConfig()
 			if err != nil {
+				if cmd.Name() == "mcp" {
+					return errors.New("config not found: run govfs config first")
+				}
 				if promptErr := promptSetConfig(cmd, &u); promptErr != nil {
 					return promptErr
 				}
