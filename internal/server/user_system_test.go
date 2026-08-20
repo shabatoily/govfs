@@ -82,6 +82,37 @@ func TestUserSystemAdminBoundary(t *testing.T) {
 	if meRes.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("비활성 사용자의 기존 JWT 상태 = %d", meRes.StatusCode)
 	}
+	eventsRes, err := app.Test(request(t, http.MethodGet, "/admin/events", nil, adminToken))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer eventsRes.Body.Close()
+	var events []types.UserEventRes
+	if err := json.NewDecoder(eventsRes.Body).Decode(&events); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, event := range events {
+		if event.Username == "admin" && event.Action == "admin.update-user" && event.Status == http.StatusOK {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("사용자 수정 이벤트가 없습니다: %#v", events)
+	}
+	statusRes, err := app.Test(request(t, http.MethodGet, "/admin/status", nil, adminToken))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer statusRes.Body.Close()
+	var status types.StatusRes
+	if err := json.NewDecoder(statusRes.Body).Decode(&status); err != nil {
+		t.Fatal(err)
+	}
+	if len(status.Drives) != 2 || status.Drives[0].Online || status.Drives[1].Online {
+		t.Fatalf("사용자 드라이브 상태 = %#v", status.Drives)
+	}
 }
 
 func loginToken(t *testing.T, app *fiber.App, username, password string) string {

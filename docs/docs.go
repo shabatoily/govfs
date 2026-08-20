@@ -291,10 +291,31 @@ const docTemplate = `{
             },
             "types.StatusRes": {
                 "properties": {
+                    "drives": {
+                        "items": {
+                            "$ref": "#/components/schemas/types.UserDriveStatusRes"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "openDrives": {
                         "type": "integer"
                     },
+                    "system": {
+                        "$ref": "#/components/schemas/types.StorageStatRes"
+                    },
                     "users": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "types.StorageStatRes": {
+                "properties": {
+                    "items": {
+                        "type": "integer"
+                    },
+                    "size": {
                         "type": "integer"
                     }
                 },
@@ -346,6 +367,55 @@ const docTemplate = `{
                     },
                     "role": {
                         "$ref": "#/components/schemas/types.Role"
+                    }
+                },
+                "type": "object"
+            },
+            "types.UserDriveStatusRes": {
+                "properties": {
+                    "items": {
+                        "type": "integer"
+                    },
+                    "online": {
+                        "type": "boolean"
+                    },
+                    "open": {
+                        "type": "boolean"
+                    },
+                    "size": {
+                        "type": "integer"
+                    },
+                    "sseCount": {
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "types.UserEventRes": {
+                "properties": {
+                    "action": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
                     }
                 },
                 "type": "object"
@@ -431,6 +501,39 @@ const docTemplate = `{
         "url": ""
     },
     "paths": {
+        "/admin/events": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "user id",
+                        "in": "query",
+                        "name": "userId",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/types.UserEventRes"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "최근 사용자 이벤트",
+                "tags": [
+                    "admin"
+                ]
+            }
+        },
         "/admin/status": {
             "get": {
                 "responses": {

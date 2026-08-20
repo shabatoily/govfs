@@ -4,6 +4,7 @@ import (
 	"errors"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/shabatoily/govfs/internal/types"
 )
@@ -27,5 +28,34 @@ func TestStoreUserLifecycle(t *testing.T) {
 	disabled := true
 	if _, err := store.Update(admin.ID, UserUpdate{Disabled: &disabled}); !errors.Is(err, ErrLastAdmin) {
 		t.Fatalf("마지막 관리자 오류 = %v", err)
+	}
+	if err := store.RecordEvent(admin, "auth.login", 200); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(time.Nanosecond)
+	if err := store.RecordEvent(admin, "vfs.create", 202); err != nil {
+		t.Fatal(err)
+	}
+	events, err := store.ListEvents(1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].Action != "vfs.create" {
+		t.Fatalf("최근 이벤트 = %#v", events)
+	}
+	member, err := store.Create("member", "password", types.RoleUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.RecordEvent(member, "auth.login", 200); err != nil {
+		t.Fatal(err)
+	}
+	events, err = store.ListEvents(10, &admin.ID)
+	if err != nil || len(events) != 2 {
+		t.Fatalf("사용자 이벤트 = %#v, %v", events, err)
+	}
+	stats, err := store.Stats()
+	if err != nil || stats.Items == 0 || stats.Size == 0 {
+		t.Fatalf("시스템 DB 통계 = %#v, %v", stats, err)
 	}
 }

@@ -133,7 +133,7 @@ func registerRoutes(app *fiber.App, ctx serverContext) {
 	})
 
 	authHandler := handlers.NewAuthHandler(ctx.Config.Auth, ctx.Users)
-	adminHandler := handlers.NewAdminHandler(ctx.Users, ctx.Drives)
+	adminHandler := handlers.NewAdminHandler(ctx.Users, ctx.Drives, sseBroker)
 
 	sseHandler := handlers.NewSSEHandler(sseBroker)
 
@@ -147,18 +147,19 @@ func registerRoutes(app *fiber.App, ctx serverContext) {
 	}, "auth.")
 
 	app.Route("/admin", func(router fiber.Router) {
-		router.Use(jwtAuth, userAuth, middlewares.AdminOnly)
+		router.Use(jwtAuth, userAuth, middlewares.AdminOnly, middlewares.Audit(ctx.Users))
 		router.Get("/users", adminHandler.ListUsers).Name("users")
 		router.Post("/users", adminHandler.CreateUser).Name("create-user")
 		router.Patch("/users/:id", adminHandler.UpdateUser).Name("update-user")
 		router.Get("/status", adminHandler.Status).Name("status")
+		router.Get("/events", adminHandler.Events).Name("events")
 	}, "admin.")
 
 	// VFS 라우트 그룹 (SSE 알림 미들웨어 포함 가능성)
 	// 핸들러가 실행된 후 상태 변경을 알리기 위해 동작하도록 설계되었습니다.
 	// 라우팅 경로: /vfs/*
 	app.Route("/vfs", func(router fiber.Router) {
-		router.Use(jwtAuth, userAuth)
+		router.Use(jwtAuth, userAuth, middlewares.Audit(ctx.Users))
 		router.Post("/backup", withVFS(ctx.Drives, sseBroker, (*handlers.VfsHandler).Backup)).Name("backup")
 		router.Post("/restore", withVFS(ctx.Drives, sseBroker, (*handlers.VfsHandler).Restore)).Name("restore")
 		router.Post("/", withVFS(ctx.Drives, sseBroker, (*handlers.VfsHandler).Create)).Name("create")
@@ -173,14 +174,14 @@ func registerRoutes(app *fiber.App, ctx serverContext) {
 	}, "vfs.")
 
 	app.Route("/sse", func(router fiber.Router) {
-		router.Use(jwtAuth, userAuth)
+		router.Use(jwtAuth, userAuth, middlewares.Audit(ctx.Users))
 		router.Get("/subscribe", sseHandler.Subscribe).Name("subscribe")
 		router.Post("/publish/:id?", sseHandler.Publish).Name("publish")
 		router.Get("/clients", sseHandler.Clients).Name("clients")
 	}, "sse.")
 
 	app.Route("/badger", func(router fiber.Router) {
-		router.Use(jwtAuth, userAuth)
+		router.Use(jwtAuth, userAuth, middlewares.Audit(ctx.Users))
 		router.Get("/keys", withBadger(ctx.Drives, (*handlers.BadgerHandler).AllKeys)).Name("keys")
 		router.Get("/stats", withBadger(ctx.Drives, (*handlers.BadgerHandler).Stats)).Name("stats")
 		router.Post("/rotate", withBadger(ctx.Drives, (*handlers.BadgerHandler).Rotate)).Name("rotate")

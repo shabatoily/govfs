@@ -5,6 +5,7 @@ import (
 	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/extractors"
+	"github.com/gofiber/fiber/v3/log"
 	"github.com/google/uuid"
 	"github.com/shabatoily/govfs/internal/config"
 	"github.com/shabatoily/govfs/internal/server/services"
@@ -61,4 +62,25 @@ func AdminOnly(ctx fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 	return ctx.Next()
+}
+
+func Audit(store *services.UserStore) fiber.Handler {
+	return func(ctx fiber.Ctx) error {
+		err := ctx.Next()
+		if ctx.Method() == fiber.MethodGet {
+			return err
+		}
+		user, ok := CurrentUser(ctx)
+		if !ok {
+			return err
+		}
+		status := ctx.Response().StatusCode()
+		if fiberErr, ok := err.(*fiber.Error); ok {
+			status = fiberErr.Code
+		}
+		if recordErr := store.RecordEvent(user, ctx.Route().Name, status); recordErr != nil {
+			log.Errorf("failed to record user event: %v", recordErr)
+		}
+		return err
+	}
 }

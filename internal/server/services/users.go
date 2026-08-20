@@ -26,6 +26,7 @@ var (
 var (
 	userPrefix     = []byte("user:")
 	usernamePrefix = []byte("username:")
+	eventPrefix    = []byte("event:")
 )
 
 type User struct {
@@ -42,6 +43,15 @@ type UserUpdate struct {
 	Role     *types.Role
 	Disabled *bool
 	Password string
+}
+
+type UserEvent struct {
+	ID        uuid.UUID `json:"id"`
+	UserID    uuid.UUID `json:"userId"`
+	Username  string    `json:"username"`
+	Action    string    `json:"action"`
+	Status    int       `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type UserStore struct {
@@ -160,6 +170,58 @@ func (s *UserStore) List() ([]User, error) {
 		return nil
 	})
 	return users, err
+}
+
+func (s *UserStore) RecordEvent(user User, action string, status int) error {
+	event := UserEvent{ID: uuid.New(), UserID: user.ID, Username: user.Username, Action: action, Status: status, CreatedAt: time.Now().UTC()}
+	data, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+	key := fmt.Appendf(append([]byte(nil), eventPrefix...), "%020d:%s", event.CreatedAt.UnixNano(), event.ID)
+	return s.db.Update(func(txn *badgerdb.Txn) error { return txn.Set(key, data) })
+}
+
+func (s *UserStore) ListEvents(limit int, userID *uuid.UUID) ([]UserEvent, error) {
+	events := make([]UserEvent, 0, limit)
+	opts := badgerdb.DefaultIteratorOptions
+	opts.Reverse = true
+	err := s.db.View(func(txn *badgerdb.Txn) error {
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		seek := append(append([]byte(nil), eventPrefix...), 0xff)
+		for it.Seek(seek); it.ValidForPrefix(eventPrefix) && len(events) < limit; it.Next() {
+			if err := it.Item().Value(func(data []byte) error {
+				var event UserEvent
+				if err := json.Unmarshal(data, &event); err != nil {
+					return err
+				}
+				if userID != nil && event.UserID != *userID {
+					return nil
+				}
+				events = append(events, event)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return events, err
+}
+
+func (s *UserStore) Stats() (types.StorageStatRes, error) {
+	var stats types.StorageStatRes
+	err := s.db.View(func(txn *badgerdb.Txn) error {
+		it := txn.NewIterator(badgerdb.DefaultIteratorOptions)
+		defer it.Close()
+		for it.Rewind(); it.Valid(); it.Next() {
+			stats.Items++
+			stats.Size += int64(len(it.Item().Key())) + it.Item().ValueSize()
+		}
+		return nil
+	})
+	return stats, err
 }
 
 func (s *UserStore) Update(id uuid.UUID, update UserUpdate) (User, error) {

@@ -8,6 +8,7 @@
     import ConnectionStatus from "./lib/components/ConnectionStatus.svelte";
     import Login from "./lib/components/Login.svelte";
     import AdminUsers from "./lib/components/AdminUsers.svelte";
+	import AdminStatus from "./lib/components/AdminStatus.svelte";
     import { appState } from "./lib/state.svelte";
     import vfs from "./lib/vfs";
     import sseClient, { type SSEMessage } from "./lib/sse";
@@ -186,9 +187,15 @@
 
     <Toast />
     {#if appState.currentUser?.role === "admin"}
-        <button class="fixed top-2 right-2 z-40 bg-gray-700 hover:bg-gray-600 rounded px-3 py-1 text-sm" onclick={() => appState.showUserAdmin = true}>Users</button>
+		<div class="fixed top-2 right-2 z-40 flex gap-2">
+			<button class="bg-gray-700 hover:bg-gray-600 rounded px-3 py-1 text-sm" onclick={() => appState.showServerStatus = true}>Server</button>
+			<button class="bg-gray-700 hover:bg-gray-600 rounded px-3 py-1 text-sm" onclick={() => appState.showUserAdmin = true}>Users</button>
+		</div>
     {/if}
     {#if appState.showUserAdmin}
         <AdminUsers />
     {/if}
+	{#if appState.showServerStatus}
+		<AdminStatus />
+	{/if}
 </div>

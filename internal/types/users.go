@@ -39,6 +39,32 @@ type UpdateUserReq struct {
 }
 
 type StatusRes struct {
-	Users      int `json:"users"`
-	OpenDrives int `json:"openDrives"`
+	Users      int                  `json:"users"`
+	OpenDrives int                  `json:"openDrives"`
+	System     StorageStatRes       `json:"system"`
+	Drives     []UserDriveStatusRes `json:"drives"`
+}
+
+type StorageStatRes struct {
+	Items int   `json:"items"`
+	Size  int64 `json:"size"`
+}
+
+type UserDriveStatusRes struct {
+	UserID   uuid.UUID `json:"userId"`
+	Username string    `json:"username"`
+	Open     bool      `json:"open"`
+	Online   bool      `json:"online"`
+	SSECount int       `json:"sseCount"`
+	Items    int       `json:"items"`
+	Size     int64     `json:"size"`
+}
+
+type UserEventRes struct {
+	ID        uuid.UUID `json:"id"`
+	UserID    uuid.UUID `json:"userId"`
+	Username  string    `json:"username"`
+	Action    string    `json:"action"`
+	Status    int       `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
 }

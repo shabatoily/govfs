@@ -27,6 +27,7 @@ export class AppState {
     authInitialized = $state<boolean>(false);
     currentUser = $state<CurrentUser | null>(null);
     showUserAdmin = $state<boolean>(false);
+	showServerStatus = $state<boolean>(false);
 
     setClientId(id: string) {
         this.clientId = id;

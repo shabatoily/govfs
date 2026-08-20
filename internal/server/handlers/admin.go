@@ -12,10 +12,11 @@ import (
 type AdminHandler struct {
 	users  *services.UserStore
 	drives *services.DriveManager
+	broker *services.SSEBroker
 }
 
-func NewAdminHandler(users *services.UserStore, drives *services.DriveManager) *AdminHandler {
-	return &AdminHandler{users: users, drives: drives}
+func NewAdminHandler(users *services.UserStore, drives *services.DriveManager, broker *services.SSEBroker) *AdminHandler {
+	return &AdminHandler{users: users, drives: drives, broker: broker}
 }
 
 // ListUsers는 사용자 목록을 반환합니다.
@@ -99,5 +100,47 @@ func (h *AdminHandler) Status(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(types.StatusRes{Users: len(list), OpenDrives: h.drives.OpenCount()})
+	system, err := h.users.Stats()
+	if err != nil {
+		return err
+	}
+	drives := make([]types.UserDriveStatusRes, len(list))
+	for i, user := range list {
+		stats, wasOpen, err := h.drives.Stats(user.ID)
+		if err != nil {
+			return err
+		}
+		sseCount := len(h.broker.Clients(user.ID.String()))
+		drives[i] = types.UserDriveStatusRes{
+			UserID: user.ID, Username: user.Username, Open: wasOpen,
+			Online: sseCount > 0, SSECount: sseCount, Items: stats.Items, Size: stats.Size,
+		}
+	}
+	return c.JSON(types.StatusRes{Users: len(list), OpenDrives: h.drives.OpenCount(), System: system, Drives: drives})
+}
+
+// Events는 최근 사용자 이벤트를 반환합니다.
+// @Summary 최근 사용자 이벤트
+// @Tags admin
+// @Param userId query string false "user id"
+// @Success 200 {array} types.UserEventRes
+// @Router /admin/events [get]
+func (h *AdminHandler) Events(c fiber.Ctx) error {
+	var userID *uuid.UUID
+	if value := c.Query("userId"); value != "" {
+		id, err := uuid.Parse(value)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid user id")
+		}
+		userID = &id
+	}
+	events, err := h.users.ListEvents(100, userID)
+	if err != nil {
+		return err
+	}
+	res := make([]types.UserEventRes, len(events))
+	for i, event := range events {
+		res[i] = types.UserEventRes(event)
+	}
+	return c.JSON(res)
 }

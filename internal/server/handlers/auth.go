@@ -6,6 +6,7 @@ import (
 
 	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/log"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/shabatoily/govfs/internal/config"
 	"github.com/shabatoily/govfs/internal/server/middlewares"
@@ -59,6 +60,9 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	}
 
 	exp := time.Now().Add(h.cfg.JWT.Exp)
+	if err := h.users.RecordEvent(user, "auth.login", fiber.StatusOK); err != nil {
+		log.Errorf("failed to record login event: %v", err)
+	}
 
 	c.Cookie(&fiber.Cookie{
 		Name:     types.CookieAcessToken,

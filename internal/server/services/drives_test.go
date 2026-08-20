@@ -37,4 +37,8 @@ func TestDriveManagerSeparatesUsers(t *testing.T) {
 	if len(files) != 0 {
 		t.Fatal("다른 사용자의 파일이 노출되었습니다")
 	}
+	stats, open, err := manager.Stats(uuid.New())
+	if err != nil || open || stats.Items != 0 || manager.OpenCount() != 2 {
+		t.Fatalf("미개방 드라이브 통계 = %#v, open=%v, count=%d, err=%v", stats, open, manager.OpenCount(), err)
+	}
 }
