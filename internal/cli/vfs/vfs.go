@@ -27,7 +27,7 @@ type Handler struct {
 	client *client.Client
 }
 
-// NewHandler는 컨텍스트 기반으로 새로운 VFS 핸들러를 반환하며, 필요시 자동 로그인을 수행합니다.
+// NewHandler는 로그인 세션을 사용하는 VFS 핸들러를 반환합니다.
 func NewHandler(cmd *cobra.Command) (*Handler, error) {
 	u, ok := cmd.Context().Value(cli.ContextKeyUserConfig{}).(*cli.UserConfig)
 	if !ok {
@@ -35,23 +35,12 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 	}
 
 	c := client.New(u.ServerURL)
+	if u.TokenInfo.IsExpired() {
+		return nil, errors.New("session expired: run govfs login")
+	}
+	c.SetToken(u.TokenInfo.Token)
 	if _, err := c.Auth().Me(cmd.Context()); err != nil {
-		if !u.TokenInfo.IsExpired() {
-			c.SetToken(u.TokenInfo.Token)
-		}
-
-		t, err := c.Auth().Login(cmd.Context(), u.Username, u.Password)
-		if err != nil {
-			return nil, err
-		}
-
-		c.SetToken(t.Token)
-
-		u.TokenInfo = cli.TokenInfo{TokenRes: t}
-		err = cli.SetUserConfig(u)
-		if err != nil {
-			return nil, err
-		}
+		return nil, errors.New("session invalid: run govfs login")
 	}
 
 	return &Handler{

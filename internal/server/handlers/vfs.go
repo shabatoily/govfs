@@ -22,6 +22,7 @@ const headerXClientID = "X-Client-ID"
 type VfsHandler struct {
 	srv    *services.VfsService
 	broker *services.SSEBroker
+	user   string
 }
 
 // Prefix는 VfsHandler가 담당하는 라우트의 URL 접두사를 반환합니다.
@@ -453,8 +454,12 @@ func (h *VfsHandler) Restore(ctx fiber.Ctx) error {
 }
 
 // NewVfsHandler는 새로운 VfsHandler 인스턴스를 생성합니다.
-func NewVfsHandler(srv *services.VfsService, broker *services.SSEBroker) *VfsHandler {
-	return &VfsHandler{srv: srv, broker: broker}
+func NewVfsHandler(srv *services.VfsService, broker *services.SSEBroker, user ...string) *VfsHandler {
+	handler := &VfsHandler{srv: srv, broker: broker}
+	if len(user) > 0 {
+		handler.user = user[0]
+	}
+	return handler
 }
 
 // parseDstReq는 요청 구조체에서 대상 경로 정보(DstReq)를 파싱합니다.
@@ -500,6 +505,6 @@ func (h *VfsHandler) asyncExecute(clientID string, do func() (types.SSEMeta, err
 		if err != nil {
 			data.Message = err.Error()
 		}
-		h.broker.Publish(cid, data, 0)
+		h.broker.Publish(h.user, cid, data, 0)
 	}()
 }

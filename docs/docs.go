@@ -128,6 +128,20 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
+            "types.CreateUserReq": {
+                "properties": {
+                    "password": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/types.Role"
+                    },
+                    "username": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "types.DstReq": {
                 "properties": {
                     "name": {
@@ -180,6 +194,17 @@ const docTemplate = `{
                     }
                 },
                 "type": "object"
+            },
+            "types.Role": {
+                "enum": [
+                    "admin",
+                    "user"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "RoleAdmin",
+                    "RoleUser"
+                ]
             },
             "types.RotateKeyReq": {
                 "properties": {
@@ -264,10 +289,27 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
+            "types.StatusRes": {
+                "properties": {
+                    "openDrives": {
+                        "type": "integer"
+                    },
+                    "users": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
             "types.TokenRes": {
                 "properties": {
                     "expiresAt": {
                         "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/types.Role"
                     },
                     "token": {
                         "type": "string"
@@ -290,6 +332,43 @@ const docTemplate = `{
                     },
                     "meta": {
                         "$ref": "#/components/schemas/types.MetaRes"
+                    }
+                },
+                "type": "object"
+            },
+            "types.UpdateUserReq": {
+                "properties": {
+                    "disabled": {
+                        "type": "boolean"
+                    },
+                    "password": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/types.Role"
+                    }
+                },
+                "type": "object"
+            },
+            "types.UserRes": {
+                "properties": {
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "disabled": {
+                        "type": "boolean"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/types.Role"
+                    },
+                    "updatedAt": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
                     }
                 },
                 "type": "object"
@@ -352,6 +431,124 @@ const docTemplate = `{
         "url": ""
     },
     "paths": {
+        "/admin/status": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.StatusRes"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "사용자 시스템 상태",
+                "tags": [
+                    "admin"
+                ]
+            }
+        },
+        "/admin/users": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/types.UserRes"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "사용자 목록",
+                "tags": [
+                    "admin"
+                ]
+            },
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/types.CreateUserReq",
+                                "summary": "request",
+                                "description": "user"
+                            }
+                        }
+                    },
+                    "description": "user",
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.UserRes"
+                                }
+                            }
+                        },
+                        "description": "Created"
+                    }
+                },
+                "summary": "사용자 생성",
+                "tags": [
+                    "admin"
+                ]
+            }
+        },
+        "/admin/users/{id}": {
+            "patch": {
+                "parameters": [
+                    {
+                        "description": "user id",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/types.UpdateUserReq",
+                                "summary": "request",
+                                "description": "changes"
+                            }
+                        }
+                    },
+                    "description": "changes",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.UserRes"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "사용자 수정",
+                "tags": [
+                    "admin"
+                ]
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "사용자 자격 증명을 확인하고 JWT 토큰을 발급합니다.",

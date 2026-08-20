@@ -32,11 +32,8 @@ func (c *AuthClient) Login(ctx context.Context, username, password string) (type
 		return types.TokenRes{}, err
 	}
 
-	status := resp.StatusCode()
-	if status != fiber.StatusOK && status != fiber.StatusNoContent {
+	if resp.StatusCode() != fiber.StatusOK {
 		return types.TokenRes{}, fmt.Errorf("login failed: %v", resp.StatusCode())
-	} else if status == fiber.StatusNoContent {
-		return types.TokenRes{}, nil
 	}
 
 	var res types.TokenRes
@@ -45,7 +42,6 @@ func (c *AuthClient) Login(ctx context.Context, username, password string) (type
 	}
 
 	c.SetToken(res.Token)
-	// If no token but OK, it could be "Auth is disabled"
 	return res, nil
 }
 
@@ -58,11 +54,8 @@ func (c *AuthClient) Me(ctx context.Context) (types.TokenRes, error) {
 		return res, err
 	}
 
-	status := resp.StatusCode()
-	if status != fiber.StatusOK && status != fiber.StatusNoContent {
+	if resp.StatusCode() != fiber.StatusOK {
 		return res, fmt.Errorf("not logged in: %v", resp.StatusCode())
-	} else if status == fiber.StatusNoContent {
-		return res, nil
 	}
 
 	if err := resp.JSON(&res); err != nil {

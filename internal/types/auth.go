@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
+	"github.com/google/uuid"
 )
 
 const (
@@ -19,7 +20,9 @@ type LoginReq struct {
 
 // TokenRes는 인증 성공 시 발급되는 토큰 및 만료 정보를 담고 있는 구조체입니다.
 type TokenRes struct {
+	ID        uuid.UUID `json:"id"`
 	Username  string    `json:"username"`
+	Role      Role      `json:"role"`
 	Token     string    `json:"token"`
 	ExpiresAt time.Time `json:"expiresAt"`
 }
@@ -27,7 +30,9 @@ type TokenRes struct {
 // MarshalJSON은 TokenRes 구조체를 JSON으로 직렬화할 때 시간 형식을 RFC3339로 지정하여 반환합니다.
 func (tr *TokenRes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
+		"id":        tr.ID,
 		"username":  tr.Username,
+		"role":      tr.Role,
 		"token":     tr.Token,
 		"expiresAt": tr.ExpiresAt.Format(time.RFC3339),
 	})

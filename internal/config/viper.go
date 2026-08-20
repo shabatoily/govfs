@@ -79,7 +79,7 @@ func resolveConfig(cfg *Config) error {
 	if cfg.Server.Fiber.AppName == "" {
 		cfg.Server.Fiber.AppName = cfg.App.Name + " " + cfg.App.Version
 	}
-	if cfg.Server.Auth.Enabled && cfg.Server.Auth.JWT.Secret == "" {
+	if cfg.Server.Auth.JWT.Secret == "" {
 		b := make([]byte, 32)
 		if _, err := rand.Read(b); err != nil {
 			return err

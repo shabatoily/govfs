@@ -36,7 +36,6 @@ type (
 type UserConfig struct {
 	ServerURL string    // 서버 접속 주소
 	Username  string    // 사용자 이름
-	Password  string    // 사용자 비밀번호
 	TokenInfo TokenInfo // 발급받은 인증 토큰 정보
 }
 
@@ -76,16 +75,15 @@ func SetUserConfig(u *UserConfig) error {
 	}
 	defer file.Close()
 
-	//nolint:gosec // Password is not hardcoded, it is stored in the config file
 	return toml.NewEncoder(file).Encode(u)
 }
 
-func newConfigCommand() *cobra.Command {
+func newLoginCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "config",
-		Short: "Set configuration",
+		Use:   "login",
+		Short: "Log in to a govfs server",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return promptSetConfig(cmd, &UserConfig{})
+			return promptLogin(cmd)
 		},
 	}
 }
@@ -116,11 +114,7 @@ func newInfoCommand() *cobra.Command {
 			}
 
 			c := client.New(u.ServerURL)
-			t, err := c.Auth().Login(cmd.Context(), u.Username, u.Password)
-			if err != nil {
-				return err
-			}
-			c.SetToken(t.Token)
+			c.SetToken(u.TokenInfo.Token)
 
 			cfg, err := c.Config(cmd.Context())
 			if err != nil {
@@ -168,19 +162,17 @@ func NewRootCommand(appInfo *config.AppInfo) *cobra.Command {
 				}
 			}
 
-			if cmd.Name() == "config" || (cmd.Name() == "info" && !cmd.Flag("verbose").Changed) {
+			if cmd.Name() == "login" || (cmd.Name() == "info" && !cmd.Flag("verbose").Changed) {
 				cmd.SetContext(ctx)
 				return nil
 			}
 
 			u, err := GetUserConfig()
 			if err != nil {
-				if cmd.Name() == "mcp" {
-					return errors.New("config not found: run govfs config first")
-				}
-				if promptErr := promptSetConfig(cmd, &u); promptErr != nil {
-					return promptErr
-				}
+				return errors.New("not logged in: run govfs login")
+			}
+			if u.TokenInfo.IsExpired() {
+				return errors.New("session expired: run govfs login")
 			}
 
 			ctx = context.WithValue(ctx, ContextKeyUserConfig{}, &u)
@@ -195,13 +187,14 @@ func NewRootCommand(appInfo *config.AppInfo) *cobra.Command {
 
 	root.AddCommand(newInfoCommand())
 
-	root.AddCommand(newConfigCommand())
+	root.AddCommand(newLoginCommand())
 
 	return root
 }
 
-func promptSetConfig(cmd *cobra.Command, u *UserConfig) error {
+func promptLogin(cmd *cobra.Command) error {
 	reader := bufio.NewReader(os.Stdin)
+	u := UserConfig{}
 
 	cmd.Print("🔗 \033[36mEnter server URL:\033[0m\n   ")
 	u.ServerURL, _ = reader.ReadString('\n')
@@ -221,8 +214,8 @@ func promptSetConfig(cmd *cobra.Command, u *UserConfig) error {
 		return err
 	}
 
-	u.Password, _ = reader.ReadString('\n')
-	u.Password = strings.TrimSpace(u.Password)
+	password, _ := reader.ReadString('\n')
+	password = strings.TrimSpace(password)
 
 	err = enableEcho(cmd.Context())
 	if err != nil {
@@ -230,19 +223,18 @@ func promptSetConfig(cmd *cobra.Command, u *UserConfig) error {
 	}
 
 	cmd.Println()
-	cmd.Println("\n✨ \033[1m[Input Config]\033[0m")
-	cmd.Println("   \033[34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m")
-	cmd.Printf("   📍 \033[1mServer URL\033[0m : %s\n", u.ServerURL)
-	cmd.Printf("   🆔 \033[1mUsername\033[0m   : %s\n", u.Username)
-	cmd.Println("   \033[34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m")
-	cmd.Println()
-
-	err = SetUserConfig(u)
+	c := client.New(u.ServerURL)
+	token, err := c.Auth().Login(cmd.Context(), u.Username, password)
+	if err != nil {
+		return err
+	}
+	u.TokenInfo = TokenInfo{TokenRes: token}
+	err = SetUserConfig(&u)
 	if err != nil {
 		return err
 	}
 
-	cmd.Println("✅ \033[32mConfig saved successfully!\033[0m")
+	cmd.Println("✅ \033[32mLogin successful!\033[0m")
 
 	return nil
 }

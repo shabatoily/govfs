@@ -21,11 +21,12 @@ import (
 	vfs "github.com/shabatoily/govfs"
 	"github.com/shabatoily/govfs/internal/config"
 	"github.com/shabatoily/govfs/internal/server/middlewares/swaggo"
+	"github.com/shabatoily/govfs/internal/server/services"
 	"github.com/shabatoily/govfs/internal/types"
 )
 
 // Register는 애플리케이션 전반에 걸쳐 사용되는 공통 미들웨어들을 등록합니다.
-func Register(app *fiber.App, cfg *config.ServerConfig) {
+func Register(app *fiber.App, cfg *config.ServerConfig, users *services.UserStore) {
 	// 복구(recover) 미들웨어 추가
 	app.Use(recover.New(recover.Config{
 		EnableStackTrace: true,
@@ -64,27 +65,28 @@ func Register(app *fiber.App, cfg *config.ServerConfig) {
 
 	// JWT 인증 미들웨어 초기화
 	jwtAuth := JWTAuthMiddleware(cfg.Auth)
+	userAuth := UserMiddleware(users)
 
 	// debug/vars 라우트 활성화 여부 확인
 	if cfg.Middlewares.Expvar {
-		app.All("/debug/vars", jwtAuth)
+		app.All("/debug/vars", jwtAuth, userAuth, AdminOnly)
 		app.Use(expvar.New()).Name("debug.vars")
 	}
 
 	// debug/pprof 라우트 활성화 여부 확인
 	if cfg.Middlewares.Pprof {
-		app.All("/debug/pprof/*", jwtAuth)
+		app.All("/debug/pprof/*", jwtAuth, userAuth, AdminOnly)
 		app.Use(pprof.New()).Name("debug.pprof")
 	}
 
 	// 환경 변수 노출 라우트 활성화 여부 확인
 	if cfg.Middlewares.Envvar {
-		app.Get("/expose/envvars", jwtAuth, envvar.New()).Name("envvars")
+		app.Get("/expose/envvars", jwtAuth, userAuth, AdminOnly, envvar.New()).Name("envvars")
 	}
 
 	// 설정 정보 노출 라우트 활성화 여부 확인
 	if cfg.Middlewares.Config {
-		app.Get("/config", jwtAuth, func(c fiber.Ctx) error {
+		app.Get("/config", jwtAuth, userAuth, AdminOnly, func(c fiber.Ctx) error {
 			res := types.ConfigRes{
 				AppName:      cfg.Fiber.AppName,
 				ServerConfig: *cfg,
@@ -99,14 +101,14 @@ func Register(app *fiber.App, cfg *config.ServerConfig) {
 
 	// 라우트 정보 노출 활성화 여부 확인
 	if cfg.Middlewares.Route {
-		app.Get("/routes", jwtAuth, func(c fiber.Ctx) error {
+		app.Get("/routes", jwtAuth, userAuth, AdminOnly, func(c fiber.Ctx) error {
 			return c.Status(fiber.StatusOK).JSON(app.GetRoutes())
 		}).Name("routes")
 	}
 
 	// Swagger UI 활성화 여부 확인
 	if cfg.Middlewares.Swagger {
-		app.Get("/swagger/*", jwtAuth, swaggo.New(swaggo.Config{
+		app.Get("/swagger/*", jwtAuth, userAuth, AdminOnly, swaggo.New(swaggo.Config{
 			Title: cfg.Fiber.AppName,
 		}))
 	}

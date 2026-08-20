@@ -115,6 +115,8 @@ CLI 바이너리(`govfs-cli-***`)를 사용하여 실행 중인 서버를 제어
 
 #### 기본 명령어 (Root Level)
 
+- `govfs-cli login`: 서버에 로그인하고 access token 저장
+
 - **데이터 관리**
   - `govfs-cli backup`: VFS 데이터베이스 백업
   - `govfs-cli restore`: 백업 파일에서 복원
@@ -147,14 +149,14 @@ accessLogPath = "./logs/access-log.log"
 # log-level: debug=-4, info=0, warn=4, error=8
 level = 0
 
-[server.basicAuth]
-# Basic Auth 사용 여부
-enabled = false
-# Basic Auth 사용 시 사용자 이름
-username = "${BASIC_AUTH_USERNAME}"
-# Basic Auth 사용 시 사용자 비밀번호 (해시된 문자열 필요)
-# ref: https://docs.gofiber.io/middleware/basicauth#password-hashes
-password = "${BASIC_AUTH_PASSWORD}"
+[server.auth.admin]
+# 사용자 DB가 비어 있을 때 생성할 최초 관리자
+username = "${SERVER_AUTH_ADMIN_USERNAME}"
+password = "${SERVER_AUTH_ADMIN_PASSWORD}"
+
+[server.auth.jwt]
+secret = "${SERVER_AUTH_JWT_SECRET}"
+exp = "24h"
 
 [vfs.logger]
 path = "./logs/vfs.log"
@@ -166,7 +168,7 @@ level = 8
 type = "badger"
 
 [vfs.driver.badger]
-path = "./data"
+path = "./drives"
 encryptKeyRotateDuration = "24h"
 
 [vfs.driver.localstorage]

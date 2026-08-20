@@ -8,20 +8,20 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/shabatoily/govfs/internal/config"
+	"github.com/shabatoily/govfs/internal/server/middlewares"
+	"github.com/shabatoily/govfs/internal/server/services"
 	"github.com/shabatoily/govfs/internal/types"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // AuthHandler는 사용자 인증 관련 요청을 처리합니다.
 type AuthHandler struct {
-	cfg config.AuthConfig
+	cfg   config.AuthConfig
+	users *services.UserStore
 }
 
 // NewAuthHandler는 새로운 AuthHandler 인스턴스를 생성합니다.
-func NewAuthHandler(cfg config.AuthConfig) *AuthHandler {
-	return &AuthHandler{
-		cfg: cfg,
-	}
+func NewAuthHandler(cfg config.AuthConfig, users *services.UserStore) *AuthHandler {
+	return &AuthHandler{cfg: cfg, users: users}
 }
 
 // Login은 사용자 로그인을 처리합니다.
@@ -37,26 +37,19 @@ func NewAuthHandler(cfg config.AuthConfig) *AuthHandler {
 // @Router       /auth/login [post]
 // Login은 사용자 로그인을 처리하고 JWT 토큰을 발급합니다.
 func (h *AuthHandler) Login(c fiber.Ctx) error {
-	if !h.cfg.Enabled {
-		return c.SendStatus(fiber.StatusNoContent)
-	}
-
 	var req types.LoginReq
 	if err := c.Bind().JSON(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	if req.Username != h.cfg.Username {
-		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(h.cfg.Password), []byte(req.Password)); err != nil {
+	user, err := h.users.Authenticate(req.Username, req.Password)
+	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
 	// 토큰 생성
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": h.cfg.Username,
+		"sub": user.ID.String(),
 		"exp": float64(time.Now().Add(h.cfg.JWT.Exp).Unix()),
 	})
 
@@ -77,7 +70,9 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	})
 
 	return c.Status(fiber.StatusOK).JSON(types.TokenRes{
-		Username:  h.cfg.Username,
+		ID:        user.ID,
+		Username:  user.Username,
+		Role:      user.Role,
 		Token:     t,
 		ExpiresAt: exp,
 	})
@@ -92,10 +87,6 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 // @Router       /auth/logout [post]
 // Logout은 사용자 로그아웃을 처리하고 클라이언트의 토큰 쿠키를 삭제합니다.
 func (h *AuthHandler) Logout(c fiber.Ctx) error {
-	if !h.cfg.Enabled {
-		return c.SendStatus(fiber.StatusNoContent)
-	}
-
 	c.Cookie(&fiber.Cookie{
 		Name:     types.CookieAcessToken,
 		Value:    "",
@@ -117,18 +108,10 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 // @Router       /auth/me [get]
 // IsLoggedIn은 현재 사용자의 로그인 상태를 확인하고 정보를 반환합니다.
 func (h *AuthHandler) IsLoggedIn(c fiber.Ctx) error {
-	if !h.cfg.Enabled {
-		return c.SendStatus(fiber.StatusNoContent)
-	}
-
 	token := jwtware.FromContext(c)
-	if token == nil {
+	user, ok := middlewares.CurrentUser(c)
+	if token == nil || !ok {
 		return fiber.ErrUnauthorized
-	}
-
-	sub, err := token.Claims.GetSubject()
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	exp, err := token.Claims.GetExpirationTime()
@@ -137,7 +120,9 @@ func (h *AuthHandler) IsLoggedIn(c fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(types.TokenRes{
-		Username:  sub,
+		ID:        user.ID,
+		Username:  user.Username,
+		Role:      user.Role,
 		Token:     token.Raw,
 		ExpiresAt: exp.Time,
 	})

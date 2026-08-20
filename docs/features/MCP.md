@@ -65,7 +65,7 @@ MCP 클라이언트는 기존 CLI 바이너리를 하위 프로세스로 실행�
 }
 ```
 
-`govfs mcp`는 기존 `~/.govfs/config`의 서버 주소와 인증 정보를 재사용한다. stdio는 MCP 메시지 전용이므로 다음 규칙을 지킨다.
+`govfs mcp`는 `govfs login`이 `~/.govfs/config`에 저장한 서버 주소와 access token을 재사용한다. stdio는 MCP 메시지 전용이므로 다음 규칙을 지킨다.
 
 - stdout에는 MCP 프로토콜 메시지만 출력한다.
 - 로그와 진단 메시지는 stderr에 출력한다.

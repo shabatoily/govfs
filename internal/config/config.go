@@ -50,12 +50,15 @@ type FiberLoggerConfig struct {
 	AccessLogPath string         `json:"accessLogPath"`
 }
 
-// AuthConfig는 서버 인증 기능의 사용 여부와 계정, JWT 암호화 정보를 설정합니다.
+// AuthConfig는 최초 관리자와 JWT 암호화 정보를 설정합니다.
 type AuthConfig struct {
-	Enabled  bool      `json:"enabled"`
-	Username string    `json:"username"`
-	Password string    `json:"-"`
-	JWT      JWTConfig `json:"jwt"`
+	Admin AdminConfig `json:"admin"`
+	JWT   JWTConfig   `json:"jwt"`
+}
+
+type AdminConfig struct {
+	Username string `json:"username"`
+	Password string `json:"-"`
 }
 
 // MiddlewareConfig는 서버에서 제공하는 부가 기능(디버그, 환경 변수 등) 미들웨어 활성화 상태를 제어합니다.

@@ -45,6 +45,11 @@
   - **Core Interface**: `vfs.VFS` 인터페이스를 통한 표준화된 파일 작업.
   - **Pluggable Drivers**: `config.toml` 설정을 통해 스토리지 백엔드 교체 가능 (`badger`, `localstorage`).
   - **Meta Handling**: 파일 메타데이터(크기, 수정 시간, MIME 타입 등) 자동 관리.
+- **사용자 격리**
+  - 관리자와 일반 사용자 역할을 제공한다.
+  - 계정은 시스템 BadgerDB에 저장한다.
+  - 각 사용자는 UUID 경로의 독립된 BadgerDB 드라이브를 사용한다.
+  - 관리자는 다른 사용자의 파일에 접근할 수 없다.
 - **웹 서버 (API)**
   - **Framework**: `gofiber/fiber` v3 기반의 고성능 웹 서버.
   - **API Endpoints**:
@@ -153,6 +158,10 @@ flowchart TB
 `vfs.VFS` 인터페이스는 파일 시스템의 모든 동작을 추상화합니다. `drivers.New(config)` 팩토리 함수를 통해 설정에 맞는 구현체를 주입받습니다.
 
 `internal/cloud`에는 향후 연동을 위한 구현이 남아 있지만 서버 API, API 클라이언트, CLI 및 설정에는 연결되지 않는다.
+
+### 4.3 사용자 드라이브
+
+인증 미들웨어는 JWT의 사용자 UUID를 현재 사용자 레코드와 대조한다. `DriveManager`는 해당 UUID의 BadgerDB를 지연 생성하여 VFS 요청에 주입한다. 사용자 관리 API는 관리자 역할에만 열리지만 파일 API는 역할과 관계없이 현재 사용자의 드라이브만 선택한다.
 
 ### 4.3 스토리지 엔진 (Storage Engines)
 
