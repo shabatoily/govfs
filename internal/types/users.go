@@ -39,10 +39,9 @@ type UpdateUserReq struct {
 }
 
 type StatusRes struct {
-	Users      int                  `json:"users"`
-	OpenDrives int                  `json:"openDrives"`
-	System     StorageStatRes       `json:"system"`
-	Drives     []UserDriveStatusRes `json:"drives"`
+	Users      int            `json:"users"`
+	OpenDrives int            `json:"openDrives"`
+	System     StorageStatRes `json:"system"`
 }
 
 type StorageStatRes struct {
@@ -67,4 +66,11 @@ type UserEventRes struct {
 	Action    string    `json:"action"`
 	Status    int       `json:"status"`
 	CreatedAt time.Time `json:"createdAt"`
+}
+
+type UserEventPageRes struct {
+	Items    []UserEventRes `json:"items"`
+	Page     int            `json:"page"`
+	PageSize int            `json:"pageSize"`
+	Total    int            `json:"total"`
 }

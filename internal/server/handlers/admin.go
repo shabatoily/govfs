@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -104,28 +105,55 @@ func (h *AdminHandler) Status(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	drives := make([]types.UserDriveStatusRes, len(list))
-	for i, user := range list {
-		stats, wasOpen, err := h.drives.Stats(user.ID)
-		if err != nil {
-			return err
-		}
-		sseCount := len(h.broker.Clients(user.ID.String()))
-		drives[i] = types.UserDriveStatusRes{
-			UserID: user.ID, Username: user.Username, Open: wasOpen,
-			Online: sseCount > 0, SSECount: sseCount, Items: stats.Items, Size: stats.Size,
-		}
-	}
-	return c.JSON(types.StatusRes{Users: len(list), OpenDrives: h.drives.OpenCount(), System: system, Drives: drives})
+	return c.JSON(types.StatusRes{Users: len(list), OpenDrives: h.drives.OpenCount(), System: system})
 }
 
-// Events는 최근 사용자 이벤트를 반환합니다.
-// @Summary 최근 사용자 이벤트
+// UserStatus는 한 사용자의 드라이브와 연결 상태를 반환합니다.
+// @Summary 사용자 드라이브 상태
+// @Tags admin
+// @Param id path string true "user id"
+// @Success 200 {object} types.UserDriveStatusRes
+// @Router /admin/users/{id}/status [get]
+func (h *AdminHandler) UserStatus(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid user id")
+	}
+	user, err := h.users.ByID(id)
+	if errors.Is(err, services.ErrNotFound) {
+		return fiber.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	stats, wasOpen, err := h.drives.Stats(user.ID)
+	if err != nil {
+		return err
+	}
+	sseCount := len(h.broker.Clients(user.ID.String()))
+	return c.JSON(types.UserDriveStatusRes{
+		UserID: user.ID, Username: user.Username, Open: wasOpen,
+		Online: sseCount > 0, SSECount: sseCount, Items: stats.Items, Size: stats.Size,
+	})
+}
+
+// Events는 사용자 이벤트를 페이지 단위로 반환합니다.
+// @Summary 사용자 이벤트
 // @Tags admin
 // @Param userId query string false "user id"
-// @Success 200 {array} types.UserEventRes
+// @Param page query int false "page" default(1)
+// @Param pageSize query int false "page size" default(20) maximum(100)
+// @Success 200 {object} types.UserEventPageRes
 // @Router /admin/events [get]
 func (h *AdminHandler) Events(c fiber.Ctx) error {
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid page")
+	}
+	pageSize, err := strconv.Atoi(c.Query("pageSize", "20"))
+	if err != nil || pageSize < 1 || pageSize > 100 {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid page size")
+	}
 	var userID *uuid.UUID
 	if value := c.Query("userId"); value != "" {
 		id, err := uuid.Parse(value)
@@ -134,7 +162,7 @@ func (h *AdminHandler) Events(c fiber.Ctx) error {
 		}
 		userID = &id
 	}
-	events, err := h.users.ListEvents(100, userID)
+	events, total, err := h.users.ListEvents(page, pageSize, userID)
 	if err != nil {
 		return err
 	}
@@ -142,5 +170,27 @@ func (h *AdminHandler) Events(c fiber.Ctx) error {
 	for i, event := range events {
 		res[i] = types.UserEventRes(event)
 	}
-	return c.JSON(res)
+	return c.JSON(types.UserEventPageRes{Items: res, Page: page, PageSize: pageSize, Total: total})
+}
+
+// ClearUserEvents는 한 사용자의 이벤트를 모두 삭제합니다.
+// @Summary 사용자 이벤트 전체 삭제
+// @Tags admin
+// @Param id path string true "user id"
+// @Success 204
+// @Router /admin/users/{id}/events [delete]
+func (h *AdminHandler) ClearUserEvents(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid user id")
+	}
+	if _, err := h.users.ByID(id); errors.Is(err, services.ErrNotFound) {
+		return fiber.ErrNotFound
+	} else if err != nil {
+		return err
+	}
+	if _, err := h.users.ClearEvents(id); err != nil {
+		return err
+	}
+	return c.SendStatus(fiber.StatusNoContent)
 }

@@ -8,7 +8,7 @@
     import ConnectionStatus from "./lib/components/ConnectionStatus.svelte";
     import Login from "./lib/components/Login.svelte";
     import AdminUsers from "./lib/components/AdminUsers.svelte";
-	import AdminStatus from "./lib/components/AdminStatus.svelte";
+    import AdminStatus from "./lib/components/AdminStatus.svelte";
     import { appState } from "./lib/state.svelte";
     import vfs from "./lib/vfs";
     import sseClient, { type SSEMessage } from "./lib/sse";
@@ -131,6 +131,11 @@
     <Sidebar />
 
     <div class="flex-1 flex flex-col min-w-0">
+        {#if appState.adminPage === "users"}
+            <AdminUsers />
+        {:else if appState.adminPage === "server"}
+            <AdminStatus />
+        {:else}
         <!-- Main Editor Area -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
@@ -176,6 +181,7 @@
         <div class="h-48 flex-shrink-0">
             <Terminal />
         </div>
+        {/if}
 
         <!-- Status Bar Footer -->
         <div
@@ -186,16 +192,4 @@
     </div>
 
     <Toast />
-    {#if appState.currentUser?.role === "admin"}
-		<div class="fixed top-2 right-2 z-40 flex gap-2">
-			<button class="bg-gray-700 hover:bg-gray-600 rounded px-3 py-1 text-sm" onclick={() => appState.showServerStatus = true}>Server</button>
-			<button class="bg-gray-700 hover:bg-gray-600 rounded px-3 py-1 text-sm" onclick={() => appState.showUserAdmin = true}>Users</button>
-		</div>
-    {/if}
-    {#if appState.showUserAdmin}
-        <AdminUsers />
-    {/if}
-	{#if appState.showServerStatus}
-		<AdminStatus />
-	{/if}
 </div>

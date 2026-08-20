@@ -36,11 +36,11 @@ func TestStoreUserLifecycle(t *testing.T) {
 	if err := store.RecordEvent(admin, "vfs.create", 202); err != nil {
 		t.Fatal(err)
 	}
-	events, err := store.ListEvents(1, nil)
+	events, total, err := store.ListEvents(1, 1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(events) != 1 || events[0].Action != "vfs.create" {
+	if len(events) != 1 || total != 2 || events[0].Action != "vfs.create" {
 		t.Fatalf("최근 이벤트 = %#v", events)
 	}
 	member, err := store.Create("member", "password", types.RoleUser)
@@ -50,9 +50,16 @@ func TestStoreUserLifecycle(t *testing.T) {
 	if err := store.RecordEvent(member, "auth.login", 200); err != nil {
 		t.Fatal(err)
 	}
-	events, err = store.ListEvents(10, &admin.ID)
+	events, total, err = store.ListEvents(1, 10, &admin.ID)
 	if err != nil || len(events) != 2 {
 		t.Fatalf("사용자 이벤트 = %#v, %v", events, err)
+	}
+	if deleted, err := store.ClearEvents(admin.ID); err != nil || deleted != 2 {
+		t.Fatalf("이벤트 삭제 = %d, %v", deleted, err)
+	}
+	events, total, err = store.ListEvents(1, 10, &admin.ID)
+	if err != nil || total != 0 || len(events) != 0 {
+		t.Fatalf("삭제 후 이벤트 = %#v, %d, %v", events, total, err)
 	}
 	stats, err := store.Stats()
 	if err != nil || stats.Items == 0 || stats.Size == 0 {

@@ -7,6 +7,8 @@
         Home,
         LogOut,
         Trash2,
+        ServerCog,
+        Users,
     } from "lucide-svelte";
     import { appState } from "../state.svelte";
     import vfs, { type FileInfo } from "../vfs";
@@ -259,7 +261,7 @@
     <div
         class="h-10 border-b border-gray-700 flex items-center px-4 justify-between bg-gray-800"
     >
-        <span class="text-xs font-bold text-gray-400">EXPLORER</span>
+        <button class="text-xs font-bold text-gray-400 hover:text-white" onclick={() => appState.adminPage = null}>EXPLORER</button>
         <div class="flex gap-1">
             <button
                 onclick={goHome}
@@ -329,6 +331,24 @@
             </div>
         {/if}
     </div>
+
+    {#if appState.currentUser?.role === "admin"}
+        <div class="border-t border-gray-700 bg-gray-800 p-2">
+            <div class="mb-1 px-2 text-[10px] font-bold tracking-wider text-gray-500">ADMIN</div>
+            <button
+                onclick={() => appState.adminPage = "server"}
+                class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white"
+            >
+                <ServerCog size={15} /> Server status
+            </button>
+            <button
+                onclick={() => appState.adminPage = "users"}
+                class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white"
+            >
+                <Users size={15} /> User management
+            </button>
+        </div>
+    {/if}
 
     <!-- Path Status -->
     <div

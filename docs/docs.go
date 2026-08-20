@@ -291,13 +291,6 @@ const docTemplate = `{
             },
             "types.StatusRes": {
                 "properties": {
-                    "drives": {
-                        "items": {
-                            "$ref": "#/components/schemas/types.UserDriveStatusRes"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
-                    },
                     "openDrives": {
                         "type": "integer"
                     },
@@ -393,6 +386,27 @@ const docTemplate = `{
                     },
                     "username": {
                         "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "types.UserEventPageRes": {
+                "properties": {
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/types.UserEventRes"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pageSize": {
+                        "type": "integer"
+                    },
+                    "total": {
+                        "type": "integer"
                     }
                 },
                 "type": "object"
@@ -511,6 +525,25 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    {
+                        "description": "page",
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "default": 1,
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "page size",
+                        "in": "query",
+                        "name": "pageSize",
+                        "schema": {
+                            "default": 20,
+                            "maximum": 100,
+                            "type": "integer"
+                        }
                     }
                 ],
                 "responses": {
@@ -518,17 +551,14 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "items": {
-                                        "$ref": "#/components/schemas/types.UserEventRes"
-                                    },
-                                    "type": "array"
+                                    "$ref": "#/components/schemas/types.UserEventPageRes"
                                 }
                             }
                         },
                         "description": "OK"
                     }
                 },
-                "summary": "최근 사용자 이벤트",
+                "summary": "사용자 이벤트",
                 "tags": [
                     "admin"
                 ]
@@ -647,6 +677,61 @@ const docTemplate = `{
                     }
                 },
                 "summary": "사용자 수정",
+                "tags": [
+                    "admin"
+                ]
+            }
+        },
+        "/admin/users/{id}/events": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "user id",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                },
+                "summary": "사용자 이벤트 전체 삭제",
+                "tags": [
+                    "admin"
+                ]
+            }
+        },
+        "/admin/users/{id}/status": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "user id",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.UserDriveStatusRes"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "사용자 드라이브 상태",
                 "tags": [
                     "admin"
                 ]

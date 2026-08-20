@@ -87,31 +87,31 @@ func TestUserSystemAdminBoundary(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer eventsRes.Body.Close()
-	var events []types.UserEventRes
-	if err := json.NewDecoder(eventsRes.Body).Decode(&events); err != nil {
+	var eventPage types.UserEventPageRes
+	if err := json.NewDecoder(eventsRes.Body).Decode(&eventPage); err != nil {
 		t.Fatal(err)
 	}
 	found := false
-	for _, event := range events {
+	for _, event := range eventPage.Items {
 		if event.Username == "admin" && event.Action == "admin.update-user" && event.Status == http.StatusOK {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Fatalf("사용자 수정 이벤트가 없습니다: %#v", events)
+		t.Fatalf("사용자 수정 이벤트가 없습니다: %#v", eventPage.Items)
 	}
-	statusRes, err := app.Test(request(t, http.MethodGet, "/admin/status", nil, adminToken))
+	statusRes, err := app.Test(request(t, http.MethodGet, "/admin/users/"+member.ID.String()+"/status", nil, adminToken))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer statusRes.Body.Close()
-	var status types.StatusRes
+	var status types.UserDriveStatusRes
 	if err := json.NewDecoder(statusRes.Body).Decode(&status); err != nil {
 		t.Fatal(err)
 	}
-	if len(status.Drives) != 2 || status.Drives[0].Online || status.Drives[1].Online {
-		t.Fatalf("사용자 드라이브 상태 = %#v", status.Drives)
+	if status.UserID != member.ID || status.Online || status.SSECount != 0 {
+		t.Fatalf("사용자 드라이브 상태 = %#v", status)
 	}
 }
 

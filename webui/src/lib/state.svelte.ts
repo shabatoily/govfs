@@ -26,8 +26,7 @@ export class AppState {
     isLoggedIn = $state<boolean>(false);
     authInitialized = $state<boolean>(false);
     currentUser = $state<CurrentUser | null>(null);
-    showUserAdmin = $state<boolean>(false);
-	showServerStatus = $state<boolean>(false);
+    adminPage = $state<"server" | "users" | null>(null);
 
     setClientId(id: string) {
         this.clientId = id;
@@ -61,6 +60,7 @@ export class AppState {
         });
         this.isLoggedIn = false;
         this.currentUser = null;
+		this.adminPage = null;
         sseClient.disconnect();
     }
 

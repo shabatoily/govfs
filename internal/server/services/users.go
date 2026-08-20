@@ -182,15 +182,18 @@ func (s *UserStore) RecordEvent(user User, action string, status int) error {
 	return s.db.Update(func(txn *badgerdb.Txn) error { return txn.Set(key, data) })
 }
 
-func (s *UserStore) ListEvents(limit int, userID *uuid.UUID) ([]UserEvent, error) {
-	events := make([]UserEvent, 0, limit)
+func (s *UserStore) ListEvents(page, pageSize int, userID *uuid.UUID) ([]UserEvent, int, error) {
+	events := make([]UserEvent, 0, pageSize)
+	total := 0
+	start := (page - 1) * pageSize
 	opts := badgerdb.DefaultIteratorOptions
 	opts.Reverse = true
+	// ponytail: 전체 개수 계산을 위해 순회합니다. 이벤트가 커지면 cursor와 별도 count key로 교체합니다.
 	err := s.db.View(func(txn *badgerdb.Txn) error {
 		it := txn.NewIterator(opts)
 		defer it.Close()
 		seek := append(append([]byte(nil), eventPrefix...), 0xff)
-		for it.Seek(seek); it.ValidForPrefix(eventPrefix) && len(events) < limit; it.Next() {
+		for it.Seek(seek); it.ValidForPrefix(eventPrefix); it.Next() {
 			if err := it.Item().Value(func(data []byte) error {
 				var event UserEvent
 				if err := json.Unmarshal(data, &event); err != nil {
@@ -199,7 +202,10 @@ func (s *UserStore) ListEvents(limit int, userID *uuid.UUID) ([]UserEvent, error
 				if userID != nil && event.UserID != *userID {
 					return nil
 				}
-				events = append(events, event)
+				if total >= start && len(events) < pageSize {
+					events = append(events, event)
+				}
+				total++
 				return nil
 			}); err != nil {
 				return err
@@ -207,7 +213,39 @@ func (s *UserStore) ListEvents(limit int, userID *uuid.UUID) ([]UserEvent, error
 		}
 		return nil
 	})
-	return events, err
+	return events, total, err
+}
+
+func (s *UserStore) ClearEvents(userID uuid.UUID) (int, error) {
+	deleted := 0
+	err := s.db.Update(func(txn *badgerdb.Txn) error {
+		keys := make([][]byte, 0)
+		it := txn.NewIterator(badgerdb.DefaultIteratorOptions)
+		for it.Seek(eventPrefix); it.ValidForPrefix(eventPrefix); it.Next() {
+			if err := it.Item().Value(func(data []byte) error {
+				var event UserEvent
+				if err := json.Unmarshal(data, &event); err != nil {
+					return err
+				}
+				if event.UserID == userID {
+					keys = append(keys, it.Item().KeyCopy(nil))
+				}
+				return nil
+			}); err != nil {
+				it.Close()
+				return err
+			}
+		}
+		it.Close()
+		for _, key := range keys {
+			if err := txn.Delete(key); err != nil {
+				return err
+			}
+		}
+		deleted = len(keys)
+		return nil
+	})
+	return deleted, err
 }
 
 func (s *UserStore) Stats() (types.StorageStatRes, error) {

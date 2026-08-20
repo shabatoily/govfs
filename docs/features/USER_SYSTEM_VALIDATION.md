@@ -129,15 +129,20 @@ curl -N http://localhost:3000/sse/subscribe \
 
 브라우저에서 `http://localhost:3000`에 관리자로 로그인한다.
 
-- `Server` 화면에서 시스템 DB와 사용자 드라이브의 items, 논리 사용량을 확인한다.
-- `member`가 `Online (1)` 이상으로 표시되는지 확인한다.
-- `member` 상세에서 Badger drive가 `Open`, SSE가 `Online`인지 확인한다.
+- 사이드바의 `ADMIN > Server status`로 이동해 시스템 DB의 items, 논리 사용량을 확인한다.
+- `ADMIN > User management`로 이동해 `member` 상세를 연다.
+- `member` 상세에서 Badger drive가 `Open`, SSE가 `Online (1)` 이상인지 확인한다.
 - SSE용 `curl`을 종료한 뒤 상태 화면을 다시 열어 `Offline`으로 바뀌는지 확인한다.
 - `config`, `routes`, `expvar`, `pprof` 링크가 열리는지 확인한다.
 
 ## 5. 이벤트와 계정 비활성화
 
 관리자 화면의 사용자 상세에서 로그인과 VFS 변경 이벤트가 표시되는지 확인한다. 이벤트에는 사용자, 라우트 action, HTTP 상태와 시각만 있어야 하며 파일 경로나 요청 본문은 없어야 한다.
+
+- `All activity`에서 전체 이벤트의 Previous/Next 페이지 이동을 확인한다.
+- 사용자 상세에서는 해당 사용자의 이벤트만 표시되는지 확인한다.
+- `Clear activity`는 확인창 이후 해당 사용자의 전체 이벤트만 삭제해야 한다.
+- 이벤트 개별 생성·수정·삭제 UI나 API가 노출되지 않아야 한다.
 
 일반 사용자를 비활성화한다.
 
@@ -179,7 +184,7 @@ sed -n '1,120p' /tmp/govfs-cli-test/.govfs/config
 
 1. 새 설정으로 서버를 한 번 시작해 최초 관리자만 생성한다.
 2. `/admin/users`에서 최초 관리자 UUID를 확인한다.
-3. `/admin/status`나 VFS API를 호출하지 않고 서버를 중지한다.
+3. 해당 관리자의 사용자 상세 상태 API나 VFS API를 호출하지 않고 서버를 중지한다.
 4. `drives/{admin-uuid}`가 존재하지 않는지 확인한다. 존재하면 덮어쓰지 않는다.
 5. 기존 BadgerDB 디렉터리 전체를 `drives/{admin-uuid}`로 복사한다. `.secret`도 반드시 포함한다.
 6. 서버를 재시작하고 관리자 계정으로 목록, 파일 읽기, 새 파일 쓰기, backup과 restore를 확인한다.

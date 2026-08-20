@@ -17,6 +17,13 @@
         createdAt: string;
     }
 
+    interface EventPage {
+        items: UserEvent[];
+        page: number;
+        pageSize: number;
+        total: number;
+    }
+
 	interface DriveStatus {
 		userId: string;
 		open: boolean;
@@ -28,26 +35,55 @@
 
     let users = $state<User[]>([]);
 	let events = $state<UserEvent[]>([]);
-	let drives = $state<DriveStatus[]>([]);
+	let drive = $state<DriveStatus | null>(null);
 	let selected = $state<User | null>(null);
+	let activityVisible = $state(false);
+	let eventPage = $state(1);
+	let eventTotal = $state(0);
+	const eventPageSize = 20;
     let username = $state("");
     let password = $state("");
     let role = $state<"admin" | "user">("user");
     let error = $state("");
 
     async function load() {
-		const [usersRes, statusRes] = await Promise.all([fetch("/admin/users"), fetch("/admin/status")]);
+		const usersRes = await fetch("/admin/users");
 		if (!usersRes.ok) throw new Error(await usersRes.text());
-		if (!statusRes.ok) throw new Error(await statusRes.text());
 		users = await usersRes.json();
-		drives = (await statusRes.json()).drives;
     }
 
 	async function showDetails(user: User) {
 		selected = user;
-		const res = await fetch(`/admin/events?userId=${user.id}`);
+		activityVisible = true;
+		const statusRes = await fetch(`/admin/users/${user.id}/status`);
+		if (!statusRes.ok) throw new Error(await statusRes.text());
+		drive = await statusRes.json();
+		await loadEvents(1);
+	}
+
+	async function loadEvents(page: number) {
+		const user = selected ? `&userId=${selected.id}` : "";
+		const res = await fetch(`/admin/events?page=${page}&pageSize=${eventPageSize}${user}`);
 		if (!res.ok) throw new Error(await res.text());
-		events = await res.json();
+		const data: EventPage = await res.json();
+		events = data.items;
+		eventPage = data.page;
+		eventTotal = data.total;
+	}
+
+	async function showAllActivity() {
+		selected = null;
+		drive = null;
+		activityVisible = true;
+		await loadEvents(1);
+	}
+
+	async function clearEvents() {
+		if (!selected || !confirm(`Clear all activity for ${selected.username}?`)) return;
+		const res = await fetch(`/admin/users/${selected.id}/events`, { method: "DELETE" });
+		if (!res.ok) throw new Error(await res.text());
+		await loadEvents(1);
+		appState.addToast("Activity cleared", "success");
 	}
 
 	function formatBytes(value: number) {
@@ -92,12 +128,12 @@
     });
 </script>
 
-<div class="absolute inset-0 z-[150] bg-black/70 flex items-center justify-center">
-    <div class="w-[40rem] max-h-[80vh] overflow-auto rounded-xl bg-gray-800 border border-gray-700 p-6">
-        <div class="flex justify-between items-center mb-5">
-            <h2 class="text-xl font-bold text-white">Users</h2>
-            <button class="text-gray-300 hover:text-white" onclick={() => appState.showUserAdmin = false}>Close</button>
-        </div>
+<div class="h-full overflow-auto bg-gray-800 p-6">
+    <div class="mx-auto max-w-5xl">
+        <div class="mb-5 flex items-center justify-between">
+			<h2 class="text-xl font-bold text-white">User management</h2>
+			<button class="text-sm text-blue-300 hover:text-blue-200" onclick={() => showAllActivity().catch((e) => error = e.message)}>All activity</button>
+		</div>
         {#if error}<p class="mb-3 text-sm text-red-300">{error}</p>{/if}
         <form class="grid grid-cols-[1fr_1fr_auto_auto] gap-2 mb-5" onsubmit={(e) => { e.preventDefault(); createUser(); }}>
             <input class="bg-gray-900 rounded px-3 py-2" placeholder="Username" bind:value={username} required />
@@ -125,7 +161,6 @@
 			{/each}
 		</div>
 		{#if selected}
-		{@const drive = drives.find((item) => item.userId === selected?.id)}
 		<h3 class="mt-6 mb-2 font-semibold text-white">{selected.username} details</h3>
 		<div class="mb-3 grid grid-cols-4 gap-2 text-sm">
 			<div class="rounded bg-gray-900 p-3">Items<br /><strong>{drive?.items ?? 0}</strong></div>
@@ -133,7 +168,14 @@
 			<div class="rounded bg-gray-900 p-3">Badger drive<br /><strong class={drive?.open ? "text-green-300" : "text-gray-400"}>{drive?.open ? "Open" : "Closed"}</strong></div>
 			<div class="rounded bg-gray-900 p-3">SSE<br /><strong class={drive?.online ? "text-green-300" : "text-gray-400"}>{drive?.online ? `Online (${drive.sseCount})` : "Offline"}</strong></div>
 		</div>
-		<h3 class="mb-2 font-semibold text-white">Recent activity</h3>
+		{/if}
+		{#if activityVisible}
+		<div class="mt-6 mb-2 flex items-center justify-between">
+			<h3 class="font-semibold text-white">{selected ? `${selected.username} activity` : "All activity"}</h3>
+			{#if selected}
+				<button class="text-sm text-red-300 hover:text-red-200" onclick={() => clearEvents().catch((e) => error = e.message)}>Clear activity</button>
+			{/if}
+		</div>
 		<div class="space-y-1 text-sm">
 			{#each events as event}
 				<div class="grid grid-cols-[10rem_1fr_auto] gap-3 rounded bg-gray-900 px-3 py-2">
@@ -142,6 +184,11 @@
 					<span class={event.status < 400 ? "text-green-300" : "text-red-300"}>{event.status}</span>
 				</div>
 			{/each}
+		</div>
+		<div class="mt-3 flex items-center justify-end gap-3 text-sm">
+			<span class="text-gray-400">{eventTotal} events · page {eventPage}</span>
+			<button class="text-blue-300 disabled:text-gray-600" disabled={eventPage <= 1} onclick={() => loadEvents(eventPage - 1).catch((e) => error = e.message)}>Previous</button>
+			<button class="text-blue-300 disabled:text-gray-600" disabled={eventPage * eventPageSize >= eventTotal} onclick={() => loadEvents(eventPage + 1).catch((e) => error = e.message)}>Next</button>
 		</div>
 		{/if}
     </div>
