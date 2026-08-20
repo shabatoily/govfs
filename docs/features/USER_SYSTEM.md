@@ -11,6 +11,7 @@ govfs에 관리자와 일반 사용자 계정을 추가하고, 각 사용자가 
 초기 구현은 다음 기능만 포함한다.
 
 - 사용자 로그인과 현재 사용자 조회
+- CLI의 명시적인 로그인과 로컬 세션 저장
 - 관리자와 일반 사용자 역할
 - 관리자의 사용자 생성, 목록 조회, 수정 및 비활성화
 - 인증된 사용자별 독립 Badger VFS 선택
@@ -107,7 +108,7 @@ JWT의 역할 정보만 신뢰하지 않고 현재 사용자 레코드의 역할
 
 ## 초기 관리자
 
-사용자 DB가 비어 있을 때만 설정 또는 환경 변수의 기존 관리자 자격 증명으로 최초 관리자 한 명을 생성한다. 이미 사용자가 존재하면 부트스트랩 자격 증명은 무시한다.
+사용자 DB가 비어 있을 때만 `server.auth.admin` 설정으로 최초 관리자 한 명을 생성한다. 이미 사용자가 존재하면 관리자 설정의 자격 증명은 무시한다.
 
 부트스트랩 비밀번호가 없거나 올바른 bcrypt 해시를 만들 수 없으면 서버 시작을 실패시킨다. 운영 중 관리자 추가는 관리 API를 사용한다.
 
@@ -195,19 +196,63 @@ GET    /admin/status
 
 ## 설정 변경
 
-VFS의 기존 Badger 설정을 사용자 드라이브의 공통 템플릿으로 재사용한다. `path`는 단일 DB 경로가 아니라 드라이브 루트가 된다.
+인증은 사용자 드라이브를 선택하기 위한 필수 기능이므로 `server.auth.enabled`를 제거한다. 기존 `username`과 `password`는 일반 로그인 계정으로 오해하지 않도록 최초 관리자 전용 하위 설정으로 이동한다.
 
 ```toml
-[server.auth]
-enabled = true
-username = "${SERVER_AUTH_USERNAME}" # 최초 관리자 부트스트랩 전용
-password = "${SERVER_AUTH_PASSWORD}"
+[server.auth.admin]
+username = "${SERVER_AUTH_ADMIN_USERNAME}"
+password = "${SERVER_AUTH_ADMIN_PASSWORD}"
+
+[server.auth.jwt]
+secret = "${SERVER_AUTH_JWT_SECRET}"
+exp = "24h"
 
 [vfs.driver.badger]
 path = "~/.govfs/drives"
 ```
 
+`AuthConfig`에는 JWT 설정과 최초 관리자 설정만 둔다.
+
+```go
+type AuthConfig struct {
+    Admin AdminConfig `json:"admin"`
+    JWT   JWTConfig   `json:"jwt"`
+}
+
+type AdminConfig struct {
+    Username string `json:"username"`
+    Password string `json:"-"`
+}
+```
+
+서버는 인증 없이 실행되는 호환 모드를 제공하지 않는다. 기존 `SERVER_AUTH_USERNAME`, `SERVER_AUTH_PASSWORD` 및 `server.auth.enabled`는 제거하며 자동 변환이나 deprecated alias는 유지하지 않는다.
+
+VFS의 기존 Badger 설정은 사용자 드라이브의 공통 템플릿으로 재사용한다. `path`는 단일 DB 경로가 아니라 드라이브 루트가 된다.
+
 캐시 크기, GC 주기 및 암호화 키 회전 주기는 각 사용자 Badger 객체에 동일하게 적용한다. 사용자별 설정은 초기 범위에 포함하지 않는다.
+
+## CLI 로그인
+
+기존 `govfs config` 명령은 `govfs login`으로 교체한다. `login`은 입력값을 저장하는 데서 끝나지 않고 서버의 `/auth/login`을 호출하여 자격 증명을 즉시 검증한다.
+
+```text
+govfs login
+  Server URL: http://localhost:3000
+  Username: user
+  Password: ********
+```
+
+로그인에 성공하면 서버 URL, 사용자 이름, access token 및 만료 시간만 기존 로컬 설정 파일에 저장한다. 비밀번호는 로그인 요청에만 사용하고 파일에 저장하지 않는다. 로그인 실패 시 기존 세션 파일을 덮어쓰지 않는다.
+
+다른 CLI 명령의 동작은 다음과 같이 단순화한다.
+
+- 유효한 token이 있으면 그대로 사용한다.
+- token이 없거나 만료되었으면 대화형 로그인을 자동 실행하지 않고 `govfs login` 실행을 안내한다.
+- `govfs mcp`도 같은 세션을 사용하며 만료 시 즉시 오류를 반환한다.
+- 기존 `--config`, `-c` 플래그는 로컬 설정 경로를 지정하는 용도이므로 유지한다.
+- `govfs config` alias와 평문 비밀번호 기반 자동 로그인은 유지하지 않는다.
+
+초기 구현에서는 refresh token을 추가하지 않는다. access token 만료 후 사용자가 다시 `govfs login`을 실행한다.
 
 ## 기존 데이터 이전
 
@@ -234,12 +279,13 @@ Badger 내부 키와 값은 수정하지 않는다. 자동 마이그레이션은
 
 1. 사용자 모델, 저장소와 최초 관리자 부트스트랩을 추가한다.
 2. 로그인과 JWT 미들웨어를 사용자 UUID 기반으로 변경한다.
-3. `DriveManager`와 종료 처리를 추가한다.
-4. VFS 요청이 현재 사용자의 드라이브를 선택하도록 변경한다.
-5. SSE 이벤트와 클라이언트 조회를 사용자별로 제한한다.
-6. 사용자 관리 및 상태 API를 추가한다.
-7. Web UI의 로그인 응답과 관리자 화면을 연결한다.
-8. 기존 데이터 이전 절차를 검증한다.
+3. CLI의 `config` 명령과 비밀번호 저장을 `login`과 token 저장으로 교체한다.
+4. `DriveManager`와 종료 처리를 추가한다.
+5. VFS 요청이 현재 사용자의 드라이브를 선택하도록 변경한다.
+6. SSE 이벤트와 클라이언트 조회를 사용자별로 제한한다.
+7. 사용자 관리 및 상태 API를 추가한다.
+8. Web UI의 로그인 응답과 관리자 화면을 연결한다.
+9. 기존 데이터 이전 절차를 검증한다.
 
 ## 검증
 
@@ -248,6 +294,9 @@ Badger 내부 키와 값은 수정하지 않는다. 자동 마이그레이션은
 - 같은 사용자 이름의 중복 생성을 거부한다.
 - 일반 사용자가 관리 API를 호출하면 `403 Forbidden`을 반환한다.
 - 비활성화된 사용자의 기존 JWT 요청을 거부한다.
+- 최초 관리자 설정은 빈 사용자 DB에서만 계정을 생성한다.
+- `govfs login` 실패 시 기존 세션을 보존하고 비밀번호를 저장하지 않는다.
+- token이 없거나 만료된 CLI 명령은 `govfs login` 실행을 안내한다.
 - 두 사용자가 같은 VFS 경로와 파일 UUID를 사용해도 서로 조회하거나 변경하지 못한다.
 - 관리자가 다른 사용자의 파일 ID로 조회해도 자신의 드라이브만 검색한다.
 - 동일 사용자에 대한 동시 요청이 하나의 Badger 객체를 재사용한다.
@@ -258,6 +307,8 @@ Badger 내부 키와 값은 수정하지 않는다. 자동 마이그레이션은
 ## 완료 기준
 
 - 관리자와 일반 사용자가 로그인할 수 있다.
+- 서버 설정에서 인증 비활성화와 기존 단일 계정 필드가 제거된다.
+- CLI가 `govfs login`으로 인증하며 로컬 파일에 비밀번호를 저장하지 않는다.
 - 각 사용자의 모든 VFS 작업이 독립된 BadgerDB에서 수행된다.
 - 관리자에게 다른 사용자의 파일 접근 경로가 제공되지 않는다.
 - 사용자 비활성화와 역할 변경이 기존 토큰에도 적용된다.
