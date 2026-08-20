@@ -69,11 +69,14 @@ func GetUserConfig() (UserConfig, error) {
 
 // SetUserConfig는 사용자 설정을 로컬 파일 시스템에 저장합니다.
 func SetUserConfig(u *UserConfig) error {
-	file, err := os.Create(filepath.Join(configPath, "config"))
+	file, err := os.OpenFile(filepath.Join(configPath, "config"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
+	if err := file.Chmod(0o600); err != nil {
+		return err
+	}
 
 	return toml.NewEncoder(file).Encode(u)
 }
