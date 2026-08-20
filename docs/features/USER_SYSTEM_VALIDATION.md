@@ -130,6 +130,7 @@ curl -N http://localhost:3000/sse/subscribe \
 브라우저에서 `http://localhost:3000`에 관리자로 로그인한다.
 
 - 사이드바의 `ADMIN > Server status`로 이동해 시스템 DB의 items, 논리 사용량을 확인한다.
+- `System DB details`에서 전체 key를 페이지 이동해 확인하고 user value에 `passwordHash`가 없는지 확인한다.
 - `ADMIN > User management`로 이동해 `member` 상세를 연다.
 - `member` 상세에서 Badger drive가 `Open`, SSE가 `Online (1)` 이상인지 확인한다.
 - SSE용 `curl`을 종료한 뒤 상태 화면을 다시 열어 `Offline`으로 바뀌는지 확인한다.

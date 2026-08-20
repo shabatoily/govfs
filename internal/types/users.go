@@ -74,3 +74,16 @@ type UserEventPageRes struct {
 	PageSize int            `json:"pageSize"`
 	Total    int            `json:"total"`
 }
+
+type SystemEntryRes struct {
+	Key   string `json:"key"`
+	Kind  string `json:"kind"`
+	Value any    `json:"value"`
+}
+
+type SystemEntryPageRes struct {
+	Items    []SystemEntryRes `json:"items"`
+	Page     int              `json:"page"`
+	PageSize int              `json:"pageSize"`
+	Total    int              `json:"total"`
+}

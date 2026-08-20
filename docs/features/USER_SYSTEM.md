@@ -181,6 +181,7 @@ PATCH  /admin/users/:id
 GET    /admin/users/:id/status
 DELETE /admin/users/:id/events
 GET    /admin/status
+GET    /admin/system/entries
 GET    /admin/events
 ```
 
@@ -188,6 +189,7 @@ GET    /admin/events
 - 사용자 수정은 역할, 비활성화 상태 및 비밀번호 초기화만 지원한다.
 - 마지막 활성 관리자를 비활성화하거나 일반 사용자로 변경하는 요청은 거부한다.
 - 서버 상태 API는 사용자 수, 시스템 DB 상태와 열린 사용자 DB 수 등 집계 지표만 반환한다.
+- 시스템 DB 상세 API는 모든 애플리케이션 key와 정제된 value를 페이지 단위로 반환한다. 사용자 value의 비밀번호 해시는 반환하지 않으며 알 수 없는 value는 숨긴다.
 - 사용자 상세 상태 API는 선택한 사용자 드라이브의 key 수와 논리 사용량을 반환한다. 닫힌 드라이브는 조회 중에만 열고 즉시 닫는다.
 - 사용자 상세에는 Badger 드라이브 open 여부와 활성 SSE 연결 수도 포함하며, SSE 연결이 하나 이상이면 온라인으로 표시한다.
 - 상태 API는 사용자 파일 경로, 파일 메타데이터, Badger 키 및 값을 반환하지 않는다.

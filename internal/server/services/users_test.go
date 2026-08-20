@@ -65,4 +65,13 @@ func TestStoreUserLifecycle(t *testing.T) {
 	if err != nil || stats.Items == 0 || stats.Size == 0 {
 		t.Fatalf("시스템 DB 통계 = %#v, %v", stats, err)
 	}
+	entries, total, err := store.ListSystemEntries(1, 10)
+	if err != nil || total == 0 || len(entries) == 0 {
+		t.Fatalf("시스템 DB 상세 = %#v, %d, %v", entries, total, err)
+	}
+	for _, entry := range entries {
+		if value, ok := entry.Value.(types.UserRes); ok && value.Username == "" {
+			t.Fatal("사용자 상세 변환 실패")
+		}
+	}
 }

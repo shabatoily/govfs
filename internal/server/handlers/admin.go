@@ -146,13 +146,9 @@ func (h *AdminHandler) UserStatus(c fiber.Ctx) error {
 // @Success 200 {object} types.UserEventPageRes
 // @Router /admin/events [get]
 func (h *AdminHandler) Events(c fiber.Ctx) error {
-	page, err := strconv.Atoi(c.Query("page", "1"))
-	if err != nil || page < 1 {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid page")
-	}
-	pageSize, err := strconv.Atoi(c.Query("pageSize", "20"))
-	if err != nil || pageSize < 1 || pageSize > 100 {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid page size")
+	page, pageSize, err := pagination(c)
+	if err != nil {
+		return err
 	}
 	var userID *uuid.UUID
 	if value := c.Query("userId"); value != "" {
@@ -171,6 +167,37 @@ func (h *AdminHandler) Events(c fiber.Ctx) error {
 		res[i] = types.UserEventRes(event)
 	}
 	return c.JSON(types.UserEventPageRes{Items: res, Page: page, PageSize: pageSize, Total: total})
+}
+
+// SystemEntries는 시스템 DB key와 안전하게 변환한 value를 반환합니다.
+// @Summary 시스템 DB 상세
+// @Tags admin
+// @Param page query int false "page" default(1)
+// @Param pageSize query int false "page size" default(20) maximum(100)
+// @Success 200 {object} types.SystemEntryPageRes
+// @Router /admin/system/entries [get]
+func (h *AdminHandler) SystemEntries(c fiber.Ctx) error {
+	page, pageSize, err := pagination(c)
+	if err != nil {
+		return err
+	}
+	entries, total, err := h.users.ListSystemEntries(page, pageSize)
+	if err != nil {
+		return err
+	}
+	return c.JSON(types.SystemEntryPageRes{Items: entries, Page: page, PageSize: pageSize, Total: total})
+}
+
+func pagination(c fiber.Ctx) (int, int, error) {
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		return 0, 0, fiber.NewError(fiber.StatusBadRequest, "invalid page")
+	}
+	pageSize, err := strconv.Atoi(c.Query("pageSize", "20"))
+	if err != nil || pageSize < 1 || pageSize > 100 {
+		return 0, 0, fiber.NewError(fiber.StatusBadRequest, "invalid page size")
+	}
+	return page, pageSize, nil
 }
 
 // ClearUserEvents는 한 사용자의 이벤트를 모두 삭제합니다.

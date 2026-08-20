@@ -154,6 +154,7 @@ func registerRoutes(app *fiber.App, ctx serverContext) {
 		router.Get("/users/:id/status", adminHandler.UserStatus).Name("user-status")
 		router.Delete("/users/:id/events", adminHandler.ClearUserEvents).Name("clear-user-events")
 		router.Get("/status", adminHandler.Status).Name("status")
+		router.Get("/system/entries", adminHandler.SystemEntries).Name("system-entries")
 		router.Get("/events", adminHandler.Events).Name("events")
 	}, "admin.")
 

@@ -307,6 +307,39 @@
                 },
                 "type": "object"
             },
+            "types.SystemEntryPageRes": {
+                "properties": {
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/types.SystemEntryRes"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pageSize": {
+                        "type": "integer"
+                    },
+                    "total": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "types.SystemEntryRes": {
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "value": {}
+                },
+                "type": "object"
+            },
             "types.TokenRes": {
                 "properties": {
                     "expiresAt": {
@@ -572,6 +605,47 @@
                     }
                 },
                 "summary": "사용자 시스템 상태",
+                "tags": [
+                    "admin"
+                ]
+            }
+        },
+        "/admin/system/entries": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "page",
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "default": 1,
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "page size",
+                        "in": "query",
+                        "name": "pageSize",
+                        "schema": {
+                            "default": 20,
+                            "maximum": 100,
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.SystemEntryPageRes"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "시스템 DB 상세",
                 "tags": [
                     "admin"
                 ]

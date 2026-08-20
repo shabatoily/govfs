@@ -1,6 +1,8 @@
 package services
 
 import (
+	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -260,6 +262,63 @@ func (s *UserStore) Stats() (types.StorageStatRes, error) {
 		return nil
 	})
 	return stats, err
+}
+
+func (s *UserStore) ListSystemEntries(page, pageSize int) ([]types.SystemEntryRes, int, error) {
+	entries := make([]types.SystemEntryRes, 0, pageSize)
+	total := 0
+	start := (page - 1) * pageSize
+	err := s.db.View(func(txn *badgerdb.Txn) error {
+		it := txn.NewIterator(badgerdb.DefaultIteratorOptions)
+		defer it.Close()
+		for it.Rewind(); it.Valid(); it.Next() {
+			if total >= start && len(entries) < pageSize {
+				entry, err := systemEntry(it.Item())
+				if err != nil {
+					return err
+				}
+				entries = append(entries, entry)
+			}
+			total++
+		}
+		return nil
+	})
+	return entries, total, err
+}
+
+func systemEntry(item *badgerdb.Item) (types.SystemEntryRes, error) {
+	key := item.KeyCopy(nil)
+	entry := types.SystemEntryRes{Key: hex.EncodeToString(key), Kind: "unknown", Value: "<redacted>"}
+	err := item.Value(func(data []byte) error {
+		switch {
+		case bytes.HasPrefix(key, userPrefix):
+			var user User
+			if err := json.Unmarshal(data, &user); err != nil {
+				return err
+			}
+			entry.Key = "user:" + user.ID.String()
+			entry.Kind = "user"
+			entry.Value = types.UserRes{ID: user.ID, Username: user.Username, Role: user.Role, Disabled: user.Disabled, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt}
+		case bytes.HasPrefix(key, usernamePrefix):
+			id, err := uuid.FromBytes(data)
+			if err != nil {
+				return err
+			}
+			entry.Key = string(key)
+			entry.Kind = "username-index"
+			entry.Value = id.String()
+		case bytes.HasPrefix(key, eventPrefix):
+			var event UserEvent
+			if err := json.Unmarshal(data, &event); err != nil {
+				return err
+			}
+			entry.Key = string(key)
+			entry.Kind = "event"
+			entry.Value = types.UserEventRes(event)
+		}
+		return nil
+	})
+	return entry, err
 }
 
 func (s *UserStore) Update(id uuid.UUID, update UserUpdate) (User, error) {
