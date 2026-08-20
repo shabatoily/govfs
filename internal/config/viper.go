@@ -75,10 +75,6 @@ func resolveConfig(cfg *Config) error {
 		*path = resolved
 	}
 
-	if cfg.Cloud.ClientType == "" {
-		cfg.Cloud.ClientType = DefaultConfig.Cloud.ClientType
-	}
-
 	cfg.Server.Fiber = DefaultConfig.Server.Fiber
 	if cfg.Server.Fiber.AppName == "" {
 		cfg.Server.Fiber.AppName = cfg.App.Name + " " + cfg.App.Version

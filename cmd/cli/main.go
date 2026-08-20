@@ -10,7 +10,6 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/shabatoily/govfs/internal/cli"
-	"github.com/shabatoily/govfs/internal/cli/cloud"
 	"github.com/shabatoily/govfs/internal/cli/secret"
 	"github.com/shabatoily/govfs/internal/cli/vfs"
 	"github.com/shabatoily/govfs/internal/config"
@@ -34,9 +33,6 @@ func main() {
 		Description: description,
 		BuildInfo:   buildInfo,
 	})
-
-	// cloud commands
-	cloud.RegisterCommands(root)
 
 	// vfs commands
 	vfs.RegisterCommands(root)

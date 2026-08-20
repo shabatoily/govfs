@@ -128,14 +128,6 @@ CLI 바이너리(`govfs-cli-***`)를 사용하여 실행 중인 서버를 제어
   - `govfs-cli mkdir`: 디렉토리 생성
   - `govfs-cli rm`: 파일/디렉토리 삭제
 
-#### 클라우드 명령어 (Cloud)
-
-클라우드 스토리지 관련 명령어는 `cloud` 서브커맨드 하위에 있습니다.
-
-- `govfs-cli cloud list`: 클라우드 파일 목록 조회
-- `govfs-cli cloud upload`: 로컬 파일을 클라우드로 업로드
-- `govfs-cli cloud download`: 클라우드 파일을 로컬로 다운로드
-
 ## 설정 (config.toml)
 
 `config.toml` 파일을 통해 애플리케이션의 설정을 변경할 수 있습니다.
@@ -180,8 +172,4 @@ encryptKeyRotateDuration = "24h"
 [vfs.driver.localstorage]
 path = "./vfs_root"
 
-[cloud.googleDrive]
-clientID = "${CLOUD_GOOGLEDRIVE_CLIENT_ID}"
-clientSecret = "${CLOUD_GOOGLEDRIVE_CLIENT_SECRET}"
-parentFolderID = "govfs"
 ```

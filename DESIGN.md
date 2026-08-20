@@ -2,19 +2,18 @@
 
 ## 1. 프로젝트 개요
 
-**govfs**는 Go 언어로 작성된 가상 파일 시스템(Virtual File System) 프로젝트입니다. BadgerDB를 기반으로 한 로컬 스토리지와 Google Drive와 같은 클라우드 스토리지 통합을 지원합니다. 웹 서버, 웹 UI, 그리고 강력한 CLI 도구를 통해 파일 시스템을 효율적으로 관리할 수 있습니다.
+**govfs**는 Go 언어로 작성된 가상 파일 시스템(Virtual File System) 프로젝트입니다. BadgerDB 기반 저장소와 로컬 파일 시스템 드라이버를 지원하며, 웹 서버, 웹 UI 및 CLI를 통해 파일을 관리합니다.
 
 ## 2. 프로젝트 구조
 
 ```text
 /
 ├── bootstrap/         # 애플리케이션 초기화 로직 (VFS, Server)
-├── cli/               # CLI 명령어 구현체 (cloud, secret, vfs)
-│   ├── cloud/         # 클라우드 관련 명령어
+├── cli/               # CLI 명령어 구현체 (secret, vfs)
 │   ├── secret/        # Secret 관리 관련 명령어
 │   └── vfs/           # VFS 조작 명령어
 ├── client/            # govfs 서버와 통신하기 위한 API 클라이언트
-├── cloud/             # 클라우드 스토리지 연동 (Google Drive)
+├── internal/cloud/    # 외부에 연결되지 않은 클라우드 모듈
 ├── cmd/               # 메인 진입점
 │   ├── cli/           # CLI 애플리케이션 (main.go)
 │   └── server/        # 웹 서버 애플리케이션 (main.go)
@@ -73,9 +72,6 @@
       - `rotate`: 암호화 키 교체
       - `ls`, `tree`, `stat`: 파일 조회
       - `cp`, `mkdir`, `rm`: 파일/디렉토리 조작
-    - `govfs cloud [command]`: 클라우드 스토리지 관리
-      - `list`: 파일 목록 조회
-      - `upload`, `download`: 파일 전송
     - `govfs secret [command]`: Secret 관리 명령어
       - `set`, `get`: 키/값 기반 시크릿 설정 및 조회
 
@@ -128,7 +124,6 @@ flowchart TB
         VFS["VFS Interface\n(vfs.VFS)"]
         DriverBadger[("BadgerDB\n(drivers/badger)")]
         DriverLocal[("Local Storage\n(drivers/localstorage)")]
-        CloudDrive(("Google Drive\n(cloud/googledrive)"))
     end
 
     CLI -- "HTTP API / client pkg" --> Router
@@ -138,8 +133,6 @@ flowchart TB
     Handlers --> Services
 
     Services -- "File I/O" --> VFS
-    Services -- "Cloud API" --> CloudDrive
-
     VFS -. "Implementation" .-> DriverBadger
     VFS -. "Implementation" .-> DriverLocal
 ```
@@ -158,6 +151,8 @@ flowchart TB
 ### 4.2 드라이버 추상화 (Driver Abstraction)
 
 `vfs.VFS` 인터페이스는 파일 시스템의 모든 동작을 추상화합니다. `drivers.New(config)` 팩토리 함수를 통해 설정에 맞는 구현체를 주입받습니다.
+
+`internal/cloud`에는 향후 연동을 위한 구현이 남아 있지만 서버 API, API 클라이언트, CLI 및 설정에는 연결되지 않는다.
 
 ### 4.3 스토리지 엔진 (Storage Engines)
 

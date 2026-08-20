@@ -13,7 +13,7 @@ import (
 	"github.com/shabatoily/govfs/internal/types"
 )
 
-// baseClient는 모든 세부 클라이언트(Auth, Cloud 등)에서 공통으로 사용하는 기본 클라이언트 구조체입니다.
+// baseClient는 모든 세부 클라이언트에서 공통으로 사용하는 기본 클라이언트 구조체입니다.
 type baseClient struct {
 	mu    sync.RWMutex // 읽기/쓰기 잠금 제어
 	c     *client.Client
@@ -57,20 +57,14 @@ func (c *baseClient) Config(ctx context.Context) (types.ConfigRes, error) {
 // Client는 모든 분산된 클라이언트 기능을 하나로 통합하는 메인 클라이언트 구조체입니다.
 type Client struct {
 	*baseClient
-	auth  *AuthClient
-	cloud *CloudClient
-	sse   *SSEClient
-	vfs   *VFSClient
+	auth *AuthClient
+	sse  *SSEClient
+	vfs  *VFSClient
 }
 
 // Auth는 인증 관련 통신을 담당하는 AuthClient를 반환합니다.
 func (c *Client) Auth() *AuthClient {
 	return c.auth
-}
-
-// Cloud는 클라우드 저장소 통신을 담당하는 CloudClient를 반환합니다.
-func (c *Client) Cloud() *CloudClient {
-	return c.cloud
 }
 
 // SSE는 이벤트 스트림 통신을 담당하는 SSEClient를 반환합니다.
@@ -91,7 +85,6 @@ func New(url string) *Client {
 	return &Client{
 		baseClient: base,
 		auth:       &AuthClient{baseClient: base},
-		cloud:      &CloudClient{baseClient: base},
 		sse:        &SSEClient{baseClient: base},
 		vfs:        &VFSClient{baseClient: base},
 	}

@@ -11,7 +11,6 @@ import (
 	"github.com/gofiber/fiber/v3/log"
 	"github.com/gofiber/fiber/v3/middleware/static"
 	vfs "github.com/shabatoily/govfs"
-	"github.com/shabatoily/govfs/internal/cloud"
 	"github.com/shabatoily/govfs/internal/config"
 	"github.com/shabatoily/govfs/internal/server/handlers"
 	"github.com/shabatoily/govfs/internal/server/middlewares"
@@ -31,27 +30,20 @@ const banner = `
 `
 
 type serverContext struct {
-	Config  *config.ServerConfig
-	Storage cloud.Storage
-	VFS     vfs.VFS
+	Config *config.ServerConfig
+	VFS    vfs.VFS
 }
 
-// Init은 전체 설정을 읽어 클라우드, VFS를 초기화하고 최종적으로 Fiber 애플리케이션 인스턴스를 반환합니다.
+// Init은 전체 설정을 읽어 VFS를 초기화하고 최종적으로 Fiber 애플리케이션 인스턴스를 반환합니다.
 func Init(cfg *config.Config) (*fiber.App, error) {
-	storage, err := initCloud(&cfg.Cloud)
-	if err != nil {
-		return nil, err
-	}
-
 	fs, err := initVFS(&cfg.VFS)
 	if err != nil {
 		return nil, err
 	}
 
 	server := initServer(serverContext{
-		Config:  &cfg.Server,
-		Storage: storage,
-		VFS:     fs,
+		Config: &cfg.Server,
+		VFS:    fs,
 	})
 
 	return server, nil
@@ -123,11 +115,6 @@ func initVFS(cfg *config.VfsConfig) (vfs.VFS, error) {
 	return drivers.New(&cfg.Driver)
 }
 
-// initCloud는 클라우드 스토리지 인터페이스를 초기화합니다.
-func initCloud(cfg *config.CloudConfig) (cloud.Storage, error) {
-	return cloud.New(&cfg.Config)
-}
-
 func registerRoutes(app *fiber.App, ctx serverContext) {
 	sseBroker := services.NewSSEBroker(services.SSEConfig{
 		Context:          ctx.Config.Context,
@@ -136,8 +123,6 @@ func registerRoutes(app *fiber.App, ctx serverContext) {
 	})
 
 	authHandler := handlers.NewAuthHandler(ctx.Config.Auth)
-
-	cloudHandler := handlers.NewCloudHandler(ctx.Storage)
 
 	sseHandler := handlers.NewSSEHandler(sseBroker)
 
@@ -187,17 +172,6 @@ func registerRoutes(app *fiber.App, ctx serverContext) {
 			router.Post("/rotate", badgerHandler.Rotate).Name("rotate")
 		}, "badger.")
 	}
-
-	app.Route(cloudHandler.Prefix(), func(router fiber.Router) {
-		router.Get(cloudHandler.GoogleDriveCallbackURL(), cloudHandler.GoogleDriveCallback).Name("googledrive-callback")
-		router.Use(jwtAuth)
-		router.Get("/googledrive/auth", cloudHandler.IsAuthorized).Name("googledrive-auth-status")
-		router.Post("/googledrive/auth", cloudHandler.GoogleDriveAuthCodeURL).Name("googledrive-auth")
-		router.Get("/", cloudHandler.List).Name("list")
-		router.Post("/", cloudHandler.Upload).Name("upload")
-		router.Post("/download", cloudHandler.Download).Name("download")
-		router.Delete("/", cloudHandler.Delete).Name("delete")
-	}, "cloud.")
 
 	if ctx.Config.WebUI.Enabled {
 		app.Use("/", static.New("", static.Config{

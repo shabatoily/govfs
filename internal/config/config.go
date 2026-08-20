@@ -1,4 +1,4 @@
-// Package config는 애플리케이션, 서버, 가상 파일 시스템(VFS), 클라우드 등의 시스템 설정 구조를 정의합니다.
+// Package config는 애플리케이션, 서버, 가상 파일 시스템(VFS) 등의 시스템 설정 구조를 정의합니다.
 package config
 
 import (
@@ -10,7 +10,6 @@ import (
 	"github.com/gofiber/fiber/v3"
 	fiberLog "github.com/gofiber/fiber/v3/log"
 	"github.com/shabatoily/govfs/docs"
-	"github.com/shabatoily/govfs/internal/cloud"
 	"github.com/shabatoily/govfs/pkg/drivers"
 	"github.com/shabatoily/govfs/pkg/drivers/badger"
 	vfsLog "github.com/shabatoily/govfs/pkg/log"
@@ -86,18 +85,12 @@ type VfsConfig struct {
 	Logger vfsLog.Config  `json:"logger"`
 }
 
-// CloudConfig는 외부 클라우드 백엔드 연동을 위한 상세 설정을 포함합니다.
-type CloudConfig struct {
-	cloud.Config
-}
-
 // Config는 govfs 서비스 전체를 구성하는 최상위 설정 구조체입니다.
 type Config struct {
 	ctx    context.Context `json:"-"`
 	App    AppInfo         `json:"app"`
 	Server ServerConfig    `json:"server"`
 	VFS    VfsConfig       `json:"vfs"`
-	Cloud  CloudConfig     `json:"cloud"`
 }
 
 // SetContext는 설정 객체 및 하위 속성들에 컨텍스트(context.Context)를 주입합니다.
@@ -114,11 +107,6 @@ func (c *Config) Context() context.Context {
 
 // DefaultConfig는 기본적인 운용이 가능하도록 미리 정의된 초기 설정 파일 템플릿 역할을 합니다.
 var DefaultConfig = &Config{
-	Cloud: CloudConfig{
-		Config: cloud.Config{
-			ClientType: "googleDrive",
-		},
-	},
 	Server: ServerConfig{
 		Port: 3000,
 	},
