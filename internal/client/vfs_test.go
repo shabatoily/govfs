@@ -2,12 +2,14 @@ package client_test
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -55,7 +57,7 @@ func TestVFSClient_List(t *testing.T) {
 	defer server.Close()
 
 	c := client.New(server.URL)
-	res, err := c.VFS().List("/")
+	res, err := c.VFS().List(context.Background(), "/")
 	require.NoError(t, err)
 	require.NotEmpty(t, res)
 }
@@ -89,7 +91,7 @@ func TestVFSClient_Read(t *testing.T) {
 	defer server.Close()
 
 	c := client.New(server.URL)
-	rc, meta, err := c.VFS().Read(id)
+	rc, meta, err := c.VFS().Read(context.Background(), id)
 	require.NoError(t, err)
 	assert.Equal(t, expectedMeta.Name, meta.Name) // Check a field
 
@@ -101,8 +103,6 @@ func TestVFSClient_Read(t *testing.T) {
 
 func TestVFSClient_CreateDir(t *testing.T) {
 	dirName := "new-dir"
-	expectedMeta := types.MetaRes{}
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/vfs", r.URL.Path)
 		assert.Equal(t, http.MethodPost, r.Method)
@@ -113,14 +113,12 @@ func TestVFSClient_CreateDir(t *testing.T) {
 		assert.Equal(t, "true", r.FormValue("isDir"))
 		assert.Equal(t, dirName, r.FormValue("name"))
 
-		w.WriteHeader(http.StatusCreated)
-		err = json.NewEncoder(w).Encode(expectedMeta)
-		assert.NoError(t, err)
+		w.WriteHeader(http.StatusAccepted)
 	}))
 	defer server.Close()
 
 	c := client.New(server.URL)
-	_, err := c.VFS().CreateDir(dirName)
+	err := c.VFS().CreateDir(context.Background(), dirName)
 	assert.NoError(t, err)
 }
 
@@ -138,7 +136,6 @@ func TestVFSClient_CreateFile(t *testing.T) {
 	require.NoError(t, err)
 	defer file.Close()
 
-	expectedMeta := types.MetaRes{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/vfs", r.URL.Path)
 		assert.Equal(t, http.MethodPost, r.Method)
@@ -158,14 +155,12 @@ func TestVFSClient_CreateFile(t *testing.T) {
 		assert.NoError(t, copyErr)
 		assert.Equal(t, fileContent, buf.String())
 
-		w.WriteHeader(http.StatusCreated)
-		encErr := json.NewEncoder(w).Encode(expectedMeta)
-		assert.NoError(t, encErr)
+		w.WriteHeader(http.StatusAccepted)
 	}))
 	defer server.Close()
 
 	c := client.New(server.URL)
-	_, err = c.VFS().CreateFile(fileName, file)
+	err = c.VFS().CreateFile(context.Background(), fileName, file)
 	assert.NoError(t, err)
 }
 
@@ -190,7 +185,7 @@ func TestVFSClient_FileOps_Write(t *testing.T) {
 	defer server.Close()
 
 	c := client.New(server.URL)
-	err := c.VFS().Write(id, content)
+	err := c.VFS().Write(context.Background(), id, content)
 	assert.NoError(t, err)
 }
 
@@ -215,7 +210,7 @@ func TestVFSClient_FileOps_Move(t *testing.T) {
 	defer server.Close()
 
 	c := client.New(server.URL)
-	err := c.VFS().Move(id, dst)
+	err := c.VFS().Move(context.Background(), id, dst)
 	assert.NoError(t, err)
 }
 
@@ -237,7 +232,7 @@ func TestVFSClient_FileOps_Copy(t *testing.T) {
 	defer server.Close()
 
 	c := client.New(server.URL)
-	err := c.VFS().Copy(id, dst)
+	err := c.VFS().Copy(context.Background(), id, dst)
 	assert.NoError(t, err)
 }
 
@@ -252,7 +247,7 @@ func TestVFSClient_FileOps_Delete(t *testing.T) {
 	defer server.Close()
 
 	c := client.New(server.URL)
-	err := c.VFS().Delete(id)
+	err := c.VFS().Delete(context.Background(), id)
 	assert.NoError(t, err)
 }
 
@@ -292,7 +287,7 @@ func TestVFSClient_Admin_Restore(t *testing.T) {
 	defer server.Close()
 
 	c := client.New(server.URL)
-	err = c.VFS().Restore(file)
+	err = c.VFS().Restore(context.Background(), file)
 	assert.NoError(t, err)
 }
 
@@ -311,7 +306,7 @@ func TestVFSClient_Admin_Backup(t *testing.T) {
 	defer server.Close()
 
 	c := client.New(server.URL)
-	reader, err := c.VFS().Backup()
+	reader, err := c.VFS().Backup(context.Background())
 	require.NoError(t, err)
 
 	buf := new(bytes.Buffer)
@@ -337,7 +332,7 @@ func TestVFSClient_Admin_Rotate(t *testing.T) {
 	defer server.Close()
 
 	c := client.New(server.URL)
-	err := c.VFS().Rotate(newKey)
+	err := c.VFS().Rotate(context.Background(), newKey)
 	assert.NoError(t, err)
 }
 
@@ -360,7 +355,7 @@ func TestVFSClient_Meta_Stat(t *testing.T) {
 	defer server.Close()
 
 	c := client.New(server.URL)
-	meta, err := c.VFS().Stat(id)
+	meta, err := c.VFS().Stat(context.Background(), id)
 	require.NoError(t, err)
 	assert.Equal(t, expectedMeta.Name, meta.Name)
 }
@@ -388,9 +383,25 @@ func TestVFSClient_Meta_Tree(t *testing.T) {
 	defer server.Close()
 
 	c := client.New(server.URL)
-	res, err := c.VFS().Tree("/")
+	res, err := c.VFS().Tree(context.Background(), "/")
 	require.NoError(t, err)
 	assert.Equal(t, "root", res.Meta.Name)
+}
+
+func TestVFSClient_Tree_Canceled(t *testing.T) {
+	var called atomic.Bool
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		called.Store(true)
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	c := client.New(server.URL)
+	_, err := c.VFS().Tree(ctx, "/")
+	require.Error(t, err)
+	assert.False(t, called.Load())
 }
 
 func TestVFSClient_Misc_WriteComments(t *testing.T) {
@@ -411,6 +422,6 @@ func TestVFSClient_Misc_WriteComments(t *testing.T) {
 	defer server.Close()
 
 	c := client.New(server.URL)
-	err := c.VFS().WriteComments(id, comment)
+	err := c.VFS().WriteComments(context.Background(), id, comment)
 	assert.NoError(t, err)
 }

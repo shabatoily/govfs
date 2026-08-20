@@ -61,15 +61,25 @@ func resolveConfigPath(in string) string {
 }
 
 func resolveConfig(cfg *Config) error {
-	if cfg.Cloud.ClientType == "" {
-		cfg.Cloud.ClientType = DefaultConfig.Cloud.ClientType
+	paths := []*string{
+		&cfg.Server.Logger.Path,
+		&cfg.Server.Logger.AccessLogPath,
+		&cfg.VFS.Logger.Path,
+		&cfg.VFS.Driver.Badger.Path,
+	}
+	for _, path := range paths {
+		resolved, err := expandHomePath(*path)
+		if err != nil {
+			return err
+		}
+		*path = resolved
 	}
 
 	cfg.Server.Fiber = DefaultConfig.Server.Fiber
 	if cfg.Server.Fiber.AppName == "" {
-		cfg.Server.Fiber.AppName = cfg.App.Name + " v" + cfg.App.Version
+		cfg.Server.Fiber.AppName = cfg.App.Name + " " + cfg.App.Version
 	}
-	if cfg.Server.Auth.Enabled && cfg.Server.Auth.JWT.Secret == "" {
+	if cfg.Server.Auth.JWT.Secret == "" {
 		b := make([]byte, 32)
 		if _, err := rand.Read(b); err != nil {
 			return err
@@ -97,6 +107,21 @@ func resolveConfig(cfg *Config) error {
 	}
 
 	return nil
+}
+
+func expandHomePath(path string) (string, error) {
+	if path != "~" && !strings.HasPrefix(path, "~/") {
+		return path, nil
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	if path == "~" {
+		return home, nil
+	}
+	return filepath.Join(home, strings.TrimPrefix(path, "~/")), nil
 }
 
 func mkdirAll(path string) error {

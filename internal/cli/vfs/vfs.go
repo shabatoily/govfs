@@ -27,7 +27,7 @@ type Handler struct {
 	client *client.Client
 }
 
-// NewHandler는 컨텍스트 기반으로 새로운 VFS 핸들러를 반환하며, 필요시 자동 로그인을 수행합니다.
+// NewHandler는 로그인 세션을 사용하는 VFS 핸들러를 반환합니다.
 func NewHandler(cmd *cobra.Command) (*Handler, error) {
 	u, ok := cmd.Context().Value(cli.ContextKeyUserConfig{}).(*cli.UserConfig)
 	if !ok {
@@ -35,23 +35,12 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 	}
 
 	c := client.New(u.ServerURL)
-	if _, err := c.Auth().Me(); err != nil {
-		if !u.TokenInfo.IsExpired() {
-			c.SetToken(u.TokenInfo.Token)
-		}
-
-		t, err := c.Auth().Login(u.Username, u.Password)
-		if err != nil {
-			return nil, err
-		}
-
-		c.SetToken(t.Token)
-
-		u.TokenInfo = cli.TokenInfo{TokenRes: t}
-		err = cli.SetUserConfig(u)
-		if err != nil {
-			return nil, err
-		}
+	if u.TokenInfo.IsExpired() {
+		return nil, errors.New("session expired: run govfs login")
+	}
+	c.SetToken(u.TokenInfo.Token)
+	if _, err := c.Auth().Me(cmd.Context()); err != nil {
+		return nil, errors.New("session invalid: run govfs login")
 	}
 
 	return &Handler{
@@ -69,7 +58,7 @@ func (h *Handler) Backup(backupFile string) error {
 	}
 	defer f.Close()
 
-	r, err := h.client.VFS().Backup()
+	r, err := h.client.VFS().Backup(h.cmd.Context())
 	if err != nil {
 		return err
 	}
@@ -92,7 +81,7 @@ func (h *Handler) Restore(restoreFile string) error {
 	}
 	defer f.Close()
 
-	err = h.client.VFS().Restore(f)
+	err = h.client.VFS().Restore(h.cmd.Context(), f)
 	if err != nil {
 		return err
 	}
@@ -103,7 +92,7 @@ func (h *Handler) Restore(restoreFile string) error {
 }
 
 func (h *Handler) Rotate(newKey string) error {
-	return h.client.VFS().Rotate(newKey)
+	return h.client.VFS().Rotate(h.cmd.Context(), newKey)
 }
 
 func (h *Handler) handleUpload(srcLocal, dstVfs string) error {
@@ -131,11 +120,11 @@ func (h *Handler) handleUpload(srcLocal, dstVfs string) error {
 		dstVfs = dstVfs + "/" + info.Name()
 	}
 
-	res, err := h.client.VFS().CreateFile(dstVfs, f)
+	err = h.client.VFS().CreateFile(h.cmd.Context(), dstVfs, f)
 	if err != nil {
 		return err
 	}
-	h.cmd.Printf("Upload: %s -> %s (%d bytes)\n", srcLocal, dstVfs, res.Size)
+	h.cmd.Printf("Upload accepted: %s -> %s\n", srcLocal, dstVfs)
 	return nil
 }
 
@@ -192,7 +181,7 @@ func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 		targetPath = filepath.ToSlash(targetPath)
 
 		if info.IsDir() {
-			_, err = h.client.VFS().CreateDir(targetPath)
+			err = h.client.VFS().CreateDir(h.cmd.Context(), targetPath)
 			if err != nil {
 				// Client의 CreateDir은 디렉토리가 이미 존재하면 에러를 반환함.
 				// 여기서는 미리 존재 여부를 확인하거나 에러를 무시하는 방식으로 처리.
@@ -212,13 +201,13 @@ func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 		}
 		defer f.Close()
 
-		res, err := h.client.VFS().CreateFile(targetPath, f)
+		err = h.client.VFS().CreateFile(h.cmd.Context(), targetPath, f)
 		if err != nil {
 			return err
 		}
-		h.cmd.Printf("Upload: %s -> %s (%d bytes)\n", path, targetPath, res.Size)
+		h.cmd.Printf("Upload accepted: %s -> %s\n", path, targetPath)
 		count++
-		totalBytes += res.Size
+		totalBytes += info.Size()
 		return nil
 	})
 	if err == nil {
@@ -243,7 +232,7 @@ func (h *Handler) handleDownload(srcVfs, dstLocal string) error {
 		return fmt.Errorf("'%s' is a directory (use -r to copy directories)", srcVfs)
 	}
 
-	reader, _, err := h.client.VFS().Read(meta.ID)
+	reader, _, err := h.client.VFS().Read(h.cmd.Context(), meta.ID)
 	if err != nil {
 		return err
 	}
@@ -283,7 +272,7 @@ func (h *Handler) handleRecursiveDownload(srcVfs, dstLocal string) error {
 	startTime := time.Now()
 
 	// 트리(Tree) API 사용
-	tree, err := h.client.VFS().Tree(srcVfs)
+	tree, err := h.client.VFS().Tree(h.cmd.Context(), srcVfs)
 	if err != nil {
 		return err
 	}
@@ -312,7 +301,7 @@ func (h *Handler) handleRecursiveDownload(srcVfs, dstLocal string) error {
 				}
 			}
 		} else {
-			reader, _, readErr := h.client.VFS().Read(node.Meta.ID)
+			reader, _, readErr := h.client.VFS().Read(h.cmd.Context(), node.Meta.ID)
 			if readErr != nil {
 				return readErr
 			}
@@ -366,7 +355,7 @@ func (h *Handler) findMetaByPath(path string) (types.MetaRes, error) {
 		targetName = cleanPath[lastSlash+1:]
 	}
 
-	metas, err := h.client.VFS().List(parentPath)
+	metas, err := h.client.VFS().List(h.cmd.Context(), parentPath)
 	if err != nil {
 		return types.MetaRes{}, err
 	}
@@ -425,7 +414,7 @@ func (h *Handler) Mkdir(path string, parents bool) error {
 		for i, p := range paths {
 			if p != "" {
 				target := filepath.Join(parent, p)
-				_, err := h.client.VFS().CreateDir(target)
+				err := h.client.VFS().CreateDir(h.cmd.Context(), target)
 				parent = target
 				if err != nil {
 					// Client의 CreateDir은 디렉토리가 이미 존재하거나 실패하면 에러를 반환함.
@@ -443,7 +432,7 @@ func (h *Handler) Mkdir(path string, parents bool) error {
 		}
 		return nil
 	}
-	_, err := h.client.VFS().CreateDir(path)
+	err := h.client.VFS().CreateDir(h.cmd.Context(), path)
 	if err == nil {
 		h.cmd.Printf("Created directory: %s\n", path)
 	}
@@ -458,7 +447,7 @@ func (h *Handler) Remove(path string, recursive bool) error {
 	}
 
 	if !recursive {
-		delErr := h.client.VFS().Delete(meta.ID)
+		delErr := h.client.VFS().Delete(h.cmd.Context(), meta.ID)
 		if delErr == nil {
 			h.cmd.Printf("Removed: %s\n", path)
 		}
@@ -466,14 +455,14 @@ func (h *Handler) Remove(path string, recursive bool) error {
 	}
 
 	if !meta.IsDir {
-		delErr := h.client.VFS().Delete(meta.ID)
+		delErr := h.client.VFS().Delete(h.cmd.Context(), meta.ID)
 		if delErr == nil {
 			h.cmd.Printf("Removed: %s\n", path)
 		}
 		return delErr
 	}
 
-	treeRes, treeErr := h.client.VFS().Tree(path)
+	treeRes, treeErr := h.client.VFS().Tree(h.cmd.Context(), path)
 	if treeErr != nil {
 		return treeErr
 	}
@@ -485,7 +474,7 @@ func (h *Handler) Remove(path string, recursive bool) error {
 				return walkErr
 			}
 		}
-		if delErr := h.client.VFS().Delete(node.Meta.ID); delErr != nil {
+		if delErr := h.client.VFS().Delete(h.cmd.Context(), node.Meta.ID); delErr != nil {
 			return delErr
 		}
 		h.cmd.Printf("Removed: %s\n", node.Meta.Path)
@@ -523,7 +512,7 @@ func (h *Handler) Copy(src, dst string, recursive bool) error {
 			if err == nil && meta.IsDir {
 				dstRaw = strings.TrimSuffix(dstRaw, "/") + "/" + filepath.Base(srcRaw)
 			}
-			_, _ = h.client.VFS().CreateDir(dstRaw)
+			_ = h.client.VFS().CreateDir(h.cmd.Context(), dstRaw)
 
 			return h.handleRecursiveUpload(srcRaw, dstRaw)
 		}
@@ -542,7 +531,7 @@ func (h *Handler) Copy(src, dst string, recursive bool) error {
 		if err != nil {
 			return err
 		}
-		return h.client.VFS().Copy(srcMeta.ID, dstRaw)
+		return h.client.VFS().Copy(h.cmd.Context(), srcMeta.ID, dstRaw)
 	default:
 		return fmt.Errorf("local to local copy is not supported by this tool")
 	}

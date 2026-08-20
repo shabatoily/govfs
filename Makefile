@@ -6,6 +6,7 @@ PRJ_DESC=$(PRJ_NAME) Deployment and Development Makefile.
 
 SUPPORTED_OS=linux darwin
 SUPPORTED_ARCH=amd64 arm64
+DOCKER_PLATFORMS=linux/amd64,linux/arm64
 
 DATE_UTC=$(shell date +"%Y-%m-%dT%H:%M:%S%z")
 VERSION=$(shell git describe --tags --always --dirty 2>/dev/null || echo devel)
@@ -165,14 +166,18 @@ release:
 
 ##release-docker tag={tag [v1.0.0]}: release application
 .PHONY: release-docker
-release-docker: tag ?= "latest"
+release-docker: tag ?= latest
+release-docker: swag
 release-docker:
 	@echo "[release-docker] starting release-docker"
-	$(MAKE) build-docker tag=$(tag)
-	@echo "[release-docker] pushing docker image"
-	docker tag ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):$(tag) ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):latest
-	docker push ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):$(tag)
-	docker push ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):latest
+	@echo "[release-docker] platforms: $(DOCKER_PLATFORMS)"
+	docker buildx build \
+		--platform $(DOCKER_PLATFORMS) \
+		--build-arg "VERSION=$(tag)" \
+		--build-arg "BUILD_TIME=$(DATE_UTC)" \
+		-t ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):$(tag) \
+		$(if $(filter latest,$(tag)),,-t ghcr.io/$(GITHUB_USER)/$(PRJ_NAME):latest) \
+		--push .
 	@echo "[release-docker] complete release-docker"
 
 ##swag: generate api docs

@@ -128,24 +128,15 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
-            "types.CloudAuthRes": {
+            "types.CreateUserReq": {
                 "properties": {
-                    "url": {
+                    "password": {
                         "type": "string"
-                    }
-                },
-                "type": "object"
-            },
-            "types.CloudListRes": {
-                "properties": {
-                    "items": {
-                        "items": {
-                            "type": "string"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
                     },
-                    "path": {
+                    "role": {
+                        "$ref": "#/components/schemas/types.Role"
+                    },
+                    "username": {
                         "type": "string"
                     }
                 },
@@ -203,6 +194,17 @@ const docTemplate = `{
                     }
                 },
                 "type": "object"
+            },
+            "types.Role": {
+                "enum": [
+                    "admin",
+                    "user"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "RoleAdmin",
+                    "RoleUser"
+                ]
             },
             "types.RotateKeyReq": {
                 "properties": {
@@ -287,10 +289,74 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
+            "types.StatusRes": {
+                "properties": {
+                    "openDrives": {
+                        "type": "integer"
+                    },
+                    "system": {
+                        "$ref": "#/components/schemas/types.StorageStatRes"
+                    },
+                    "users": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "types.StorageStatRes": {
+                "properties": {
+                    "items": {
+                        "type": "integer"
+                    },
+                    "size": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "types.SystemEntryPageRes": {
+                "properties": {
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/types.SystemEntryRes"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pageSize": {
+                        "type": "integer"
+                    },
+                    "total": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "types.SystemEntryRes": {
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "value": {}
+                },
+                "type": "object"
+            },
             "types.TokenRes": {
                 "properties": {
                     "expiresAt": {
                         "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/types.Role"
                     },
                     "token": {
                         "type": "string"
@@ -313,6 +379,113 @@ const docTemplate = `{
                     },
                     "meta": {
                         "$ref": "#/components/schemas/types.MetaRes"
+                    }
+                },
+                "type": "object"
+            },
+            "types.UpdateUserReq": {
+                "properties": {
+                    "disabled": {
+                        "type": "boolean"
+                    },
+                    "password": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/types.Role"
+                    }
+                },
+                "type": "object"
+            },
+            "types.UserDriveStatusRes": {
+                "properties": {
+                    "items": {
+                        "type": "integer"
+                    },
+                    "online": {
+                        "type": "boolean"
+                    },
+                    "open": {
+                        "type": "boolean"
+                    },
+                    "size": {
+                        "type": "integer"
+                    },
+                    "sseCount": {
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "types.UserEventPageRes": {
+                "properties": {
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/types.UserEventRes"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pageSize": {
+                        "type": "integer"
+                    },
+                    "total": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "types.UserEventRes": {
+                "properties": {
+                    "action": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "types.UserRes": {
+                "properties": {
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "disabled": {
+                        "type": "boolean"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/types.Role"
+                    },
+                    "updatedAt": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
                     }
                 },
                 "type": "object"
@@ -375,6 +548,269 @@ const docTemplate = `{
         "url": ""
     },
     "paths": {
+        "/admin/events": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "user id",
+                        "in": "query",
+                        "name": "userId",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "page",
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "default": 1,
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "page size",
+                        "in": "query",
+                        "name": "pageSize",
+                        "schema": {
+                            "default": 20,
+                            "maximum": 100,
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.UserEventPageRes"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "사용자 이벤트",
+                "tags": [
+                    "admin"
+                ]
+            }
+        },
+        "/admin/status": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.StatusRes"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "사용자 시스템 상태",
+                "tags": [
+                    "admin"
+                ]
+            }
+        },
+        "/admin/system/entries": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "page",
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "default": 1,
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "page size",
+                        "in": "query",
+                        "name": "pageSize",
+                        "schema": {
+                            "default": 20,
+                            "maximum": 100,
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.SystemEntryPageRes"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "시스템 DB 상세",
+                "tags": [
+                    "admin"
+                ]
+            }
+        },
+        "/admin/users": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/types.UserRes"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "사용자 목록",
+                "tags": [
+                    "admin"
+                ]
+            },
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/types.CreateUserReq",
+                                "summary": "request",
+                                "description": "user"
+                            }
+                        }
+                    },
+                    "description": "user",
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.UserRes"
+                                }
+                            }
+                        },
+                        "description": "Created"
+                    }
+                },
+                "summary": "사용자 생성",
+                "tags": [
+                    "admin"
+                ]
+            }
+        },
+        "/admin/users/{id}": {
+            "patch": {
+                "parameters": [
+                    {
+                        "description": "user id",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/types.UpdateUserReq",
+                                "summary": "request",
+                                "description": "changes"
+                            }
+                        }
+                    },
+                    "description": "changes",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.UserRes"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "사용자 수정",
+                "tags": [
+                    "admin"
+                ]
+            }
+        },
+        "/admin/users/{id}/events": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "user id",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                },
+                "summary": "사용자 이벤트 전체 삭제",
+                "tags": [
+                    "admin"
+                ]
+            }
+        },
+        "/admin/users/{id}/status": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "user id",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.UserDriveStatusRes"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "사용자 드라이브 상태",
+                "tags": [
+                    "admin"
+                ]
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "사용자 자격 증명을 확인하고 JWT 토큰을 발급합니다.",
@@ -644,272 +1080,6 @@ const docTemplate = `{
                 ]
             }
         },
-        "/cloud/delete": {
-            "delete": {
-                "description": "클라우드 저장소에서 지정된 파일을 삭제합니다.",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "204": {
-                        "content": {
-                            "application/json": {}
-                        },
-                        "description": "No Content"
-                    },
-                    "400": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "description": "Bad Request"
-                    }
-                },
-                "summary": "파일 삭제",
-                "tags": [
-                    "cloud"
-                ]
-            }
-        },
-        "/cloud/download": {
-            "post": {
-                "description": "클라우드 저장소에서 지정된 파일을 다운로드합니다.",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/octet-stream": {
-                                "schema": {}
-                            }
-                        },
-                        "description": "OK"
-                    },
-                    "400": {
-                        "content": {
-                            "application/octet-stream": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "description": "Bad Request"
-                    }
-                },
-                "summary": "파일 다운로드",
-                "tags": [
-                    "cloud"
-                ]
-            }
-        },
-        "/cloud/googledrive/auth": {
-            "post": {
-                "description": "Google Drive OAuth 인증을 위한 URL을 반환합니다.",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/types.CloudAuthRes"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    },
-                    "400": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "description": "Bad Request"
-                    }
-                },
-                "summary": "Google Drive 인증 URL",
-                "tags": [
-                    "cloud"
-                ]
-            }
-        },
-        "/cloud/googledrive/callback": {
-            "get": {
-                "description": "Google Drive 인증 콜백을 처리하고 토큰을 발급받습니다.",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    },
-                    "400": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "description": "Bad Request"
-                    }
-                },
-                "summary": "Google Drive 콜백",
-                "tags": [
-                    "cloud"
-                ]
-            }
-        },
-        "/cloud/is-authorized": {
-            "get": {
-                "description": "클라우드 저장소의 인증(인가) 여부를 확인합니다.",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "204": {
-                        "content": {
-                            "application/json": {}
-                        },
-                        "description": "No Content"
-                    },
-                    "400": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "description": "Bad Request"
-                    }
-                },
-                "summary": "인증 상태 확인",
-                "tags": [
-                    "cloud"
-                ]
-            }
-        },
-        "/cloud/list": {
-            "get": {
-                "description": "클라우드 저장소의 특정 경로에 있는 파일 목록을 가져옵니다.",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/types.CloudListRes"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    },
-                    "400": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "description": "Bad Request"
-                    }
-                },
-                "summary": "파일 목록 조회",
-                "tags": [
-                    "cloud"
-                ]
-            }
-        },
-        "/cloud/upload": {
-            "post": {
-                "description": "클라우드 저장소에 파일을 업로드합니다.",
-                "requestBody": {
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "204": {
-                        "content": {
-                            "application/json": {}
-                        },
-                        "description": "No Content"
-                    },
-                    "400": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "description": "Bad Request"
-                    }
-                },
-                "summary": "파일 업로드",
-                "tags": [
-                    "cloud"
-                ]
-            }
-        },
         "/sse/:id/publish": {
             "post": {
                 "description": "지정된 클라이언트(또는 전체)에 Server-Sent Event 메시지를 발행합니다.",
@@ -1163,15 +1333,15 @@ const docTemplate = `{
                     "required": true
                 },
                 "responses": {
-                    "201": {
+                    "202": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/types.MetaRes"
+                                    "type": "string"
                                 }
                             }
                         },
-                        "description": "Created"
+                        "description": "Accepted"
                     },
                     "400": {
                         "content": {

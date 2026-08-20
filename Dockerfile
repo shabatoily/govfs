@@ -29,21 +29,21 @@ COPY . .
 
 COPY --from=node /webui/dist ./webui/dist
 
-RUN go build -trimpath -ldflags="-X 'main.version=${VERSION}' -X 'main.buildTime=${BUILD_TIME}'" -o build/server ./cmd/server/main.go
+RUN go build -trimpath -ldflags="-X 'main.version=${VERSION}' -X 'main.buildTime=${BUILD_TIME}'" -o server ./cmd/server/main.go
 
 FROM base AS deploy
 
 ENV SERVER_PORT=3000
 
-WORKDIR /app
+WORKDIR /govfs
 
 RUN apk add curl
 
-COPY --from=go /govfs/build/server ./server
+COPY --from=go /govfs/server ./server
 COPY --from=go /govfs/config.toml ./config.toml
 
-RUN mkdir -p /app/data
+RUN mkdir -p /govfs/data
 
 EXPOSE ${SERVER_PORT}
 
-ENTRYPOINT ["./server"]
+ENTRYPOINT ["./server", "--config", "config.toml"]

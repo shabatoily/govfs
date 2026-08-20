@@ -2,9 +2,11 @@
 package client
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/client"
 	"github.com/shabatoily/govfs/internal/types"
 )
 
@@ -14,13 +16,13 @@ type AuthClient struct {
 }
 
 // Login은 서버에 인증을 요청하고, 성공 시 발급받은 토큰을 클라이언트에 설정합니다.
-func (c *AuthClient) Login(username, password string) (types.TokenRes, error) {
+func (c *AuthClient) Login(ctx context.Context, username, password string) (types.TokenRes, error) {
 	req := types.LoginReq{
 		Username: username,
 		Password: password,
 	}
 
-	cfg, err := createJSONConfig(req)
+	cfg, err := createJSONConfig(ctx, req)
 	if err != nil {
 		return types.TokenRes{}, err
 	}
@@ -30,11 +32,8 @@ func (c *AuthClient) Login(username, password string) (types.TokenRes, error) {
 		return types.TokenRes{}, err
 	}
 
-	status := resp.StatusCode()
-	if status != fiber.StatusOK && status != fiber.StatusNoContent {
+	if resp.StatusCode() != fiber.StatusOK {
 		return types.TokenRes{}, fmt.Errorf("login failed: %v", resp.StatusCode())
-	} else if status == fiber.StatusNoContent {
-		return types.TokenRes{}, nil
 	}
 
 	var res types.TokenRes
@@ -43,24 +42,20 @@ func (c *AuthClient) Login(username, password string) (types.TokenRes, error) {
 	}
 
 	c.SetToken(res.Token)
-	// If no token but OK, it could be "Auth is disabled"
 	return res, nil
 }
 
 // Me는 현재 로그인된 사용자의 정보를 조회하고 토큰을 갱신합니다.
-func (c *AuthClient) Me() (types.TokenRes, error) {
+func (c *AuthClient) Me(ctx context.Context) (types.TokenRes, error) {
 	var res types.TokenRes
 
-	resp, err := c.c.Get("/auth/me")
+	resp, err := c.c.Get("/auth/me", client.Config{Ctx: ctx})
 	if err != nil {
 		return res, err
 	}
 
-	status := resp.StatusCode()
-	if status != fiber.StatusOK && status != fiber.StatusNoContent {
+	if resp.StatusCode() != fiber.StatusOK {
 		return res, fmt.Errorf("not logged in: %v", resp.StatusCode())
-	} else if status == fiber.StatusNoContent {
-		return res, nil
 	}
 
 	if err := resp.JSON(&res); err != nil {

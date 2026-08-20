@@ -6,6 +6,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"syscall"
@@ -42,9 +43,17 @@ func main() {
 	_ = godotenv.Load()
 
 	// parse flags
-	flag.StringVar(&configPath, "config", "config.toml", "config file path")
+	flag.StringVar(&configPath, "config", "", "config file path")
 	flag.Parse()
 
+	if configPath == "" {
+		baseDir, err := os.UserHomeDir()
+		if err != nil {
+			log.Panic(err)
+		}
+		configPath = filepath.Join(baseDir, ".govfs", "config.toml")
+	}
+	
 	// load config
 	buildInfo, _ := debug.ReadBuildInfo()
 	cfg, err := config.LoadWithViper(configPath, config.AppInfo{
