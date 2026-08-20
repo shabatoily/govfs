@@ -44,10 +44,16 @@ func TestUserSystemAdminBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = createRes.Body.Close()
 	if createRes.StatusCode != http.StatusCreated {
+		_ = createRes.Body.Close()
 		t.Fatalf("사용자 생성 상태 = %d", createRes.StatusCode)
 	}
+	var member types.UserRes
+	if err := json.NewDecoder(createRes.Body).Decode(&member); err != nil {
+		_ = createRes.Body.Close()
+		t.Fatal(err)
+	}
+	_ = createRes.Body.Close()
 
 	memberToken := loginToken(t, app, "member", "password")
 	listRes, err := app.Test(request(t, http.MethodGet, "/admin/users", nil, memberToken))
@@ -57,6 +63,24 @@ func TestUserSystemAdminBoundary(t *testing.T) {
 	_ = listRes.Body.Close()
 	if listRes.StatusCode != http.StatusForbidden {
 		t.Fatalf("일반 사용자 관리 API 상태 = %d", listRes.StatusCode)
+	}
+
+	disabled := true
+	updateRes, err := app.Test(request(t, http.MethodPatch, "/admin/users/"+member.ID.String(), types.UpdateUserReq{Disabled: &disabled}, adminToken))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = updateRes.Body.Close()
+	if updateRes.StatusCode != http.StatusOK {
+		t.Fatalf("사용자 비활성화 상태 = %d", updateRes.StatusCode)
+	}
+	meRes, err := app.Test(request(t, http.MethodGet, "/auth/me", nil, memberToken))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = meRes.Body.Close()
+	if meRes.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("비활성 사용자의 기존 JWT 상태 = %d", meRes.StatusCode)
 	}
 }
 
