@@ -4,7 +4,7 @@ Go로 작성된 가상 파일 시스템 (VFS) 프로젝트입니다. 웹 서버�
 
 ## 기능
 
-- **가상 파일 시스템 (VFS)**: 플러그형 드라이버 아키텍처를 지원하여 **BadgerDB** 또는 **LocalStorage**를 스토리지 백엔드로 선택할 수 있습니다.
+- **가상 파일 시스템 (VFS)**: 서버는 사용자별로 격리된 **BadgerDB** 드라이브를 제공합니다. LocalStorage 드라이버 패키지는 라이브러리 용도로 유지됩니다.
 - **웹 서버**: RESTful API를 통해 VFS에 접근할 수 있는 엔드포인트를 제공합니다.
 - **실시간 알림 (SSE)**: Server-Sent Events를 통해 파일 시스템 변경 사항이나 작업 상태를 실시간으로 클라이언트에 전달합니다.
 - **웹 UI**: Svelte 5 기반의 모던 웹 인터페이스를 통해 VFS를 시각적으로 탐색하고 조작할 수 있습니다.
@@ -27,8 +27,8 @@ govfs는 Client-Server 아키텍처를 따릅니다.
 
 | 드라이버 | 특징 | 권장 시나리오 |
 | :--- | :--- | :--- |
-| **LocalStorage** | **최고의 성능**. OS 파일 시스템 직접 사용. 파일 직접 접근 가능. | 고성능 비디오 스트리밍, 대용량 파일 서비스, 개발 및 디버깅. |
-| **BadgerDB** | **높은 보안 및 이식성**. 단일 DB 파일에 모든 데이터 및 메타데이터 저장. 암호화 지원. | 보안이 중요한 데이터, 간편한 배포 및 백업이 필요한 경우. |
+| **LocalStorage** | OS 파일 시스템을 직접 사용하는 라이브러리 드라이버입니다. | 현재 다중 사용자 서버에서는 사용할 수 없습니다. |
+| **BadgerDB** | 사용자마다 별도 DB와 암호화 키를 사용합니다. | govfs 서버의 지원 드라이버입니다. |
 
 자세한 성능 비교는 [BENCHMARK.md](./BENCHMARK.md)를 참조하세요.
 
@@ -164,14 +164,13 @@ path = "./logs/vfs.log"
 level = 8
 
 [vfs.driver]
-# 사용할 드라이버 타입: "badger" 또는 "localstorage"
+# 다중 사용자 서버는 BadgerDB 드라이버만 지원
 type = "badger"
 
 [vfs.driver.badger]
 path = "./drives"
 encryptKeyRotateDuration = "24h"
 
-[vfs.driver.localstorage]
-path = "./vfs_root"
-
 ```
+
+사용자 시스템의 수동 검증과 기존 데이터 이전 방법은 [USER_SYSTEM_VALIDATION.md](./docs/features/USER_SYSTEM_VALIDATION.md)를 참고하세요.
