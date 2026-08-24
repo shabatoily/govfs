@@ -75,15 +75,11 @@ func resolveConfig(cfg *Config) error {
 		*path = resolved
 	}
 
-	if cfg.Cloud.ClientType == "" {
-		cfg.Cloud.ClientType = DefaultConfig.Cloud.ClientType
-	}
-
 	cfg.Server.Fiber = DefaultConfig.Server.Fiber
 	if cfg.Server.Fiber.AppName == "" {
 		cfg.Server.Fiber.AppName = cfg.App.Name + " " + cfg.App.Version
 	}
-	if cfg.Server.Auth.Enabled && cfg.Server.Auth.JWT.Secret == "" {
+	if cfg.Server.Auth.JWT.Secret == "" {
 		b := make([]byte, 32)
 		if _, err := rand.Read(b); err != nil {
 			return err

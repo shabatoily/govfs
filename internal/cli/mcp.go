@@ -23,19 +23,12 @@ func NewMCPCommand(version string) *cobra.Command {
 			}
 
 			c := client.New(userConfig.ServerURL)
-			if !userConfig.TokenInfo.IsExpired() {
-				c.SetToken(userConfig.TokenInfo.Token)
+			if userConfig.TokenInfo.IsExpired() {
+				return errors.New("session expired: run govfs login")
 			}
+			c.SetToken(userConfig.TokenInfo.Token)
 			if _, err := c.Auth().Me(cmd.Context()); err != nil {
-				token, loginErr := c.Auth().Login(cmd.Context(), userConfig.Username, userConfig.Password)
-				if loginErr != nil {
-					return fmt.Errorf("authenticate MCP client: %w", loginErr)
-				}
-				c.SetToken(token.Token)
-				userConfig.TokenInfo.TokenRes = token
-				if err := SetUserConfig(userConfig); err != nil {
-					return err
-				}
+				return fmt.Errorf("authenticate MCP client: run govfs login: %w", err)
 			}
 
 			server, err := mcpserver.New(cmd.Context(), c, version)

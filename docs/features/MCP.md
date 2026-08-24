@@ -16,7 +16,7 @@ govfs의 파일 시스템 기능을 AI 에이전트가 MCP(Model Context Protoco
 | `vfs_upload` | `path`, `content_base64` | base64로 전달된 파일을 업로드한다. |
 | `vfs_delete` | `id` | 파일 또는 디렉터리를 삭제한다. |
 
-파일 수정, 이동, 복사, 백업, 복원 및 cloud 기능은 실제 사용 요구가 생길 때 추가한다.
+파일 수정, 이동, 복사, 백업 및 복원은 실제 사용 요구가 생길 때 추가한다. 애플리케이션에서 제거된 cloud 기능은 MCP에서도 제공하지 않는다.
 
 ## 구조
 
@@ -65,7 +65,7 @@ MCP 클라이언트는 기존 CLI 바이너리를 하위 프로세스로 실행�
 }
 ```
 
-`govfs mcp`는 기존 `~/.govfs/config`의 서버 주소와 인증 정보를 재사용한다. stdio는 MCP 메시지 전용이므로 다음 규칙을 지킨다.
+`govfs mcp`는 `govfs login`이 `~/.govfs/config`에 저장한 서버 주소와 access token을 재사용한다. stdio는 MCP 메시지 전용이므로 다음 규칙을 지킨다.
 
 - stdout에는 MCP 프로토콜 메시지만 출력한다.
 - 로그와 진단 메시지는 stderr에 출력한다.

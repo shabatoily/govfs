@@ -7,6 +7,9 @@
     import Toast from "./lib/components/Toast.svelte";
     import ConnectionStatus from "./lib/components/ConnectionStatus.svelte";
     import Login from "./lib/components/Login.svelte";
+    import AdminUsers from "./lib/components/AdminUsers.svelte";
+    import AdminStatus from "./lib/components/AdminStatus.svelte";
+    import ChangePassword from "./lib/components/ChangePassword.svelte";
     import { appState } from "./lib/state.svelte";
     import vfs from "./lib/vfs";
     import sseClient, { type SSEMessage } from "./lib/sse";
@@ -129,6 +132,13 @@
     <Sidebar />
 
     <div class="flex-1 flex flex-col min-w-0">
+        {#if appState.adminPage === "users"}
+            <AdminUsers />
+        {:else if appState.adminPage === "server"}
+            <AdminStatus />
+        {:else if appState.adminPage === "password"}
+            <ChangePassword />
+        {:else}
         <!-- Main Editor Area -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
@@ -174,6 +184,7 @@
         <div class="h-48 flex-shrink-0">
             <Terminal />
         </div>
+        {/if}
 
         <!-- Status Bar Footer -->
         <div

@@ -219,7 +219,7 @@ func TestVFSClient_FileOps_Copy(t *testing.T) {
 	dst := "copy-loc"
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/vfs/"+id.String(), r.URL.Path)
+		assert.Equal(t, "/vfs/"+id.String()+"/copy", r.URL.Path)
 		assert.Equal(t, http.MethodPost, r.Method)
 
 		var req types.DstReq
@@ -319,7 +319,7 @@ func TestVFSClient_Admin_Rotate(t *testing.T) {
 	newKey := "new-encryption-key"
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/vfs/rotate", r.URL.Path)
+		assert.Equal(t, "/badger/rotate", r.URL.Path)
 		assert.Equal(t, http.MethodPost, r.Method)
 
 		var req map[string]string

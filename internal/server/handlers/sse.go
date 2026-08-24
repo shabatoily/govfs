@@ -5,11 +5,11 @@ import (
 	"bufio"
 	"time"
 
-	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/fiber/v3/log"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+	"github.com/shabatoily/govfs/internal/server/middlewares"
 	"github.com/shabatoily/govfs/internal/server/services"
 	"github.com/shabatoily/govfs/internal/types"
 )
@@ -33,6 +33,7 @@ type SSEHandler struct {
 // @Failure 500 {object} any
 // @Router /sse/subscribe [get]
 func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
+	user := userIDFromContext(ctx)
 	ctx.Set(fiber.HeaderContentType, "text/event-stream")
 	ctx.Set(fiber.HeaderCacheControl, "no-cache")
 	ctx.Set(fiber.HeaderConnection, "keep-alive")
@@ -40,7 +41,7 @@ func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 	msg, clientChan := h.broker.Subscribe(types.SubscribeReq{
 		Ctx:  ctx.Context(),
 		Addr: ctx.IP(),
-		User: usernameFromContext(ctx),
+		User: user,
 	})
 	if clientChan == nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "SSE Broker is not available")
@@ -72,7 +73,7 @@ func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 				log.Debug("message sent to client")
 			case <-ticker.C:
 				// Heartbeat
-				h.broker.Hearbeat(msg.ID)
+				h.broker.Hearbeat(user, msg.ID)
 				log.Debugf("heartbeat sent to client: %s", msg.ID)
 			}
 		}
@@ -110,7 +111,7 @@ func (h *SSEHandler) Publish(ctx fiber.Ctx) error {
 		Meta:      metaData,
 	}
 
-	h.broker.Publish(targetID, &data, time.Second*3)
+	h.broker.Publish(userIDFromContext(ctx), targetID, &data, time.Second*3)
 
 	return ctx.SendStatus(fiber.StatusNoContent)
 }
@@ -124,7 +125,7 @@ func (h *SSEHandler) Publish(ctx fiber.Ctx) error {
 // @Router /sse/clients [get]
 func (h *SSEHandler) Clients(ctx fiber.Ctx) error {
 	return ctx.JSON(types.ClientList{
-		Clients: h.broker.Clients(),
+		Clients: h.broker.Clients(userIDFromContext(ctx)),
 	})
 }
 
@@ -133,16 +134,10 @@ func NewSSEHandler(broker *services.SSEBroker) *SSEHandler {
 	return &SSEHandler{broker: broker}
 }
 
-func usernameFromContext(ctx fiber.Ctx) string {
-	token := jwtware.FromContext(ctx)
-	if token == nil {
+func userIDFromContext(ctx fiber.Ctx) string {
+	user, ok := middlewares.CurrentUser(ctx)
+	if !ok {
 		return ""
 	}
-
-	sub, err := token.Claims.GetSubject()
-	if err != nil {
-		return ""
-	}
-
-	return sub
+	return user.ID.String()
 }

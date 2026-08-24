@@ -189,7 +189,7 @@ func (c *VFSClient) Copy(ctx context.Context, id uuid.UUID, dstName string) erro
 		return err
 	}
 
-	resp, err := c.c.Post("/vfs/"+id.String(), cfg)
+	resp, err := c.c.Post("/vfs/"+id.String()+"/copy", cfg)
 	if err != nil {
 		return err
 	}
@@ -269,7 +269,7 @@ func (c *VFSClient) Rotate(ctx context.Context, newKey string) error {
 		return err
 	}
 
-	resp, err := c.c.Post("/vfs/rotate", cfg)
+	resp, err := c.c.Post("/badger/rotate", cfg)
 	if err != nil {
 		return err
 	}

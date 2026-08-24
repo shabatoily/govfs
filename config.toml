@@ -11,9 +11,9 @@ accessLogPath = "~/.govfs/logs/access-log.log"
 level = 0
 
 [server.auth]
-enabled = false
-username = "${SERVER_AUTH_USERNAME}"
-password = "${SERVER_AUTH_PASSWORD}"
+[server.auth.admin]
+username = "${SERVER_AUTH_ADMIN_USERNAME}"
+password = "${SERVER_AUTH_ADMIN_PASSWORD}"
 [server.auth.jwt]
 secret = "${SERVER_AUTH_JWT_SECRET}"
 exp = "24h"
@@ -36,7 +36,7 @@ enabled = true
 type = "badger"
 
 [vfs.driver.badger]
-path = "~/.govfs/data"
+path = "~/.govfs/drives"
 encryptKeyRotateDuration = "24h"
 gcInterval = "5m"
 gcDiscardRatio = 0.7
@@ -45,12 +45,3 @@ gcDiscardRatio = 0.7
 path = "~/.govfs/logs/vfs.log"
 # log-level: trace=-1, debug=0, info=1, warn=2, error=3, fatal=4, panic=5, noLevel=6, disabled=7
 level = -1
-
-[cloud.config]
-clientType = "googleDrive"
-
-[cloud.config.googleDrive]
-tokenPath = ".googledrive"
-clientID = "${CLOUD_CONFIG_GOOGLEDRIVE_CLIENTID}"
-clientSecret = "${CLOUD_CONFIG_GOOGLEDRIVE_CLIENTSECRET}"
-parentFolderID = "govfs"

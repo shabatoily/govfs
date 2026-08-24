@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-const dirFileMode = 0755
+const dirFileMode = 0o755
 
 func main() {
 	width := 640

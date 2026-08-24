@@ -53,7 +53,7 @@ func main() {
 		}
 		configPath = filepath.Join(baseDir, ".govfs", "config.toml")
 	}
-	
+
 	// load config
 	buildInfo, _ := debug.ReadBuildInfo()
 	cfg, err := config.LoadWithViper(configPath, config.AppInfo{

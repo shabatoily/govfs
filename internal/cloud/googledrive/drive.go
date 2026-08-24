@@ -19,6 +19,8 @@ import (
 	"google.golang.org/api/option"
 )
 
+const googleDriveFolderMIME = "application/vnd.google-apps.folder"
+
 const (
 	tokenDirMode         = 0o600
 	tokenFileMode        = 0o600
@@ -138,8 +140,8 @@ func (d *Adapter) findOrCreateFolder(name string) (string, error) {
 		return "", ErrUnauthorized
 	}
 
-	query := fmt.Sprintf("name = '%s' and 'root' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
-		escape(name))
+	query := fmt.Sprintf("name = '%s' and 'root' in parents and mimeType = '%s' and trashed = false",
+		escape(name), googleDriveFolderMIME)
 	resp, err := d.service.Files.List().Q(query).Fields("files(id)").PageSize(1).Do()
 	if err != nil {
 		return "", err
@@ -151,7 +153,7 @@ func (d *Adapter) findOrCreateFolder(name string) (string, error) {
 
 	folder := &drive.File{
 		Name:     name,
-		MimeType: "application/vnd.google-apps.folder",
+		MimeType: googleDriveFolderMIME,
 		Parents:  []string{"root"},
 	}
 	createdFolder, err := d.service.Files.Create(folder).Fields("id").Do()
@@ -180,8 +182,8 @@ func (d *Adapter) findOrCreatePath(filePath string) (string, error) {
 		if part == "" {
 			continue
 		}
-		q := fmt.Sprintf("name = '%s' and '%s' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
-			escape(part), currentParentID)
+		q := fmt.Sprintf("name = '%s' and '%s' in parents and mimeType = '%s' and trashed = false",
+			escape(part), currentParentID, googleDriveFolderMIME)
 		resp, err := d.service.Files.List().Q(q).Fields("files(id)").PageSize(1).Do()
 		if err != nil {
 			return "", fmt.Errorf("failed to search for folder '%s': %w", part, err)
@@ -192,7 +194,7 @@ func (d *Adapter) findOrCreatePath(filePath string) (string, error) {
 		} else {
 			folder := &drive.File{
 				Name:     part,
-				MimeType: "application/vnd.google-apps.folder",
+				MimeType: googleDriveFolderMIME,
 				Parents:  []string{currentParentID},
 			}
 			createdFolder, err := d.service.Files.Create(folder).Fields("id").Do()
@@ -215,8 +217,8 @@ func (d *Adapter) Upload(p string, r io.Reader) error {
 	fileName := path.Base(p)
 
 	// 파일이 존재하면 업데이트를, 없으면 새로 생성합니다.
-	q := fmt.Sprintf("name = '%s' and '%s' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'",
-		escape(fileName), parentID)
+	q := fmt.Sprintf("name = '%s' and '%s' in parents and trashed = false and mimeType != '%s'",
+		escape(fileName), parentID, googleDriveFolderMIME)
 	resp, err := d.service.Files.List().Q(q).Fields("files(id)").PageSize(1).Do()
 	if err != nil {
 		return err
@@ -298,7 +300,7 @@ func (d *Adapter) recursiveList(folderID, currentPath string, allFiles *[]string
 
 		for _, f := range resp.Files {
 			newPath := path.Join(currentPath, f.Name)
-			if f.MimeType == "application/vnd.google-apps.folder" {
+			if f.MimeType == googleDriveFolderMIME {
 				if err := d.recursiveList(f.Id, newPath, allFiles); err != nil {
 					return err
 				}
@@ -329,8 +331,8 @@ func (d *Adapter) findFolderIDByPath(p string) (string, error) {
 	currentParentID := d.cfg.ParentFolder
 
 	for _, part := range parts {
-		q := fmt.Sprintf("name = '%s' and '%s' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
-			escape(part), currentParentID)
+		q := fmt.Sprintf("name = '%s' and '%s' in parents and mimeType = '%s' and trashed = false",
+			escape(part), currentParentID, googleDriveFolderMIME)
 		resp, err := d.service.Files.List().Q(q).Fields("files(id)").PageSize(1).Do()
 		if err != nil {
 			return "", err
@@ -358,8 +360,8 @@ func (d *Adapter) findFileIDByPath(p string) (string, error) {
 		}
 	}
 
-	q := fmt.Sprintf("name = '%s' and '%s' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed = false",
-		escape(name), parentFolderID)
+	q := fmt.Sprintf("name = '%s' and '%s' in parents and mimeType != '%s' and trashed = false",
+		escape(name), parentFolderID, googleDriveFolderMIME)
 	resp, err := d.service.Files.List().Q(q).Fields("files(id)").PageSize(1).Do()
 	if err != nil {
 		return "", err

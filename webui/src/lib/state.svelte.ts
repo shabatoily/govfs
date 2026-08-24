@@ -10,6 +10,12 @@ export interface ToastItem {
     type: ToastType;
 }
 
+export interface CurrentUser {
+    id: string;
+    username: string;
+    role: 'admin' | 'user';
+}
+
 export class AppState {
     currentPath = $state('/');
     currentFile = $state<FileInfo | null>(null);
@@ -19,6 +25,8 @@ export class AppState {
     refreshSignal = $state<{ type: 'PATH' | 'ID'; value: string; timestamp: number } | null>(null);
     isLoggedIn = $state<boolean>(false);
     authInitialized = $state<boolean>(false);
+    currentUser = $state<CurrentUser | null>(null);
+    adminPage = $state<"server" | "users" | "password" | null>(null);
 
     setClientId(id: string) {
         this.clientId = id;
@@ -33,8 +41,10 @@ export class AppState {
                 },
             });
             this.isLoggedIn = res.status === 200;
+            this.currentUser = this.isLoggedIn ? await res.json() : null;
         } catch (e) {
             this.isLoggedIn = false;
+            this.currentUser = null;
         } finally {
             this.authInitialized = true;
         }
@@ -49,6 +59,8 @@ export class AppState {
             },
         });
         this.isLoggedIn = false;
+        this.currentUser = null;
+		this.adminPage = null;
         sseClient.disconnect();
     }
 
