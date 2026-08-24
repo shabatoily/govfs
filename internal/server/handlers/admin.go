@@ -45,8 +45,8 @@ func (h *AdminHandler) ListUsers(c fiber.Ctx) error {
 // @Router /admin/users [post]
 func (h *AdminHandler) CreateUser(c fiber.Ctx) error {
 	var req types.CreateUserReq
-	if err := c.Bind().JSON(&req); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	if bindErr := c.Bind().JSON(&req); bindErr != nil {
+		return fiber.NewError(fiber.StatusBadRequest, bindErr.Error())
 	}
 	user, err := h.users.Create(req.Username, req.Password, req.Role)
 	if errors.Is(err, services.ErrAlreadyExists) || errors.Is(err, services.ErrInvalidRole) || errors.Is(err, services.ErrInvalidPassword) {
@@ -71,8 +71,8 @@ func (h *AdminHandler) UpdateUser(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid user id")
 	}
 	var req types.UpdateUserReq
-	if err := c.Bind().JSON(&req); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	if bindErr := c.Bind().JSON(&req); bindErr != nil {
+		return fiber.NewError(fiber.StatusBadRequest, bindErr.Error())
 	}
 	user, err := h.users.Update(id, services.UserUpdate{Role: req.Role, Disabled: req.Disabled, Password: req.Password})
 	if errors.Is(err, services.ErrNotFound) {
@@ -88,7 +88,14 @@ func (h *AdminHandler) UpdateUser(c fiber.Ctx) error {
 }
 
 func userResponse(user services.User) types.UserRes {
-	return types.UserRes{ID: user.ID, Username: user.Username, Role: user.Role, Disabled: user.Disabled, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt}
+	return types.UserRes{
+		ID:        user.ID,
+		Username:  user.Username,
+		Role:      user.Role,
+		Disabled:  user.Disabled,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+	}
 }
 
 // Status는 사용자 시스템의 집계 상태를 반환합니다.
@@ -152,8 +159,8 @@ func (h *AdminHandler) Events(c fiber.Ctx) error {
 	}
 	var userID *uuid.UUID
 	if value := c.Query("userId"); value != "" {
-		id, err := uuid.Parse(value)
-		if err != nil {
+		id, parseErr := uuid.Parse(value)
+		if parseErr != nil {
 			return fiber.NewError(fiber.StatusBadRequest, "invalid user id")
 		}
 		userID = &id

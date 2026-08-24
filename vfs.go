@@ -15,9 +15,9 @@ const (
 	Root = "/"
 
 	// DefaultFileMode는 파일 생성 시 사용되는 기본 권한(0644)입니다.
-	DefaultFileMode = 0644
+	DefaultFileMode = 0o644
 	// DefaultDirMode는 디렉터리 생성 시 사용되는 기본 권한(0755)입니다.
-	DefaultDirMode  = 0755
+	DefaultDirMode = 0o755
 )
 
 // VFS 작업 중 발생할 수 있는 주요 에러들입니다.

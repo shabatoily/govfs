@@ -9,6 +9,7 @@
     import Login from "./lib/components/Login.svelte";
     import AdminUsers from "./lib/components/AdminUsers.svelte";
     import AdminStatus from "./lib/components/AdminStatus.svelte";
+    import ChangePassword from "./lib/components/ChangePassword.svelte";
     import { appState } from "./lib/state.svelte";
     import vfs from "./lib/vfs";
     import sseClient, { type SSEMessage } from "./lib/sse";
@@ -135,6 +136,8 @@
             <AdminUsers />
         {:else if appState.adminPage === "server"}
             <AdminStatus />
+        {:else if appState.adminPage === "password"}
+            <ChangePassword />
         {:else}
         <!-- Main Editor Area -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->

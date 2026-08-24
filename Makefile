@@ -139,11 +139,18 @@ install:
 	@yarn --cwd webui install
 	@echo "[install] complete install"
 
+##fmt: Run code formatter
+.PHONY: fmt
+fmt:
+	@echo "[fmt] starting fmt (gofumpt)"
+	@GOTOOLCHAIN=$(GOVERSION) go run mvdan.cc/gofumpt@latest -l -w .
+	@echo "[fmt] complete fmt"
+
 ##lint: 🚨 Run lint checks
 .PHONY: lint
 lint:
 	@echo "[lint] starting lint"
-	@GOTOOLCHAIN=$(GOVERSION) go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4 run ./...
+	@GOTOOLCHAIN=$(GOVERSION) go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1 run ./...
 	@echo "[lint] complete lint"
 
 ##release tag={tag [v1.0.0]}: release application

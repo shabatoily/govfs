@@ -50,7 +50,7 @@ func TestStoreUserLifecycle(t *testing.T) {
 	if err := store.RecordEvent(member, "auth.login", 200); err != nil {
 		t.Fatal(err)
 	}
-	events, total, err = store.ListEvents(1, 10, &admin.ID)
+	events, _, err = store.ListEvents(1, 10, &admin.ID)
 	if err != nil || len(events) != 2 {
 		t.Fatalf("사용자 이벤트 = %#v, %v", events, err)
 	}

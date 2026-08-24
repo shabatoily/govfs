@@ -9,6 +9,7 @@
         Trash2,
         ServerCog,
         Users,
+        KeyRound,
     } from "lucide-svelte";
     import { appState } from "../state.svelte";
     import vfs, { type FileInfo } from "../vfs";
@@ -349,6 +350,15 @@
             </button>
         </div>
     {/if}
+
+    <div class="border-t border-gray-700 bg-gray-800 p-2">
+        <button
+            onclick={() => appState.adminPage = "password"}
+            class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white"
+        >
+            <KeyRound size={15} /> Change password
+        </button>
+    </div>
 
     <!-- Path Status -->
     <div
