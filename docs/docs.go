@@ -99,6 +99,17 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
+            "types.ChangePasswordReq": {
+                "properties": {
+                    "currentPassword": {
+                        "type": "string"
+                    },
+                    "newPassword": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "types.ClientInfo": {
                 "properties": {
                     "addr": {
@@ -939,6 +950,32 @@ const docTemplate = `{
                     }
                 },
                 "summary": "로그인 상태 확인",
+                "tags": [
+                    "auth"
+                ]
+            }
+        },
+        "/auth/password": {
+            "patch": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/types.ChangePasswordReq",
+                                "summary": "request",
+                                "description": "passwords"
+                            }
+                        }
+                    },
+                    "description": "passwords",
+                    "required": true
+                },
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                },
+                "summary": "비밀번호 변경",
                 "tags": [
                     "auth"
                 ]
