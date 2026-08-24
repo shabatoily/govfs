@@ -25,8 +25,6 @@ const (
 var HandlerDefault = New()
 
 // New returns custom handler
-//
-//nolint:gocyclo // 기존 소스 그대로 가져옴
 func New(config ...Config) fiber.Handler {
 	cfg := configDefault(config...)
 

@@ -30,7 +30,6 @@ func main() {
 		fmt.Println("Failed to get absolute path of secret file: ", err)
 		return
 	}
-	//nolint:gosec // intentional for CLI tool
 	secretKey, err := os.ReadFile(secretFile)
 	if err != nil {
 		fmt.Println("Failed to read secret file: ", err)

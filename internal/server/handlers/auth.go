@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"errors"
 	"time"
 
 	jwtware "github.com/gofiber/contrib/v3/jwt"
@@ -90,7 +91,7 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 // @Failure      500  {object}  fiber.Error
 // @Router       /auth/logout [post]
 // Logout은 사용자 로그아웃을 처리하고 클라이언트의 토큰 쿠키를 삭제합니다.
-func (h *AuthHandler) Logout(c fiber.Ctx) error {
+func (*AuthHandler) Logout(c fiber.Ctx) error {
 	c.Cookie(&fiber.Cookie{
 		Name:     types.CookieAcessToken,
 		Value:    "",
@@ -111,7 +112,7 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 // @Failure      500  {object}  fiber.Error
 // @Router       /auth/me [get]
 // IsLoggedIn은 현재 사용자의 로그인 상태를 확인하고 정보를 반환합니다.
-func (h *AuthHandler) IsLoggedIn(c fiber.Ctx) error {
+func (*AuthHandler) IsLoggedIn(c fiber.Ctx) error {
 	token := jwtware.FromContext(c)
 	user, ok := middlewares.CurrentUser(c)
 	if token == nil || !ok {
@@ -130,4 +131,30 @@ func (h *AuthHandler) IsLoggedIn(c fiber.Ctx) error {
 		Token:     token.Raw,
 		ExpiresAt: exp.Time,
 	})
+}
+
+// ChangePassword는 현재 사용자의 비밀번호를 변경합니다.
+// @Summary 비밀번호 변경
+// @Tags auth
+// @Param request body types.ChangePasswordReq true "passwords"
+// @Success 204
+// @Router /auth/password [patch]
+func (h *AuthHandler) ChangePassword(c fiber.Ctx) error {
+	user, ok := middlewares.CurrentUser(c)
+	if !ok {
+		return fiber.ErrUnauthorized
+	}
+	var req types.ChangePasswordReq
+	if err := c.Bind().JSON(&req); err != nil || req.NewPassword == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid password")
+	}
+	if _, err := h.users.Authenticate(user.Username, req.CurrentPassword); errors.Is(err, services.ErrInvalidPassword) {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+	} else if err != nil {
+		return err
+	}
+	if _, err := h.users.Update(user.ID, services.UserUpdate{Password: req.NewPassword}); err != nil {
+		return err
+	}
+	return c.SendStatus(fiber.StatusNoContent)
 }

@@ -13,7 +13,7 @@ import (
 
 func TestClient_SetToken(t *testing.T) {
 	t.Run("SetToken", func(t *testing.T) {
-		token := "my-auth-token" //nolint:gosec // This is a test token
+		token := "my-auth-token"
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "Bearer "+token, r.Header.Get("Authorization"))
 			w.WriteHeader(http.StatusOK)

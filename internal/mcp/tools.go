@@ -82,8 +82,8 @@ func (s *Server) mkdir(ctx context.Context, _ *mcpsdk.CallToolRequest, input pat
 	}
 	s.mutationMu.Lock()
 	defer s.mutationMu.Unlock()
-	if err := s.client.VFS().CreateDir(ctx, cleaned); err != nil {
-		return nil, nil, err
+	if createErr := s.client.VFS().CreateDir(ctx, cleaned); createErr != nil {
+		return nil, nil, createErr
 	}
 	meta, err := s.waitForMutation(ctx, "vfs.create")
 	if err != nil {
@@ -105,8 +105,8 @@ func (s *Server) upload(ctx context.Context, _ *mcpsdk.CallToolRequest, input up
 
 	s.mutationMu.Lock()
 	defer s.mutationMu.Unlock()
-	if err := s.client.VFS().CreateFile(ctx, cleaned, io.NopCloser(bytes.NewReader(content))); err != nil {
-		return nil, nil, err
+	if createErr := s.client.VFS().CreateFile(ctx, cleaned, io.NopCloser(bytes.NewReader(content))); createErr != nil {
+		return nil, nil, createErr
 	}
 	meta, err := s.waitForMutation(ctx, "vfs.create")
 	if err != nil {
@@ -123,8 +123,8 @@ func (s *Server) delete(ctx context.Context, _ *mcpsdk.CallToolRequest, input id
 	}
 	s.mutationMu.Lock()
 	defer s.mutationMu.Unlock()
-	if err := s.client.VFS().Delete(ctx, id); err != nil {
-		return nil, nil, err
+	if deleteErr := s.client.VFS().Delete(ctx, id); deleteErr != nil {
+		return nil, nil, deleteErr
 	}
 	meta, err := s.waitForMutation(ctx, "vfs.delete")
 	return nil, meta, err

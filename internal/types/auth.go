@@ -18,6 +18,11 @@ type LoginReq struct {
 	Password string `json:"password"`
 }
 
+type ChangePasswordReq struct {
+	CurrentPassword string `json:"currentPassword"`
+	NewPassword     string `json:"newPassword"`
+}
+
 // TokenRes는 인증 성공 시 발급되는 토큰 및 만료 정보를 담고 있는 구조체입니다.
 type TokenRes struct {
 	ID        uuid.UUID `json:"id"`

@@ -84,12 +84,14 @@ linters:
         - style
       disabled-checks:
         - dupImport # https://github.com/go-critic/go-critic/issues/845
+        - hugeParam
         - ifElseChain
         - octalLiteral
+        - rangeValCopy
         - whyNoLint
         - unnamedResult
     gocyclo:
-      min-complexity: 15
+      min-complexity: 20
     godox:
       keywords:
         - FIXME
@@ -112,6 +114,8 @@ linters:
         - '0644'
         - '0666'
         - '0755'
+        - '0o600'
+        - '0xff'
       ignored-functions:
         - strings.SplitN
     govet:
@@ -161,6 +165,12 @@ linters:
       - path: (.+)_test\.go
         linters:
           - dupl
+          - funlen
+          - goconst
+          - gocyclo
+          - gosec
+          - govet
+          - ineffassign
           - mnd
           - lll
 

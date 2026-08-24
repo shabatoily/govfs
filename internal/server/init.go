@@ -144,6 +144,7 @@ func registerRoutes(app *fiber.App, ctx serverContext) {
 		router.Post("/login", authHandler.Login).Name("login")
 		router.Post("/logout", authHandler.Logout).Name("logout")
 		router.Get("/me", jwtAuth, userAuth, authHandler.IsLoggedIn).Name("me")
+		router.Patch("/password", jwtAuth, userAuth, middlewares.Audit(ctx.Users), authHandler.ChangePassword).Name("password")
 	}, "auth.")
 
 	app.Route("/admin", func(router fiber.Router) {

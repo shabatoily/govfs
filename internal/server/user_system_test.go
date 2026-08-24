@@ -56,6 +56,27 @@ func TestUserSystemAdminBoundary(t *testing.T) {
 	_ = createRes.Body.Close()
 
 	memberToken := loginToken(t, app, "member", "password")
+	invalidPasswordRes, err := app.Test(request(t, http.MethodPatch, "/auth/password", types.ChangePasswordReq{
+		CurrentPassword: "wrong", NewPassword: "changed-password",
+	}, memberToken))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = invalidPasswordRes.Body.Close()
+	if invalidPasswordRes.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("현재 비밀번호 불일치 상태 = %d", invalidPasswordRes.StatusCode)
+	}
+	passwordRes, err := app.Test(request(t, http.MethodPatch, "/auth/password", types.ChangePasswordReq{
+		CurrentPassword: "password", NewPassword: "changed-password",
+	}, memberToken))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = passwordRes.Body.Close()
+	if passwordRes.StatusCode != http.StatusNoContent {
+		t.Fatalf("비밀번호 변경 상태 = %d", passwordRes.StatusCode)
+	}
+	memberToken = loginToken(t, app, "member", "changed-password")
 	listRes, err := app.Test(request(t, http.MethodGet, "/admin/users", nil, memberToken))
 	if err != nil {
 		t.Fatal(err)

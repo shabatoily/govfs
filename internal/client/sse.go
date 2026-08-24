@@ -40,7 +40,7 @@ func (c *SSEClient) SubscribeEvents(ctx context.Context) (*SSESubscription, erro
 	serverURL, token := c.url, c.token
 	c.mu.RUnlock()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, serverURL+"/sse/subscribe", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, serverURL+"/sse/subscribe", http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (c *SSEClient) SubscribeEvents(ctx context.Context) (*SSESubscription, erro
 		req.Header.Set(fiber.HeaderAuthorization, "Bearer "+token)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req) //nolint:bodyclose // 스트림 종료 시 goroutine에서 닫습니다.
 	if err != nil {
 		return nil, err
 	}
@@ -106,8 +106,8 @@ func readSSEMessage(reader *bufio.Reader) (types.SSEMessage, error) {
 			if data.Len() == 0 {
 				continue
 			}
-			if err := json.Unmarshal([]byte(data.String()), &message.Data); err != nil {
-				return types.SSEMessage{}, err
+			if unmarshalErr := json.Unmarshal([]byte(data.String()), &message.Data); unmarshalErr != nil {
+				return types.SSEMessage{}, unmarshalErr
 			}
 			return message, nil
 		}

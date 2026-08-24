@@ -175,7 +175,14 @@ func (s *UserStore) List() ([]User, error) {
 }
 
 func (s *UserStore) RecordEvent(user User, action string, status int) error {
-	event := UserEvent{ID: uuid.New(), UserID: user.ID, Username: user.Username, Action: action, Status: status, CreatedAt: time.Now().UTC()}
+	event := UserEvent{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		Username:  user.Username,
+		Action:    action,
+		Status:    status,
+		CreatedAt: time.Now().UTC(),
+	}
 	data, err := json.Marshal(event)
 	if err != nil {
 		return err
@@ -298,7 +305,10 @@ func systemEntry(item *badgerdb.Item) (types.SystemEntryRes, error) {
 			}
 			entry.Key = "user:" + user.ID.String()
 			entry.Kind = "user"
-			entry.Value = types.UserRes{ID: user.ID, Username: user.Username, Role: user.Role, Disabled: user.Disabled, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt}
+			entry.Value = types.UserRes{
+				ID: user.ID, Username: user.Username, Role: user.Role, Disabled: user.Disabled,
+				CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt,
+			}
 		case bytes.HasPrefix(key, usernamePrefix):
 			id, err := uuid.FromBytes(data)
 			if err != nil {
