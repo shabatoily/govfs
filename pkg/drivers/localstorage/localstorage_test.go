@@ -751,3 +751,21 @@ func Test_TreeStructure(t *testing.T) {
 	require.Len(t, nodeB.Children, 1)
 	require.Equal(t, "/a/b/c.txt", nodeB.Children[0].Meta.Path)
 }
+
+func Test_LocalStoragePersistsUpdatedMetadata(t *testing.T) {
+	ls, cleanup := setupVFS(t)
+	defer cleanup()
+
+	meta, err := ls.Create("file.txt", bytes.NewBufferString("old"))
+	require.NoError(t, err)
+	_, err = ls.Write(meta.ID, bytes.NewBufferString("updated"))
+	require.NoError(t, err)
+	_, err = ls.WriteComments(meta.ID, "comment")
+	require.NoError(t, err)
+
+	got, err := ls.Stat(meta.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "/file.txt", got.Path)
+	assert.Equal(t, int64(len("updated")), got.Size)
+	assert.Equal(t, "comment", got.Comments)
+}

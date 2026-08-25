@@ -1,178 +1,150 @@
-# govfs 프로젝트 디자인 문서
+# govfs 디자인 문서
 
-## 1. 프로젝트 개요
+## Architecture Overview
 
-**govfs**는 Go 언어로 작성된 가상 파일 시스템(Virtual File System) 프로젝트입니다. BadgerDB 기반 저장소와 로컬 파일 시스템 드라이버를 지원하며, 웹 서버, 웹 UI 및 CLI를 통해 파일을 관리합니다.
-
-## 2. 프로젝트 구조
-
-```text
-/
-├── bootstrap/         # 애플리케이션 초기화 로직 (VFS, Server)
-├── cli/               # CLI 명령어 구현체 (secret, vfs)
-│   ├── secret/        # Secret 관리 관련 명령어
-│   └── vfs/           # VFS 조작 명령어
-├── client/            # govfs 서버와 통신하기 위한 API 클라이언트
-├── internal/cloud/    # 외부에 연결되지 않은 클라우드 모듈
-├── cmd/               # 메인 진입점
-│   ├── cli/           # CLI 애플리케이션 (main.go)
-│   └── server/        # 웹 서버 애플리케이션 (main.go)
-├── config/            # 설정 로직 (Viper, TOML)
-├── data/              # 로컬 데이터 저장소 (BadgerDB 등 기본 경로)
-├── docs/              # Swagger API 문서
-├── drivers/           # VFS 스토리지 드라이버 인터페이스 및 구현체
-│   ├── badger/        # BadgerDB (Key-Value) 드라이버
-│   ├── localstorage/  # LocalStorage (Native FS) 드라이버
-│   └── driver.go      # 드라이버 팩토리 및 공통 인터페이스
-├── scripts/           # 유틸리티 및 배포 쉘 스크립트
-├── server/            # 웹 서버 및 API 라우팅 로직
-│   ├── handlers/      # HTTP 핸들러 (VFS, SSE)
-│   ├── middlewares/   # 미들웨어 (Logger, CORS 등)
-│   ├── routes/        # 라우터 설정 (Web, API)
-│   ├── services/      # 비즈니스 로직 (VFS Service, SSE Broker)
-│   └── types/         # API 요청/응답 타입 정의
-├── tools/             # 개발 및 데이터 마이그레이션 도구
-├── vfs.go             # VFS 인터페이스 및 코어 타입 (Meta, File, TreeNode)
-├── webui/             # Svelte 5 + Vite 기반 웹 프론트엔드
-├── go.mod             # Go 모듈 의존성 관리
-├── Dockerfile         # Docker 이미지 빌드 설정
-└── Makefile           # 빌드 및 유틸리티 스크립트 실행
-```
-
-## 3. 기능 리스트 및 요약
-
-- **가상 파일 시스템 (VFS)**
-  - **Core Interface**: `vfs.VFS` 인터페이스를 통한 표준화된 파일 작업.
-  - **Pluggable Drivers**: `config.toml` 설정을 통해 스토리지 백엔드 교체 가능 (`badger`, `localstorage`).
-  - **Meta Handling**: 파일 메타데이터(크기, 수정 시간, MIME 타입 등) 자동 관리.
-- **사용자 격리**
-  - 관리자와 일반 사용자 역할을 제공한다.
-  - 계정은 시스템 BadgerDB에 저장한다.
-  - 각 사용자는 UUID 경로의 독립된 BadgerDB 드라이브를 사용한다.
-  - 관리자는 다른 사용자의 파일에 접근할 수 없다.
-  - 관리자는 파일 식별자나 요청 내용을 포함하지 않는 최근 사용자 변경 이벤트를 조회할 수 있다.
-  - 이벤트는 페이지 단위로 전체 또는 사용자별 조회하며 정리가 필요할 때 사용자 단위로만 전체 삭제한다.
-  - 관리자 상태 화면은 시스템 DB 집계와 활성화된 Fiber 진단 API를 표시하고, 사용자 드라이브 통계는 선택한 사용자 상세에서만 조회한다.
-  - 시스템 DB 상세는 페이지 조회만 제공하며 사용자 비밀번호 해시와 알 수 없는 raw value는 노출하지 않는다.
-  - 사용자 온라인 상태는 현재 SSE 연결 유무로 판단하며 Badger 드라이브 open 상태와 별도로 표시한다.
-- **웹 서버 (API)**
-  - **Framework**: `gofiber/fiber` v3 기반의 고성능 웹 서버.
-  - **API Endpoints**:
-    - `POST /vfs`: 파일/디렉토리 생성
-    - `GET /vfs`: 파일 목록 조회 (List/Tree 뷰 지원)
-    - `GET /vfs/:id`: 파일 다운로드 및 스트리밍 (Range Request 지원)
-    - `PUT /vfs/:id`: 파일 내용 수정
-    - `PATCH /vfs/:id`: 파일/디렉토리 이동(Rename)
-    - `DELETE /vfs/:id`: 파일/디렉토리 삭제
-    - `POST /vfs/:id/copy`: 파일 복사
-    - `PATCH /vfs/:id/comments`: 파일 코멘트 수정
-    - **Maintenance**: `backup`, `restore`, `rotate` (암호화 키)
-  - **SSE (Real-time)**:
-    - `GET /sse/subscribe`: 실시간 이벤트 구독
-    - `POST /sse/publish`: 이벤트 발행 (내부/외부 트리거)
-    - **Async Operations**: 대용량 작업(Copy, Write 등)의 비동기 처리 및 진행 상황 알림.
-- **웹 UI**
-  - **Stack**: Svelte 5, Vite, TailwindCSS.
-  - **Integration**: `server`가 정적 파일을 서빙하며 API와 연동.
-- **CLI (Command Line Interface)**
-  - **Framework**: `cobra`, `viper` 기반.
-  - **Commands**:
-    - `govfs [command]`: VFS 조작 및 관리 명령어 (Root Level)
-      - `backup`, `restore`: 데이터 백업 및 복원
-      - `rotate`: 암호화 키 교체
-      - `ls`, `tree`, `stat`: 파일 조회
-      - `cp`, `mkdir`, `rm`: 파일/디렉토리 조작
-    - `govfs secret [command]`: Secret 관리 명령어
-      - `set`, `get`: 키/값 기반 시크릿 설정 및 조회
-
-### 3.1 주요 동작 시퀀스 (Operation Sequence)
-
-다음은 CLI 또는 Web UI에서 비동기 파일 조작(예: 복사)을 요청하고, SSE를 통해 실시간으로 작업 진행 상황을 응답받는 대표적인 기능 흐름 시퀀스 다이어그램입니다.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Client as CLI / Web UI
-    participant Server as Fiber Server (API)
-    participant SSE as SSE Broker
-    participant VFS as VFS Driver (Badger/Local)
-
-    Client->>Server: POST /vfs/{id}/copy (복사 요청)
-    Server->>SSE: 비동기 작업 등록 (AsyncExecute)
-    Server-->>Client: 202 Accepted (HTTP 응답)
-    
-    Client->>Server: GET /sse/subscribe (진행률 구독)
-    Server-->>Client: SSE 연결 수립 (Stream)
-    
-    par 백그라운드 작업
-        SSE->>VFS: 데이터 청크(Chunk) 단위 복사 시작
-        loop 청크 처리 중
-            VFS-->>SSE: 청크 처리 완료
-            SSE-->>Client: SSE Event (Progress 업데이트)
-        end
-        VFS-->>SSE: 최종 복사 완료
-        SSE-->>Client: SSE Event (Success 완료 알림)
-    end
-```
-
-## 4. 아키텍처 상세 (Architecture Details)
+govfs는 Fiber 기반 서버, Svelte 웹 UI, HTTP CLI로 구성된 다중 사용자 가상
+파일 시스템이다. 서버는 인증된 사용자마다 선택된 VFS 드라이버를 지연 생성하며,
+파일 API와 SSE 이벤트를 사용자 UUID 범위로 격리한다.
 
 ```mermaid
 flowchart TB
-    subgraph ClientLayer ["Client Layer"]
-        CLI("govfs CLI\n(cmd/cli)")
-        WebUI("Web UI\n(webui, Svelte/Vite)")
+    CLI["CLI\ncmd/cli"] -->|HTTP + JWT| API
+    UI["Svelte Web UI\nwebui"] -->|HTTP + JWT / SSE| API
+
+    subgraph Server["Fiber Server · internal/server"]
+        API["Routes / Handlers"] --> Auth["JWT + Current User"]
+        Auth --> Users[("System BadgerDB\nusers · username index · audit events")]
+        Auth --> DriveManager["DriveManager"]
+        DriveManager --> Service["Request-scoped VfsService"]
+        API --> SSE["User-scoped SSE Broker"]
     end
 
-    subgraph ServerLayer ["Server Layer (Daemon)"]
-        Router("Fiber Router\n(server/routes)")
-        Handlers("HTTP Handlers\n(server/handlers)")
-        Services("Services\n(VfsService, SSEBroker)")
-    end
-
-    subgraph StorageLayer ["Storage Layer"]
-        VFS["VFS Interface\n(vfs.VFS)"]
-        DriverBadger[("BadgerDB\n(drivers/badger)")]
-        DriverLocal[("Local Storage\n(drivers/localstorage)")]
-    end
-
-    CLI -- "HTTP API / client pkg" --> Router
-    WebUI -- "HTTP API / SSE" --> Router
-
-    Router --> Handlers
-    Handlers --> Services
-
-    Services -- "File I/O" --> VFS
-    VFS -. "Implementation" .-> DriverBadger
-    VFS -. "Implementation" .-> DriverLocal
+    DriveManager --> AdminDrive[("BadgerDB or LocalStorage\ndrives/{admin UUID}")]
+    DriveManager --> UserDrive[("BadgerDB or LocalStorage\ndrives/{user UUID}")]
 ```
 
-### 4.1 클라이언트-서버 모델 (Client-Server Model)
+서버 시작 흐름은 `cmd/server/main.go` → `internal/config.LoadWithViper` →
+`internal/server.Init` 순서다. `Init`은 시스템 사용자 DB와 최초 관리자를 준비하고
+`DriveManager`를 생성한 뒤 라우트와 종료 훅을 등록한다
+(`internal/server/init.go`).
 
-**govfs**는 클라이언트-서버 아키텍처를 채택했습니다. 사용자는 CLI(Client)를 통해 명령을 내리고, 실제 파일 시스템 조작은 백그라운드에서 실행 중인 서버(Daemon)가 수행합니다.
+## Component/Module Details
 
-- **Daemon (Server)**:
-  - **역할**: 실제 스토리지(BadgerDB, LocalStorage)에 접근하여 I/O를 수행하고 상태를 관리합니다.
-  - **통신**: HTTP REST API 및 SSE(Server-Sent Events)를 통해 클라이언트와 통신합니다.
-- **CLI (Client)**:
-  - **역할**: 사용자 명령을 파싱하여 서버 API를 호출하고 결과를 출력합니다.
-  - **특징**: 무상태(Stateless)이며, 로컬 설정 파일이나 환경 변수를 통해 서버 연결 정보를 참조합니다.
+```text
+/
+├── cmd/
+│   ├── server/              # 서버 진입점과 설정 파일 선택
+│   └── cli/                 # CLI 진입점
+├── internal/
+│   ├── cli/                 # login, MCP, secret, VFS 명령
+│   ├── client/              # 서버 HTTP API 클라이언트
+│   ├── cloud/               # 현재 서버에 연결되지 않은 클라우드 코드
+│   ├── config/              # Viper 설정 로딩·경로 확장·설정 타입
+│   ├── mcp/                 # CLI 세션을 사용하는 MCP 서버
+│   ├── server/
+│   │   ├── handlers/        # auth, admin, VFS, SSE, Badger HTTP 처리
+│   │   ├── middlewares/     # JWT, 현재 사용자, 감사, Fiber 미들웨어
+│   │   └── services/        # 사용자 저장소, DriveManager, VFS, SSE
+│   └── types/               # API 요청·응답 타입
+├── pkg/
+│   ├── drivers/
+│   │   ├── badger/          # 암호화·트랜잭션 기반 VFS
+│   │   └── localstorage/    # OS 파일 시스템 기반 VFS
+│   └── log/                 # VFS 로거
+├── docs/                    # OpenAPI 산출물과 기능 문서
+├── tools/                   # Badger 마이그레이션·테스트 데이터 도구
+├── webui/                   # 내장 Svelte 5 웹 UI
+├── vfs.go                   # VFS 인터페이스와 핵심 타입
+└── config.toml              # 배포용 서버 설정 예시
+```
 
-### 4.2 드라이버 추상화 (Driver Abstraction)
+### Configuration
 
-`vfs.VFS` 인터페이스는 파일 시스템의 모든 동작을 추상화합니다. `drivers.New(config)` 팩토리 함수를 통해 설정에 맞는 구현체를 주입받습니다.
+서버는 `-config`가 없으면 `~/.govfs/config.toml`을 읽는다
+(`cmd/server/main.go`). Viper는 점을 밑줄로 바꾼 대문자 환경 변수로 설정을
+덮어쓸 수 있다. `~`로 시작하는 로그와 드라이버 경로는 사용자 홈으로 확장된다
+(`internal/config/viper.go`).
 
-`internal/cloud`에는 향후 연동을 위한 구현이 남아 있지만 서버 API, API 클라이언트, CLI 및 설정에는 연결되지 않는다.
+핵심 설정은 다음과 같다.
 
-### 4.3 사용자 드라이브
+- `server.auth.admin`: 시스템 DB가 비었을 때만 사용하는 최초 관리자 자격 증명
+- `server.auth.jwt`: JWT 서명 secret과 access token 만료 시간
+- `server.fiber.bodyLimit`: HTTP 요청 본문 최대 크기
+- `server.middlewares`: 관리자용 진단 endpoint 활성화 여부
+- `server.webui.enabled`: 내장 웹 UI 제공 여부
+- `vfs.driver.badger.path`: 사용자 드라이브 루트
+- `vfs.driver.localstorage.path`: LocalStorage 사용자 드라이브 루트
+- `gcInterval`, `gcDiscardRatio`: 모든 사용자 BadgerDB에 공통 적용되는 GC 설정
 
-인증 미들웨어는 JWT의 사용자 UUID를 현재 사용자 레코드와 대조한다. `DriveManager`는 해당 UUID의 BadgerDB를 지연 생성하여 VFS 요청에 주입한다. 사용자 관리 API는 관리자 역할에만 열리지만 파일 API는 역할과 관계없이 현재 사용자의 드라이브만 선택한다.
+선택한 드라이버의 `path`가 `~/.govfs/drives`이면 시스템 DB는
+`~/.govfs/system/users`, 사용자 드라이브는 `~/.govfs/drives/{UUID}`에 열린다
+(`internal/server/init.go`, `internal/server/services/drives.go`).
 
-### 4.3 스토리지 엔진 (Storage Engines)
+### Authentication and User Isolation
 
-| 특징 | BadgerDB Driver | LocalStorage Driver |
-| :--- | :--- | :--- |
-| **Path** | `drivers/badger` | `drivers/localstorage` |
-| **Backend** | BadgerDB (LSM Tree Key-Value Store) | Native OS Filesystem (`os`, `io` 패키지) |
-| **Data Model** | Key: UUID / Value: Metadata + Content | File System Path |
-| **Pros** | **Single File**: 운반 용이성.<br>**Encryption**: 데이터 암호화 내장.<br>**Transaction**:  ACID 보장. | **Performance**: OS 커널 캐시 활용.<br>**Accessibility**: 파일 직접 열람 가능.<br>**Debug**: 디버깅 용이. |
+시스템 BadgerDB는 사용자 레코드, 정규화된 사용자 이름 index, 최소 정보의 감사
+이벤트를 저장한다 (`internal/server/services/users.go`). 시스템 DB가 비어 있으면
+`server.auth.admin`으로 최초 관리자를 생성하며, 자격 증명이 없으면 서버 시작을
+거부한다.
+
+로그인은 bcrypt로 비밀번호를 확인하고 사용자 UUID를 JWT subject에 기록한다.
+인증 요청마다 JWT 검증 뒤 시스템 DB에서 현재 사용자를 다시 조회하므로 계정
+비활성화와 역할 변경이 기존 token에도 즉시 적용된다
+(`internal/server/middlewares/auth.go`).
+
+VFS와 Badger 라우트는 URL에서 사용자 ID를 받지 않는다. `withVFS`와
+`withBadger`가 인증 컨텍스트의 UUID로 드라이브를 선택하므로 관리자도 다른
+사용자의 파일 드라이브에 접근하지 못한다 (`internal/server/init.go`).
+
+### Storage Lifecycle
+
+`DriveManager`는 최초 요청 시 선택한 드라이버의 `path/{user UUID}`를 열고 서버
+종료까지 재사용한다. 동시 최초 접근과 드라이브 map은 mutex로 보호한다. 서버
+종료 훅은 열린 사용자 드라이브, 시스템 DB, 서버 로그를 닫는다
+(`internal/server/services/drives.go`, `internal/server/init.go`).
+
+서버는 `vfs.driver.type`에 따라 `drivers.New`로 BadgerDB 또는 LocalStorage를
+생성한다. 시스템 사용자 DB는 파일 드라이버 선택과 관계없이 BadgerDB를 사용한다.
+관리자 드라이브 사용량은 공통 `VFS.Tree` 결과의 item 수와 논리 크기로 계산한다.
+
+### HTTP and SSE
+
+라우트 구성의 source of truth는 `internal/server/init.go`다.
+
+- `/auth`: 로그인, 로그아웃, 현재 사용자, 비밀번호 변경
+- `/admin`: 사용자 관리, 시스템/드라이브 상태, 감사 이벤트
+- `/vfs`: 생성, 조회, 수정, 이동, 복사, 삭제, backup/restore
+- `/badger`: Badger 사용자의 key 진단, 통계, 암호화 키 회전
+- `/sse`: 사용자별 구독자, 발행, client 목록
+
+SSE broker는 서버 단위 객체 하나를 사용하지만 client와 message를 사용자 ID로
+범위화한다. 파일 변경 이벤트와 client 목록은 다른 사용자에게 전달되지 않는다
+(`internal/server/services/sse.go`, `internal/server/handlers/sse.go`).
+
+### CLI Session
+
+CLI는 `govfs login`에서 서버 URL, 사용자 이름, 비밀번호를 입력받아 즉시
+`/auth/login`을 호출한다. 성공하면 서버 URL, 사용자 이름, access token, 만료
+시각만 mode `0600`의 `~/.govfs/config`에 저장한다. 비밀번호는 저장하지 않는다
+(`internal/cli/root.go`). Token이 없거나 만료되면 다른 명령은 `govfs login`을
+안내한다.
+
+## Implementation vs Design
+
+- `/badger/*`와 CLI `rotate`는 Badger 전용이며 LocalStorage에서는 지원하지 않는다.
+- `internal/cloud`는 보존돼 있지만 서버 API, CLI, 설정과 연결되지 않는다.
+- 사용자 드라이브는 유휴 상태에서도 자동으로 닫히지 않는다. 열린 드라이브 수가
+  리소스 문제가 될 때 eviction 정책이 필요하다.
+- Read/Seek 벤치마크는 동일 파일을 반복하므로 warm-cache 성능을 주로 측정한다.
+  상세 조건은 `BENCHMARK.md`를 따른다.
+- `server.auth.jwt.secret`이 비어 있으면 실행 시 임의 값이 생성돼 재시작 후 기존
+  token이 무효화된다. 운영 환경은 반드시 고정 secret을 제공해야 한다.
+- 시스템 DB 경로는 드라이브 루트의 형제 `system/users`로 파생되며 별도 설정할
+  수 없다.
+
+## Updated Date
+
+- 분석일: 2026-08-25
+- 기준 커밋: `5d4cc4a`
+- Source of truth: `cmd/server/main.go`, `internal/config/`,
+  `internal/server/`, `internal/cli/root.go`, `pkg/drivers/`
