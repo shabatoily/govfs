@@ -66,6 +66,7 @@ func resolveConfig(cfg *Config) error {
 		&cfg.Server.Logger.AccessLogPath,
 		&cfg.VFS.Logger.Path,
 		&cfg.VFS.Driver.Badger.Path,
+		&cfg.VFS.Driver.LocalStorage.Path,
 	}
 	for _, path := range paths {
 		resolved, err := expandHomePath(*path)

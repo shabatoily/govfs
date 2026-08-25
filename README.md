@@ -1,156 +1,103 @@
 # govfs
 
-Go로 작성된 가상 파일 시스템 (VFS) 프로젝트입니다. 웹 서버를 통해 파일 시스템에 접근하고 관리할 수 있는 기능을 제공하며, 웹 UI를 통해 사용자 친화적인 인터페이스를 제공합니다.
+Go로 작성된 다중 사용자 가상 파일 시스템(VFS)입니다. Fiber 서버가 사용자별
+BadgerDB 또는 LocalStorage를 관리하고 REST API, SSE, Svelte 웹 UI와 CLI를
+제공합니다.
 
-## 기능
+## 주요 기능
 
-- **가상 파일 시스템 (VFS)**: 서버는 사용자별로 격리된 **BadgerDB** 드라이브를 제공합니다. LocalStorage 드라이버 패키지는 라이브러리 용도로 유지됩니다.
-- **웹 서버**: RESTful API를 통해 VFS에 접근할 수 있는 엔드포인트를 제공합니다.
-- **실시간 알림 (SSE)**: Server-Sent Events를 통해 파일 시스템 변경 사항이나 작업 상태를 실시간으로 클라이언트에 전달합니다.
-- **웹 UI**: Svelte 5 기반의 모던 웹 인터페이스를 통해 VFS를 시각적으로 탐색하고 조작할 수 있습니다.
-- **CLI**: 파일 시스템 관리 및 데이터 조작을 위한 다양한 유틸리티 명령어를 제공합니다.
-- **설정 관리**: `config.toml` 파일을 통해 애플리케이션의 동작을 유연하게 변경할 수 있습니다.
-- **백업 및 복원**: VFS 데이터의 백업 및 복원, 암호화 키 로테이션 기능을 지원합니다.
+- JWT 로그인과 관리자/일반 사용자 역할
+- 사용자 UUID별로 격리된 BadgerDB 또는 LocalStorage 드라이브
+- 파일 생성, 조회, 수정, 이동, 복사, 삭제와 Range Request
+- 사용자 범위 SSE 알림
+- 사용자 관리, 감사 이벤트, 서버·드라이브 상태 화면
+- 사용자별 backup/restore와 Badger 암호화 키 rotation
+- HTTP API를 사용하는 CLI와 MCP 서버
 
-## 아키텍처 (Client-Server)
+## Architecture
 
-govfs는 Client-Server 아키텍처를 따릅니다.
+```text
+CLI / Web UI
+      │ HTTP + JWT / SSE
+      ▼
+Fiber Server
+      ├── System DB: users, username index, audit events
+      └── DriveManager
+            └── drives/{user UUID}: selected VFS driver
+```
 
-- **Server (Daemon)**: 서버 바이너리(예: `govfs`)로 실행되며, 스토리지 엔진(BadgerDB/LocalStorage)을 관리하고 API를 제공하는 백그라운드 프로세스입니다.
-- **Client (CLI)**: CLI 바이너리(예: `govfs-cli`)를 사용하여 실행 중인 서버에 HTTP API 요청을 보내 작업을 수행합니다.
+서버의 `vfs.driver.type`은 `badger`와 `localstorage`를 지원합니다. 자세한 구조는
+[DESIGN.md](./DESIGN.md), 선택 기준은 [BENCHMARK.md](./BENCHMARK.md)를
+참조하세요. 암호화 키 rotation과 `/badger/*` 진단 API는 Badger 전용입니다.
 
-> **Note**: 따라서 CLI 명령어를 사용하기 위해서는 먼저 서버 프로세스를 실행해야 합니다.
+## Requirements
 
-## 드라이버 선택 가이드
+- Go 1.25+
+- Yarn
 
-사용 목적에 따라 적절한 드라이버를 `config.toml`에서 선택할 수 있습니다.
+Backend는 Fiber v3, Cobra, Viper, BadgerDB를 사용하고 Frontend는 Svelte 5,
+Vite, TailwindCSS를 사용합니다.
 
-| 드라이버 | 특징 | 권장 시나리오 |
-| :--- | :--- | :--- |
-| **LocalStorage** | OS 파일 시스템을 직접 사용하는 라이브러리 드라이버입니다. | 현재 다중 사용자 서버에서는 사용할 수 없습니다. |
-| **BadgerDB** | 사용자마다 별도 DB와 암호화 키를 사용합니다. | govfs 서버의 지원 드라이버입니다. |
-
-자세한 성능 비교는 [BENCHMARK.md](./BENCHMARK.md)를 참조하세요.
-
-## 개발 환경
-
-- **Backend**: Go 1.25+
-  - **Web Framework**: [Fiber](https://github.com/gofiber/fiber)
-  - **CLI**: [Cobra](https://github.com/spf13/cobra)
-  - **Config**: [Viper](https://github.com/spf13/viper)
-  - **Storage**: [BadgerDB](https://github.com/dgraph-io/badger)
-- **Frontend**: Svelte 5, Vite, TailwindCSS
-  - **Package Manager**: Yarn
-
-## 설치 방법
+## Install and Build
 
 ```bash
 git clone https://github.com/shabatoily/govfs.git
 cd govfs
-go mod tidy
-cd webui && yarn install
-```
-
-## 빌드 방법
-
-### Makefile
-
-Makefile을 사용하여 간단하게 빌드할 수 있습니다.
-
-**기본 빌드:**
-
-```bash
+make install
 make build
 ```
 
-**특정 OS/Arch 빌드:**
+특정 플랫폼만 빌드하려면 다음과 같이 지정합니다.
 
 ```bash
 make build os=linux arch=amd64
 ```
 
-### Docker
+빌드 결과는 `bin/govfs-{os}-{arch}`와 `bin/govfs-cli-{os}-{arch}`입니다.
 
-Docker를 사용하여 빌드하고 실행할 수 있습니다.
+## Server Setup
 
-**Docker 이미지 빌드:**
-
-```bash
-make build-docker tag=latest
-```
-
-**Docker 컨테이너 실행:**
+서버는 `-config`를 생략하면 `~/.govfs/config.toml`을 읽습니다. 저장소의 예시
+설정을 복사하고 최초 관리자와 JWT secret을 환경 변수로 제공합니다.
 
 ```bash
-docker run -d -p 3000:3000 --name govfs govfs:latest
+mkdir -p ~/.govfs
+cp config.toml ~/.govfs/config.toml
+
+export SERVER_AUTH_ADMIN_USERNAME=admin
+export SERVER_AUTH_ADMIN_PASSWORD='change-this-password'
+export SERVER_AUTH_JWT_SECRET='change-this-to-a-long-random-secret'
+
+go run ./cmd/server
 ```
 
-## SSE (Server-Sent Events) API
-
-애플리케이션은 실시간 상태 업데이트를 위해 SSE를 지원합니다.
-
-- **Subscribe**: `GET /sse/subscribe`
-  - 클라이언트가 이벤트를 수신하기 위해 연결하는 엔드포인트입니다.
-- **Publish**: `POST /sse/:id/publish`
-  - 특정 클라이언트(`:id`) 또는 모든 클라이언트에게 이벤트를 발송합니다.
-
-## CLI 명령어
-
-애플리케이션은 다음과 같은 주요 명령어를 제공합니다.
-
-### 서버 실행 (Server Execution)
-
-서버는 별도의 바이너리로 제공되며, 데몬 형태 또는 백그라운드 프로세스로 실행해야 합니다.
+다른 설정 파일은 명시적으로 지정합니다.
 
 ```bash
-# 직접 실행 (예시: Linux/AMD64)
-./govfs-linux-amd64
-
-# 또는 systemd 서비스 등으로 등록하여 실행
+go run ./cmd/server -config /path/to/config.toml
 ```
 
-### CLI 명령어 (Client)
+`server.auth.admin`은 시스템 DB가 비어 있을 때 최초 관리자 한 명을 만드는
+용도로만 사용됩니다. 이후 사용자 관리는 관리자 API 또는 웹 UI에서 수행합니다.
+운영 환경에서는 재시작 후에도 기존 token을 검증할 수 있도록 JWT secret을 고정해야
+합니다.
 
-CLI 바이너리(`govfs-cli-***`)를 사용하여 실행 중인 서버를 제어합니다. 아래 예시는 `govfs-cli`로 통칭합니다.
+## Configuration
 
-#### 기본 명령어 (Root Level)
-
-- `govfs-cli login`: 서버에 로그인하고 access token 저장
-
-- **데이터 관리**
-  - `govfs-cli backup`: VFS 데이터베이스 백업
-  - `govfs-cli restore`: 백업 파일에서 복원
-  - `govfs-cli rotate`: 암호화 키 교체
-
-- **파일 조작**
-  - `govfs-cli ls`: 파일 목록 조회
-  - `govfs-cli tree`: 트리 구조 조회
-  - `govfs-cli stat`: 파일 메타데이터 조회
-  - `govfs-cli cp`: 로컬-VFS 간 파일 복사
-  - `govfs-cli mkdir`: 디렉토리 생성
-  - `govfs-cli rm`: 파일/디렉토리 삭제
-
-## 설정 (config.toml)
-
-`config.toml` 파일을 통해 애플리케이션의 설정을 변경할 수 있습니다.
+현재 `config.toml`의 전체 구조는 다음과 같습니다.
 
 ```toml
 [server]
-# 웹 서버 포트
 port = 3000
 
-[server.config]
-# 라우트 정보 출력 여부
-enablePrintRoutes = false
-
 [server.logger]
-path = "./logs/server.log"
-accessLogPath = "./logs/access-log.log"
-# log-level: debug=-4, info=0, warn=4, error=8
+path = "~/.govfs/logs/server.log"
+accessLogPath = "~/.govfs/logs/access-log.log"
+# Fiber log level: debug=-4, info=0, warn=4, error=8
 level = 0
 
+[server.auth]
 [server.auth.admin]
-# 사용자 DB가 비어 있을 때 생성할 최초 관리자
 username = "${SERVER_AUTH_ADMIN_USERNAME}"
 password = "${SERVER_AUTH_ADMIN_PASSWORD}"
 
@@ -158,19 +105,103 @@ password = "${SERVER_AUTH_ADMIN_PASSWORD}"
 secret = "${SERVER_AUTH_JWT_SECRET}"
 exp = "24h"
 
-[vfs.logger]
-path = "./logs/vfs.log"
-# log-level: debug=-4, info=0, warn=4, error=8
-level = 8
+[server.fiber]
+# 최대 request body: 100 MiB
+bodyLimit = 104857600
+
+[server.middlewares]
+# 운영 환경에서는 필요한 진단 endpoint만 활성화
+config = false
+envvar = false
+expvar = false
+pprof = false
+route = false
+swagger = false
+
+[server.webui]
+enabled = true
 
 [vfs.driver]
-# 다중 사용자 서버는 BadgerDB 드라이버만 지원
+# badger 또는 localstorage
 type = "badger"
 
 [vfs.driver.badger]
-path = "./drives"
+# 사용자 DB: {path}/{user UUID}
+# 시스템 DB: {path의 상위 경로}/system/users
+path = "~/.govfs/drives"
 encryptKeyRotateDuration = "24h"
+gcInterval = "5m"
+gcDiscardRatio = 0.7
 
+[vfs.driver.localstorage]
+# type = "localstorage"일 때 사용자 파일 루트
+path = "~/.govfs/drives"
+
+[vfs.logger]
+path = "~/.govfs/logs/vfs.log"
+# VFS log level: trace=-1, debug=0, info=1, warn=2, error=3,
+# fatal=4, panic=5, noLevel=6, disabled=7
+level = -1
 ```
 
-사용자 시스템의 수동 검증과 기존 데이터 이전 방법은 [USER_SYSTEM_VALIDATION.md](./docs/features/USER_SYSTEM_VALIDATION.md)를 참고하세요.
+Viper는 설정 키의 점을 밑줄로 바꾼 환경 변수로 값을 덮어씁니다. 예를 들어
+`server.auth.jwt.secret`은 `SERVER_AUTH_JWT_SECRET`으로 지정할 수 있습니다.
+`~`로 시작하는 로그와 드라이버 경로는 실행 사용자의 홈 디렉터리로 확장됩니다.
+
+사용자 드라이브 루트를 변경할 때는 기존 데이터 이전 절차를 먼저 확인하세요.
+[USER_SYSTEM_VALIDATION.md](./docs/features/USER_SYSTEM_VALIDATION.md)에 수동 검증과
+기존 단일 BadgerDB 이전 방법이 있습니다.
+
+## CLI Usage
+
+서버를 먼저 실행한 뒤 로그인합니다.
+
+```bash
+go run ./cmd/cli login
+```
+
+로그인 성공 시 서버 URL, 사용자 이름, access token과 만료 시각이 mode `0600`의
+`~/.govfs/config`에 저장됩니다. 비밀번호는 저장되지 않습니다. Token이 없거나
+만료되면 다시 `govfs login`을 실행해야 합니다.
+
+주요 명령은 다음과 같습니다.
+
+```text
+login                         서버 로그인
+info [-v]                     클라이언트/서버 정보
+ls <path>                     파일 목록
+tree <path>                   디렉터리 트리
+stat <id>                     메타데이터
+cp <src> <dst>                로컬-VFS 간 복사
+mkdir <path>                  디렉터리 생성
+rm <path>                     파일 또는 디렉터리 삭제
+backup / restore / rotate     사용자 드라이브 유지보수
+mcp                           현재 CLI 세션으로 MCP 서버 실행
+secret                        로컬 secret 도구
+```
+
+CLI의 `--config`, `-c`는 세션 저장 기준 디렉터리를 지정합니다. 예를 들어
+`--config /tmp/govfs-test`는 `/tmp/govfs-test/.govfs/config`을 사용합니다.
+
+## API Groups
+
+- `/auth`: 로그인, 로그아웃, 현재 사용자, 비밀번호 변경
+- `/admin`: 사용자, 서버 상태, 시스템 DB, 감사 이벤트 관리
+- `/vfs`: 사용자 파일과 backup/restore
+- `/badger`: Badger 사용자의 드라이브 통계와 키 rotation
+- `/sse`: `GET /sse/subscribe`, `POST /sse/publish/:id?`, client 목록
+
+## Docker
+
+```bash
+make build-docker tag=latest
+docker run --rm -p 3000:3000 \
+  --env-file .env \
+  -v "$HOME/.govfs/config.toml:/govfs/config.toml:ro" \
+  -v "$HOME/.govfs:/root/.govfs" \
+  ghcr.io/shabatoily/govfs:latest
+```
+
+Docker에서는 설정 파일과 선택한 드라이버의 `path`가 container 내부의 mount
+경로와 일치해야 합니다. 환경별 실행 예시는 `docker-compose.yml`과
+`docker-compose.dev.yml`을 참조하세요.

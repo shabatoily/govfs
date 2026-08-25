@@ -171,6 +171,14 @@ func (ls *LocalStorage) Create(path string, r io.Reader) (vfs.Meta, error) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 
+	path = strings.TrimSpace(path)
+	if path == vfs.Root || path == "" {
+		return vfs.Meta{}, vfs.ErrInvalidPath
+	}
+	if !strings.HasPrefix(path, vfs.Root) {
+		path = vfs.Root + path
+	}
+
 	if _, ok := ls.pathMap[path]; ok {
 		return vfs.Meta{}, vfs.ErrAlreadyExists
 	}
@@ -241,6 +249,8 @@ func (ls *LocalStorage) Write(id uuid.UUID, r io.Reader) (vfs.Meta, error) {
 
 	meta.Size = size
 	meta.Modified = time.Now()
+	ls.idMap[id] = meta
+	ls.pathMap[meta.Path] = meta
 	return meta, nil
 }
 
@@ -253,6 +263,8 @@ func (ls *LocalStorage) WriteComments(id uuid.UUID, comment string) (vfs.Meta, e
 		return vfs.Meta{}, vfs.ErrNotFound
 	}
 	meta.Comments = comment
+	ls.idMap[id] = meta
+	ls.pathMap[meta.Path] = meta
 	return meta, nil
 }
 

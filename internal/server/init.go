@@ -39,10 +39,19 @@ type serverContext struct {
 
 // Init은 전체 설정을 읽어 VFS를 초기화하고 최종적으로 Fiber 애플리케이션 인스턴스를 반환합니다.
 func Init(cfg *config.Config) (*fiber.App, error) {
-	if cfg.VFS.Driver.Type != "badger" {
-		return nil, fmt.Errorf("user drives require badger driver")
+	var driveRoot string
+	switch cfg.VFS.Driver.Type {
+	case "badger":
+		driveRoot = cfg.VFS.Driver.Badger.Path
+	case "localstorage":
+		driveRoot = cfg.VFS.Driver.LocalStorage.Path
+	default:
+		return nil, fmt.Errorf("unsupported VFS driver: %s", cfg.VFS.Driver.Type)
 	}
-	userStore, err := services.OpenUserStore(filepath.Join(filepath.Dir(cfg.VFS.Driver.Badger.Path), "system", "users"))
+	if driveRoot == "" {
+		return nil, fmt.Errorf("VFS driver path is required")
+	}
+	userStore, err := services.OpenUserStore(filepath.Join(filepath.Dir(driveRoot), "system", "users"))
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +77,8 @@ func Init(cfg *config.Config) (*fiber.App, error) {
 		return nil, err
 	}
 	cfg.VFS.Driver.Badger.Logger = vfsLogger
-	drives := services.NewDriveManager(cfg.VFS.Driver.Badger)
+	cfg.VFS.Driver.LocalStorage.Logger = vfsLogger
+	drives := services.NewDriveManager(cfg.VFS.Driver)
 
 	server := initServer(serverContext{
 		Config: &cfg.Server,

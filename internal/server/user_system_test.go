@@ -14,7 +14,38 @@ import (
 	"github.com/shabatoily/govfs/internal/types"
 	"github.com/shabatoily/govfs/pkg/drivers"
 	"github.com/shabatoily/govfs/pkg/drivers/badger"
+	"github.com/shabatoily/govfs/pkg/drivers/localstorage"
 )
+
+func TestInitSupportsLocalStorage(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "drives")
+	cfg := &config.Config{
+		Server: config.ServerConfig{Auth: config.AuthConfig{
+			Admin: config.AdminConfig{Username: "admin", Password: "password"},
+			JWT:   config.JWTConfig{Secret: "test-secret", Exp: time.Hour},
+		}},
+		VFS: config.VfsConfig{Driver: drivers.Config{
+			Type:         drivers.DriverTypeLocalStorage,
+			LocalStorage: localstorage.Config{Path: root},
+		}},
+	}
+	cfg.SetContext(context.Background())
+	app, err := Init(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = app.Shutdown() })
+
+	token := loginToken(t, app, "admin", "password")
+	res, err := app.Test(request(t, http.MethodGet, "/vfs/?q=/", nil, token))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("LocalStorage VFS 목록 상태 = %d", res.StatusCode)
+	}
+}
 
 func TestUserSystemAdminBoundary(t *testing.T) {
 	cfg := &config.Config{

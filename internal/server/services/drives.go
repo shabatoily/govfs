@@ -8,17 +8,17 @@ import (
 	"github.com/google/uuid"
 	vfs "github.com/shabatoily/govfs"
 	"github.com/shabatoily/govfs/internal/types"
-	"github.com/shabatoily/govfs/pkg/drivers/badger"
+	"github.com/shabatoily/govfs/pkg/drivers"
 )
 
 type DriveManager struct {
-	config badger.Config
-	drives map[uuid.UUID]*badger.BadgerVFS
+	config drivers.Config
+	drives map[uuid.UUID]vfs.VFS
 	mu     sync.Mutex
 }
 
-func NewDriveManager(config badger.Config) *DriveManager {
-	return &DriveManager{config: config, drives: make(map[uuid.UUID]*badger.BadgerVFS)}
+func NewDriveManager(config drivers.Config) *DriveManager {
+	return &DriveManager{config: config, drives: make(map[uuid.UUID]vfs.VFS)}
 }
 
 func (m *DriveManager) Drive(userID uuid.UUID) (vfs.VFS, error) {
@@ -35,11 +35,16 @@ func (m *DriveManager) Drive(userID uuid.UUID) (vfs.VFS, error) {
 	return drive, nil
 }
 
-func (m *DriveManager) open(userID uuid.UUID) (*badger.BadgerVFS, error) {
+func (m *DriveManager) open(userID uuid.UUID) (vfs.VFS, error) {
 	config := m.config
-	config.Path = filepath.Join(m.config.Path, userID.String())
-	config.EncryptKey = nil
-	return badger.New(&config)
+	switch config.Type {
+	case drivers.DriverTypeBadger:
+		config.Badger.Path = filepath.Join(config.Badger.Path, userID.String())
+		config.Badger.EncryptKey = nil
+	case drivers.DriverTypeLocalStorage:
+		config.LocalStorage.Path = filepath.Join(config.LocalStorage.Path, userID.String())
+	}
+	return drivers.New(&config)
 }
 
 func (m *DriveManager) OpenCount() int {
@@ -60,14 +65,17 @@ func (m *DriveManager) Stats(userID uuid.UUID) (types.StorageStatRes, bool, erro
 		}
 		defer drive.Close()
 	}
-	stats, err := drive.Stats()
+	tree, err := drive.Tree(vfs.Root)
 	if err != nil {
 		return types.StorageStatRes{}, wasOpen, err
 	}
 	var total types.StorageStatRes
-	for _, stat := range stats {
-		total.Items += stat.Count
-		total.Size += stat.Size
+	for node := range tree.Walk() {
+		if node.Meta.Path == vfs.Root {
+			continue
+		}
+		total.Items++
+		total.Size += node.Meta.Size
 	}
 	return total, wasOpen, nil
 }

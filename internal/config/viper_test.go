@@ -17,6 +17,7 @@ func TestResolveConfigExpandsHomePaths(t *testing.T) {
 	cfg.VFS.Logger.Path = "~/.govfs/logs/vfs.log"
 	cfg.VFS.Driver.Type = drivers.DriverTypeBadger
 	cfg.VFS.Driver.Badger.Path = "~/.govfs/data"
+	cfg.VFS.Driver.LocalStorage.Path = "~/.govfs/local"
 
 	if err := resolveConfig(&cfg); err != nil {
 		t.Fatal(err)
@@ -24,10 +25,11 @@ func TestResolveConfigExpandsHomePaths(t *testing.T) {
 
 	wantRoot := filepath.Join(home, ".govfs")
 	paths := map[string]string{
-		cfg.Server.Logger.Path:          filepath.Join(wantRoot, "logs", "server.log"),
-		cfg.Server.Logger.AccessLogPath: filepath.Join(wantRoot, "logs", "access.log"),
-		cfg.VFS.Logger.Path:             filepath.Join(wantRoot, "logs", "vfs.log"),
-		cfg.VFS.Driver.Badger.Path:      filepath.Join(wantRoot, "data"),
+		cfg.Server.Logger.Path:           filepath.Join(wantRoot, "logs", "server.log"),
+		cfg.Server.Logger.AccessLogPath:  filepath.Join(wantRoot, "logs", "access.log"),
+		cfg.VFS.Logger.Path:              filepath.Join(wantRoot, "logs", "vfs.log"),
+		cfg.VFS.Driver.Badger.Path:       filepath.Join(wantRoot, "data"),
+		cfg.VFS.Driver.LocalStorage.Path: filepath.Join(wantRoot, "local"),
 	}
 	for got, want := range paths {
 		if got != want {
