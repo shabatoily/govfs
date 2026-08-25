@@ -17,6 +17,10 @@ OS=$(shell go env GOOS)
 ARCH=$(shell go env GOARCH)
 
 SWAGGO_VERSION=v2.0.0-rc5
+BENCHSTAT_VERSION=v0.0.0-20260819171926-ebcb4798430d
+BENCHMARK_COUNT?=10
+BENCHMARK_TIME?=2s
+BENCHMARK_OUTPUT?=/tmp/govfs-benchmark
 
 .DEFAULT: help
 .SILENT:;
@@ -54,7 +58,30 @@ audit:
 .PHONY: benchmark
 benchmark:
 	@echo "[benchmark] starting benchmark $(PRJ_NAME)"
-	@go test ./... -benchmem -bench=. -run=^Benchmark$
+	@go test ./pkg/drivers/badger ./pkg/drivers/localstorage \
+		-run='^$$' -bench='.' -benchmem \
+		-benchtime=$(BENCHMARK_TIME) -count=$(BENCHMARK_COUNT) > "$(BENCHMARK_OUTPUT).raw"
+	@awk '\
+		BEGIN { pending = "" } \
+		/^goos:|^goarch:|^pkg:|^cpu:/ { print; next } \
+		/^Benchmark_BadgerVFS_/ { \
+			if ($$2 ~ /^[0-9]+$$/) { print; next } \
+			pending = $$1; next \
+		} \
+		pending != "" && /^[[:space:]]+[0-9]+[[:space:]]+[0-9.]+ ns\/op/ { \
+			print pending $$0; pending = ""; next \
+		} \
+		/^Benchmark_LocalStorage_/ { print } \
+	' "$(BENCHMARK_OUTPUT).raw" > "$(BENCHMARK_OUTPUT).txt"
+	@count=$$(grep -c '^Benchmark_' "$(BENCHMARK_OUTPUT).txt"); \
+		expected=$$((14 * $(BENCHMARK_COUNT))); \
+		test "$$count" -eq "$$expected" || { \
+			echo "[benchmark] expected $$expected results, got $$count"; exit 1; \
+		}
+	@go run golang.org/x/perf/cmd/benchstat@$(BENCHSTAT_VERSION) \
+		"$(BENCHMARK_OUTPUT).txt" > "$(BENCHMARK_OUTPUT).stats"
+	@cat "$(BENCHMARK_OUTPUT).stats"
+	@echo "[benchmark] results: $(BENCHMARK_OUTPUT).stats"
 	@echo "[benchmark] complete benchmark"
 
 ##build os={os [linux, darwin]} arch={arch [amd64, arm64]} tag={tag [v1.0.0]}: build application
