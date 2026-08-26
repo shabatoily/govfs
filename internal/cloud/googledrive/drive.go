@@ -19,12 +19,11 @@ import (
 	"google.golang.org/api/option"
 )
 
-const googleDriveFolderMIME = "application/vnd.google-apps.folder"
-
 const (
-	tokenDirMode         = 0o600
-	tokenFileMode        = 0o600
-	defaultTokenFilename = "token.json"
+	googleDriveFolderMIME = "application/vnd.google-apps.folder"
+	tokenDirMode          = 0o600
+	tokenFileMode         = 0o600
+	defaultTokenFilename  = "token.json"
 )
 
 // ErrUnauthorized는 인증 정보가 없거나 유효하지 않을 때 발생하는 에러입니다.

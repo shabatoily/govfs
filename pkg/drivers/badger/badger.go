@@ -25,9 +25,6 @@ const (
 	KiB = 1024 * Byte
 	// MiB는 메비바이트(1024 KiB)입니다.
 	MiB = 1024 * KiB
-)
-
-var (
 	// DefaultSecretFilename은 암호화 키를 저장하는 기본 파일명입니다.
 	DefaultSecretFilename = ".secret"
 	// DefaultSecretKeySize는 생성할 암호화 키의 기본 길이(바이트)입니다.
