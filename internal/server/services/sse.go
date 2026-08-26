@@ -60,11 +60,11 @@ type client struct {
 	ready   chan struct{}
 }
 
-// Subscribe는 새로운 클라이언트를 브로커에 등록하고 구독 성공 메시지를 반환합니다.
-func (b *SSEBroker) Subscribe(req types.SubscribeReq) (*types.SSEMessage, <-chan *types.SSEMessage, error) {
+// Subscribe는 새로운 클라이언트를 브로커에 등록하고 클라이언트 ID를 반환합니다.
+func (b *SSEBroker) Subscribe(req types.SubscribeReq) (uuid.UUID, <-chan *types.SSEMessage, error) {
 	if !b.isRunning.Load() {
 		log.Warn("Attempted to subscribe to stopped SSE Broker")
-		return nil, nil, errors.New("SSE broker is not running")
+		return uuid.Nil, nil, errors.New("SSE broker is not running")
 	}
 
 	// 구독 시 채널 생성을 브로커가 담당하여 일관성을 유지합니다.
@@ -93,18 +93,19 @@ func (b *SSEBroker) Subscribe(req types.SubscribeReq) (*types.SSEMessage, <-chan
 		initial: subMsg,
 		ready:   make(chan struct{}),
 	}
+
 	select {
 	case b.newClients <- newClient:
 	case <-b.ctx.Done():
 		log.Info("SSE Broker is shutting down, cannot subscribe")
-		return nil, nil, errors.New("SSE broker is shutting down")
+		return uuid.Nil, nil, errors.New("SSE broker is shutting down")
 	}
 
 	select {
 	case <-newClient.ready:
 		log.Infof("SSE Broker subscribed: %s", id)
 	case <-b.ctx.Done():
-		return nil, nil, errors.New("SSE broker is shutting down")
+		return uuid.Nil, nil, errors.New("SSE broker is shutting down")
 	}
 
 	// 클라이언트 컨텍스트가 취소(연결 끊김)되면 자동으로 Unsubscribe 호출
@@ -113,7 +114,7 @@ func (b *SSEBroker) Subscribe(req types.SubscribeReq) (*types.SSEMessage, <-chan
 	})
 
 	log.Infof("Initial message sent: %s", subMsg.ID)
-	return subMsg, ch, nil
+	return subMsg.ID, ch, nil
 }
 
 // Unsubscribe는 브로커에서 클라이언트를 제거하고 관련 리소스를 정리합니다.

@@ -382,7 +382,7 @@ func TestVfsHandler_AsyncExecuteTargetsClient(t *testing.T) {
 
 	handler := &VfsHandler{broker: broker}
 	meta := types.SSEMeta{ID: uuid.New(), Path: "/test.txt", Action: "vfs.create"}
-	handler.asyncExecute(target.ID.String(), func() (types.SSEMeta, error) {
+	handler.asyncExecute(target.String(), func() (types.SSEMeta, error) {
 		return meta, nil
 	})
 
