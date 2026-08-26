@@ -38,18 +38,18 @@ func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 	ctx.Set(fiber.HeaderCacheControl, "no-cache")
 	ctx.Set(fiber.HeaderConnection, "keep-alive")
 
-	msg, clientChan := h.broker.Subscribe(types.SubscribeReq{
+	msgID, clientChan, err := h.broker.Subscribe(types.SubscribeReq{
 		Ctx:  ctx.Context(),
 		Addr: ctx.IP(),
 		User: user,
 	})
-	if clientChan == nil {
+	if err != nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "SSE Broker is not available")
 	}
 
 	// Send initial subscription success event
 	return ctx.SendStreamWriter(func(w *bufio.Writer) {
-		log.Debugf("SSE Stream started for client: %s", msg.ID)
+		log.Debugf("SSE Stream started for client: %s", msgID)
 
 		ticker := time.NewTicker(heartbeatInterval)
 		defer ticker.Stop()
@@ -73,8 +73,8 @@ func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 				log.Debug("message sent to client")
 			case <-ticker.C:
 				// Heartbeat
-				h.broker.Hearbeat(user, msg.ID)
-				log.Debugf("heartbeat sent to client: %s", msg.ID)
+				h.broker.Hearbeat(user, msgID)
+				log.Debugf("heartbeat sent to client: %s", msgID)
 			}
 		}
 	})

@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"os/signal"
 	"runtime/debug"
 	"syscall"
@@ -48,6 +47,6 @@ func main() {
 
 	err := root.ExecuteContext(ctx)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 }

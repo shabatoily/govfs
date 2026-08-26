@@ -20,13 +20,13 @@ func TestSSEBrokerClientsReturnsClientInfo(t *testing.T) {
 	})
 	defer b.Shutdown()
 
-	msg, ch := b.Subscribe(types.SubscribeReq{
+	id, _, err := b.Subscribe(types.SubscribeReq{
 		Ctx:  ctx,
 		Addr: "127.0.0.1",
 		User: "admin",
 	})
-	if msg == nil || ch == nil {
-		t.Fatal("subscribe failed")
+	if err != nil {
+		t.Fatalf("subscribe: %v", err)
 	}
 
 	clients := b.Clients("admin")
@@ -35,8 +35,18 @@ func TestSSEBrokerClientsReturnsClientInfo(t *testing.T) {
 	}
 
 	got := clients[0]
-	if got.ID != msg.ID || got.CreatedAt.IsZero() || got.Addr != "127.0.0.1" || got.User != "admin" {
-		t.Fatalf("client info = %+v, msg id = %s", got, msg.ID)
+	if got.ID != id || got.CreatedAt.IsZero() || got.Addr != "127.0.0.1" || got.User != "admin" {
+		t.Fatalf("client info = %+v, client id = %s", got, id)
+	}
+}
+
+func TestSSEBrokerSubscribeStopped(t *testing.T) {
+	b := NewSSEBroker(SSEConfig{})
+	b.Shutdown()
+
+	id, ch, err := b.Subscribe(types.SubscribeReq{Ctx: context.Background()})
+	if err == nil || id != uuid.Nil || ch != nil {
+		t.Fatalf("subscribe stopped broker = (%v, %v, %v)", id, ch, err)
 	}
 }
 
@@ -51,11 +61,14 @@ func TestSSEBrokerSubscribeRegistersBeforePublish(t *testing.T) {
 	})
 	defer b.Shutdown()
 
-	msg, ch := b.Subscribe(types.SubscribeReq{Ctx: ctx})
+	id, ch, err := b.Subscribe(types.SubscribeReq{Ctx: ctx})
+	if err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
 	<-ch // 구독 완료 이벤트를 제거합니다.
 
 	meta := types.SSEMeta{ID: uuid.New(), Action: "vfs.create"}
-	b.Publish("", msg.ID, &types.SSEData{Status: true, Meta: meta}, 0)
+	b.Publish("", id, &types.SSEData{Status: true, Meta: meta}, 0)
 
 	select {
 	case got := <-ch:
@@ -72,8 +85,14 @@ func TestSSEBrokerSeparatesUsers(t *testing.T) {
 	defer cancel()
 	b := NewSSEBroker(SSEConfig{Context: ctx, MaxClientBuffer: 2, MaxMessageBuffer: 1})
 	defer b.Shutdown()
-	_, first := b.Subscribe(types.SubscribeReq{Ctx: ctx, User: "first"})
-	_, second := b.Subscribe(types.SubscribeReq{Ctx: ctx, User: "second"})
+	_, first, err := b.Subscribe(types.SubscribeReq{Ctx: ctx, User: "first"})
+	if err != nil {
+		t.Fatalf("subscribe first: %v", err)
+	}
+	_, second, err := b.Subscribe(types.SubscribeReq{Ctx: ctx, User: "second"})
+	if err != nil {
+		t.Fatalf("subscribe second: %v", err)
+	}
 	<-first
 	<-second
 

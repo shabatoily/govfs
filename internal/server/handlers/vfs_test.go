@@ -373,14 +373,16 @@ func TestVfsHandler_AsyncExecuteTargetsClient(t *testing.T) {
 	})
 	defer broker.Shutdown()
 
-	target, targetCh := broker.Subscribe(types.SubscribeReq{Ctx: ctx})
-	_, otherCh := broker.Subscribe(types.SubscribeReq{Ctx: ctx})
+	target, targetCh, err := broker.Subscribe(types.SubscribeReq{Ctx: ctx})
+	require.NoError(t, err)
+	_, otherCh, err := broker.Subscribe(types.SubscribeReq{Ctx: ctx})
+	require.NoError(t, err)
 	<-targetCh
 	<-otherCh
 
 	handler := &VfsHandler{broker: broker}
 	meta := types.SSEMeta{ID: uuid.New(), Path: "/test.txt", Action: "vfs.create"}
-	handler.asyncExecute(target.ID.String(), func() (types.SSEMeta, error) {
+	handler.asyncExecute(target.String(), func() (types.SSEMeta, error) {
 		return meta, nil
 	})
 
