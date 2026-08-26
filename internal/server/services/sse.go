@@ -3,6 +3,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"sync/atomic"
 	"time"
 
@@ -54,15 +55,16 @@ type listRequest struct {
 
 type client struct {
 	types.ClientInfo
-	ch    chan *types.SSEMessage
-	ready chan struct{}
+	ch      chan *types.SSEMessage
+	initial *types.SSEMessage
+	ready   chan struct{}
 }
 
 // Subscribe는 새로운 클라이언트를 브로커에 등록하고 구독 성공 메시지를 반환합니다.
-func (b *SSEBroker) Subscribe(req types.SubscribeReq) (*types.SSEMessage, <-chan *types.SSEMessage) {
+func (b *SSEBroker) Subscribe(req types.SubscribeReq) (*types.SSEMessage, <-chan *types.SSEMessage, error) {
 	if !b.isRunning.Load() {
 		log.Warn("Attempted to subscribe to stopped SSE Broker")
-		return nil, nil
+		return nil, nil, errors.New("SSE broker is not running")
 	}
 
 	// 구독 시 채널 생성을 브로커가 담당하여 일관성을 유지합니다.
@@ -87,21 +89,22 @@ func (b *SSEBroker) Subscribe(req types.SubscribeReq) (*types.SSEMessage, <-chan
 			Addr:      req.Addr,
 			User:      req.User,
 		},
-		ch:    ch,
-		ready: make(chan struct{}),
+		ch:      ch,
+		initial: subMsg,
+		ready:   make(chan struct{}),
 	}
 	select {
 	case b.newClients <- newClient:
 	case <-b.ctx.Done():
 		log.Info("SSE Broker is shutting down, cannot subscribe")
-		return nil, ch
+		return nil, nil, errors.New("SSE broker is shutting down")
 	}
 
 	select {
 	case <-newClient.ready:
 		log.Infof("SSE Broker subscribed: %s", id)
 	case <-b.ctx.Done():
-		return nil, ch
+		return nil, nil, errors.New("SSE broker is shutting down")
 	}
 
 	// 클라이언트 컨텍스트가 취소(연결 끊김)되면 자동으로 Unsubscribe 호출
@@ -109,18 +112,8 @@ func (b *SSEBroker) Subscribe(req types.SubscribeReq) (*types.SSEMessage, <-chan
 		b.Unsubscribe(id)
 	})
 
-	ch <- subMsg
-
 	log.Infof("Initial message sent: %s", subMsg.ID)
-
-	select {
-	case <-b.ctx.Done():
-		close(ch)
-		log.Info("SSE Broker is shutting down, cannot subscribe")
-		return nil, ch
-	default:
-		return subMsg, ch
-	}
+	return subMsg, ch, nil
 }
 
 // Unsubscribe는 브로커에서 클라이언트를 제거하고 관련 리소스를 정리합니다.
@@ -250,6 +243,7 @@ func (b *SSEBroker) listen() {
 			return
 		case newClient := <-b.newClients:
 			b.clients[newClient.ID] = newClient
+			newClient.ch <- newClient.initial
 			close(newClient.ready)
 			log.Infof("Client added: %s. Total clients: %d", newClient.ID, len(b.clients))
 		case clientID := <-b.closingClients:

@@ -12,7 +12,6 @@ import (
 	"syscall"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/log"
 	"github.com/joho/godotenv"
 	_ "github.com/shabatoily/govfs/docs"
 	"github.com/shabatoily/govfs/internal/config"
@@ -49,7 +48,7 @@ func main() {
 	if configPath == "" {
 		baseDir, err := os.UserHomeDir()
 		if err != nil {
-			log.Panic(err)
+			panic(err)
 		}
 		configPath = filepath.Join(baseDir, ".govfs", "config.toml")
 	}
@@ -64,7 +63,7 @@ func main() {
 		BuildInfo:   buildInfo,
 	})
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	// set context
@@ -73,7 +72,7 @@ func main() {
 	// init server
 	app, err := server.Init(cfg)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	// set host to config and set swagger info on listen
@@ -87,6 +86,6 @@ func main() {
 	if err := app.Listen(":"+strconv.Itoa(cfg.Server.Port), fiber.ListenConfig{
 		GracefulContext: ctx,
 	}); err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 }

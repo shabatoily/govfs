@@ -1193,6 +1193,10 @@ func (br *blobReader) Read(p []byte) (n int, err error) {
 			br.cachedChunkIdx = chunkIdx
 		}
 
+		if chunkOffset >= len(br.cachedChunk) {
+			return read, errors.New("badger: invalid chunk data")
+		}
+
 		n := copy(p[read:], br.cachedChunk[chunkOffset:])
 		read += n
 		br.offset += int64(n)
