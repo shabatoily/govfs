@@ -8,6 +8,8 @@ import (
 	"github.com/shabatoily/govfs/internal/cloud/googledrive"
 )
 
+var _ Storage = (*googledrive.Adapter)(nil)
+
 // Storage는 클라우드 스토리지와 통신하기 위한 공통 인터페이스입니다.
 type Storage interface {
 	Upload(path string, r io.Reader) error

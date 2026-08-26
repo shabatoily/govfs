@@ -26,6 +26,11 @@ type Config struct {
 	LocalStorage driverLocalStorage.Config `json:"localstorage"`
 }
 
+var (
+	_ vfs.VFS = (*driverBadger.BadgerVFS)(nil)
+	_ vfs.VFS = (*driverLocalStorage.LocalStorage)(nil)
+)
+
 // New는 설정된 유형에 따라 적절한 VFS 드라이버 인스턴스를 생성하여 반환합니다.
 func New(cfg *Config) (vfs.VFS, error) {
 	switch cfg.Type {
