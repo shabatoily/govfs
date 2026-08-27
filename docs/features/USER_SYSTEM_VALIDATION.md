@@ -47,7 +47,7 @@ level = -1
 서버를 실행한다.
 
 ```bash
-go run ./cmd/server -config /tmp/govfs-user-test.toml
+go run ./cmd/govfs -config /tmp/govfs-user-test.toml
 ```
 
 다른 터미널에서 헬스체크를 확인한다.
@@ -167,13 +167,13 @@ curl -i http://localhost:3000/auth/me \
 
 ```bash
 mkdir -p /tmp/govfs-cli-test
-go run ./cmd/cli --config /tmp/govfs-cli-test login
+go run ./cmd/govfs-cli --config /tmp/govfs-cli-test login
 ```
 
 프롬프트에 서버 URL, 사용자 이름과 비밀번호를 입력한 뒤 다음을 확인한다.
 
 ```bash
-go run ./cmd/cli --config /tmp/govfs-cli-test ls /
+go run ./cmd/govfs-cli --config /tmp/govfs-cli-test ls /
 sed -n '1,120p' /tmp/govfs-cli-test/.govfs/config
 ```
 

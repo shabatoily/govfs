@@ -2,6 +2,8 @@ FROM alpine AS base
 
 LABEL maintainer="meteormin"
 
+RUN apk add curl
+
 FROM node:24.15-alpine AS node
 
 WORKDIR /webui
@@ -29,21 +31,24 @@ COPY . .
 
 COPY --from=node /webui/dist ./webui/dist
 
-RUN go build -trimpath -ldflags="-X 'main.version=${VERSION}' -X 'main.buildTime=${BUILD_TIME}'" -o server ./cmd/server/main.go
+RUN go build -trimpath -ldflags="-X 'main.version=${VERSION}' -X 'main.buildTime=${BUILD_TIME}'" -o govfs ./cmd/govfs/main.go
 
-FROM base AS deploy
+FROM base AS govfs
 
 ENV SERVER_PORT=3000
 
-WORKDIR /govfs
+RUN addgroup -g 1000 govfs && \
+    adduser -u 1000 -G govfs -s /bin/sh -D govfs && \
+    mkdir -p /home/govfs/.govfs /etc/govfs && \
+    chown govfs:govfs /home/govfs/.govfs
 
-RUN apk add curl
+WORKDIR /home/govfs
 
-COPY --from=go /govfs/server ./server
-COPY --from=go /govfs/config.toml ./config.toml
+USER govfs
 
-RUN mkdir -p /govfs/data
+COPY --from=go /govfs/govfs /usr/local/bin/govfs
+COPY --from=go /govfs/config.toml /etc/govfs/config.toml
 
 EXPOSE ${SERVER_PORT}
 
-ENTRYPOINT ["./server", "--config", "config.toml"]
+ENTRYPOINT ["govfs", "--config", "/etc/govfs/config.toml"]

@@ -1,12 +1,12 @@
 services:
   govfs:
-    container_name: govfs-server
+    container_name: govfs
     image: ghcr.io/shabatoily/govfs:${TAG:-latest}
     env_file:
       - .env
     volumes:
-      - "${VOLUME_DATA:-./data}:/govfs/data"
-      - "${CONFIG_PATH:-./config.toml}:/govfs/config.toml"
+      - "${DATA_PATH:-./data}:/home/govfs/.govfs"
+      - "${CONFIG_PATH:-./config.toml}:/etc/govfs/config.toml"
     ports:
       - "${OUTBOUND_PORT:-3000}:${SERVER_PORT:-3000}"
     healthcheck:

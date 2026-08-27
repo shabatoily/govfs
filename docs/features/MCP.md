@@ -37,7 +37,7 @@ VFS Service → VFS Driver
 
 - `internal/mcp`는 MCP 서버 생성과 도구 등록 및 실행을 담당한다.
 - `internal/cli`는 `govfs mcp` 명령을 등록하고 stdio transport를 시작한다.
-- `cmd/cli`는 기존 CLI 진입점을 유지한다.
+- `cmd/govfs-cli`는 기존 CLI 진입점을 유지한다.
 - MCP 프로세스는 VFS 드라이버나 Badger DB를 직접 열지 않는다. 기존 HTTP API를 사용하여 인증과 서버 동작 경계를 유지한다.
 - MCP SDK는 공식 Go SDK `github.com/modelcontextprotocol/go-sdk` v1.6.1을 사용한다.
 
