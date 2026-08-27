@@ -75,13 +75,6 @@ func main() {
 		panic(err)
 	}
 
-	// set host to config and set swagger info on listen
-	app.Hooks().OnListen(func(listenData fiber.ListenData) error {
-		cfg.Server.Host = listenData.Host
-		config.SetSwaggerInfo(cfg)
-		return nil
-	})
-
 	// listen
 	if err := app.Listen(":"+strconv.Itoa(cfg.Server.Port), fiber.ListenConfig{
 		GracefulContext: ctx,

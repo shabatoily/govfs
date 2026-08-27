@@ -32,7 +32,7 @@ const banner = `
 `
 
 type serverContext struct {
-	Config *config.ServerConfig
+	Config *config.Config
 	Users  *services.UserStore
 	Drives *services.DriveManager
 }
@@ -81,7 +81,7 @@ func Init(cfg *config.Config) (*fiber.App, error) {
 	drives := services.NewDriveManager(cfg.VFS.Driver)
 
 	server := initServer(serverContext{
-		Config: &cfg.Server,
+		Config: cfg,
 		Users:  userStore,
 		Drives: drives,
 	})
@@ -91,17 +91,17 @@ func Init(cfg *config.Config) (*fiber.App, error) {
 
 // initServer는 Fiber 애플리케이션을 생성하고 라우트, 미들웨어, 이벤트 후크를 설정합니다.
 func initServer(ctx serverContext) *fiber.App {
-	cfg := ctx.Config
+	srvCfg := ctx.Config.Server
 
 	// 에러 핸들러 설정
-	cfg.Fiber.ErrorHandler = middlewares.ErrorHandler
+	srvCfg.Fiber.ErrorHandler = middlewares.ErrorHandler
 	// JSON 인코더 및 디코더 설정
-	cfg.Fiber.JSONEncoder = json.Marshal
-	cfg.Fiber.JSONDecoder = json.Unmarshal
+	srvCfg.Fiber.JSONEncoder = json.Marshal
+	srvCfg.Fiber.JSONDecoder = json.Unmarshal
 
 	// Fiber 로거 설정
-	log.SetLevel(cfg.Logger.Level)
-	fiberLogFile, err := os.OpenFile(cfg.Logger.Path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, vfs.DefaultFileMode)
+	log.SetLevel(srvCfg.Logger.Level)
+	fiberLogFile, err := os.OpenFile(srvCfg.Logger.Path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, vfs.DefaultFileMode)
 	if err != nil {
 		log.SetOutput(os.Stdout)
 	} else {
@@ -109,10 +109,10 @@ func initServer(ctx serverContext) *fiber.App {
 		log.SetOutput(w)
 	}
 
-	app := fiber.New(cfg.Fiber)
+	app := fiber.New(srvCfg.Fiber)
 
 	// 공통 미들웨어 등록
-	middlewares.Register(app, cfg, ctx.Users)
+	middlewares.Register(app, &srvCfg, ctx.Users)
 
 	// 웹 라우트 설정
 	registerRoutes(app, ctx)
@@ -132,22 +132,31 @@ func initServer(ctx serverContext) *fiber.App {
 		return err
 	})
 
+	// set host to config and set swagger info on listen
+	app.Hooks().OnListen(func(listenData fiber.ListenData) error {
+		srvCfg.Host = listenData.Host
+		config.SetSwaggerInfo(ctx.Config)
+		return nil
+	})
+
 	return app
 }
 
 func registerRoutes(app *fiber.App, ctx serverContext) {
 	sseBroker := services.NewSSEBroker(services.SSEConfig{
-		Context:          ctx.Config.Context,
+		Context:          ctx.Config.Context(),
 		MaxClientBuffer:  10,
 		MaxMessageBuffer: 100,
 	})
 
-	authHandler := handlers.NewAuthHandler(ctx.Config.Auth, ctx.Users)
+	srvCfg := ctx.Config.Server
+
+	authHandler := handlers.NewAuthHandler(srvCfg.Auth, ctx.Users)
 	adminHandler := handlers.NewAdminHandler(ctx.Users, ctx.Drives, sseBroker)
 
 	sseHandler := handlers.NewSSEHandler(sseBroker)
 
-	jwtAuth := middlewares.JWTAuthMiddleware(ctx.Config.Auth)
+	jwtAuth := middlewares.JWTAuthMiddleware(srvCfg.Auth)
 	userAuth := middlewares.UserMiddleware(ctx.Users)
 
 	app.Route("/auth", func(router fiber.Router) {
@@ -201,7 +210,7 @@ func registerRoutes(app *fiber.App, ctx serverContext) {
 		router.Post("/rotate", withBadger(ctx.Drives, (*handlers.BadgerHandler).Rotate)).Name("rotate")
 	}, "badger.")
 
-	if ctx.Config.WebUI.Enabled {
+	if srvCfg.WebUI.Enabled {
 		app.Use("/", static.New("", static.Config{
 			FS:     webui.FS,
 			Browse: true,
