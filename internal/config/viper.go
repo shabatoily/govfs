@@ -28,6 +28,7 @@ func LoadWithViper(in string, appInfo AppInfo) (*Config, error) {
 	viper.SetConfigFile(in)
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.SetDefault("vfs.idleTimeout", DefaultConfig.VFS.IdleTimeout)
 	err := viper.ReadInConfig()
 	if err != nil {
 		return nil, err

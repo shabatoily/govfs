@@ -45,6 +45,27 @@ func TestInitSupportsLocalStorage(t *testing.T) {
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("LocalStorage VFS 목록 상태 = %d", res.StatusCode)
 	}
+
+	logoutRes, err := app.Test(request(t, http.MethodPost, "/auth/logout", nil, token))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = logoutRes.Body.Close()
+	if logoutRes.StatusCode != http.StatusNoContent {
+		t.Fatalf("로그아웃 상태 = %d", logoutRes.StatusCode)
+	}
+	statusRes, err := app.Test(request(t, http.MethodGet, "/admin/status", nil, token))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer statusRes.Body.Close()
+	var status types.StatusRes
+	if err := json.NewDecoder(statusRes.Body).Decode(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status.OpenDrives != 0 {
+		t.Fatalf("로그아웃 후 열린 드라이브 = %d", status.OpenDrives)
+	}
 }
 
 func TestUserSystemAdminBoundary(t *testing.T) {

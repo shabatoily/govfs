@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/shabatoily/govfs/pkg/drivers"
@@ -15,10 +16,13 @@ func TestDriveManagerSeparatesUsers(t *testing.T) {
 	for _, driverType := range []drivers.DriverType{drivers.DriverTypeBadger, drivers.DriverTypeLocalStorage} {
 		t.Run(string(driverType), func(t *testing.T) {
 			root := filepath.Join(t.TempDir(), "drives")
-			manager := NewDriveManager(drivers.Config{
-				Type:         driverType,
-				Badger:       badger.Config{Path: root},
-				LocalStorage: localstorage.Config{Path: root},
+			manager := NewDriveManager(DriveManagerConfig{
+				Driver: drivers.Config{
+					Type:         driverType,
+					Badger:       badger.Config{Path: root},
+					LocalStorage: localstorage.Config{Path: root},
+				},
+				IdleTimeout: time.Hour,
 			})
 			t.Cleanup(func() { _ = manager.Close() })
 			firstID := uuid.New()
@@ -55,5 +59,26 @@ func TestDriveManagerSeparatesUsers(t *testing.T) {
 				t.Fatalf("미개방 드라이브 통계 = %#v, open=%v, count=%d, err=%v", stats, open, manager.OpenCount(), err)
 			}
 		})
+	}
+}
+
+func TestDriveManagerClosesIdleDrive(t *testing.T) {
+	manager := NewDriveManager(DriveManagerConfig{
+		Driver: drivers.Config{
+			Type:         drivers.DriverTypeLocalStorage,
+			LocalStorage: localstorage.Config{Path: filepath.Join(t.TempDir(), "drives")},
+		},
+		IdleTimeout: 10 * time.Millisecond,
+	})
+	t.Cleanup(func() { _ = manager.Close() })
+	if _, err := manager.Drive(uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(time.Second)
+	for manager.OpenCount() != 0 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if manager.OpenCount() != 0 {
+		t.Fatal("유휴 드라이브가 닫히지 않았습니다")
 	}
 }

@@ -3,9 +3,33 @@ package config
 import (
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/shabatoily/govfs/pkg/drivers"
+	"github.com/spf13/viper"
 )
+
+func TestVFSIdleTimeoutDefaultAndDisable(t *testing.T) {
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+	viper.SetDefault("vfs.idleTimeout", DefaultConfig.VFS.IdleTimeout)
+
+	cfg := Config{}
+	if err := setConfigFromViper(&cfg, AppInfo{}); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.VFS.IdleTimeout != 30*time.Minute {
+		t.Fatalf("기본 idle timeout = %s", cfg.VFS.IdleTimeout)
+	}
+
+	viper.Set("vfs.idleTimeout", 0)
+	if err := setConfigFromViper(&cfg, AppInfo{}); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.VFS.IdleTimeout != 0 {
+		t.Fatalf("비활성 idle timeout = %s", cfg.VFS.IdleTimeout)
+	}
+}
 
 func TestResolveConfigExpandsHomePaths(t *testing.T) {
 	home := t.TempDir()

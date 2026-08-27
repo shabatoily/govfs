@@ -121,6 +121,10 @@ swagger = false
 [server.webui]
 enabled = true
 
+[vfs]
+# 유휴 사용자 드라이브를 닫기까지의 시간. 0이면 비활성화
+idleTimeout = "30m"
+
 [vfs.driver]
 # badger 또는 localstorage
 type = "badger"
