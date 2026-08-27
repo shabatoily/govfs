@@ -19,10 +19,14 @@ type DriveManagerConfig struct {
 	IdleTimeout time.Duration
 }
 
+type driveEntry struct {
+	drive    vfs.VFS
+	lastUsed time.Time
+}
+
 type DriveManager struct {
 	config      drivers.Config
-	drives      map[uuid.UUID]vfs.VFS
-	lastUsed    map[uuid.UUID]time.Time
+	drives      map[uuid.UUID]driveEntry
 	idleTimeout time.Duration
 	stop        chan struct{}
 	stopOnce    sync.Once
@@ -33,8 +37,7 @@ type DriveManager struct {
 func NewDriveManager(config DriveManagerConfig) *DriveManager {
 	m := &DriveManager{
 		config:      config.Driver,
-		drives:      make(map[uuid.UUID]vfs.VFS),
-		lastUsed:    make(map[uuid.UUID]time.Time),
+		drives:      make(map[uuid.UUID]driveEntry),
 		idleTimeout: config.IdleTimeout,
 		stop:        make(chan struct{}),
 	}
@@ -48,16 +51,16 @@ func NewDriveManager(config DriveManagerConfig) *DriveManager {
 func (m *DriveManager) Drive(userID uuid.UUID) (vfs.VFS, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if drive := m.drives[userID]; drive != nil {
-		m.lastUsed[userID] = time.Now()
-		return drive, nil
+	if entry, ok := m.drives[userID]; ok {
+		entry.lastUsed = time.Now()
+		m.drives[userID] = entry
+		return entry.drive, nil
 	}
 	drive, err := m.open(userID)
 	if err != nil {
 		return nil, err
 	}
-	m.drives[userID] = drive
-	m.lastUsed[userID] = time.Now()
+	m.drives[userID] = driveEntry{drive: drive, lastUsed: time.Now()}
 	return drive, nil
 }
 
@@ -82,7 +85,8 @@ func (m *DriveManager) OpenCount() int {
 func (m *DriveManager) Stats(userID uuid.UUID) (types.StorageStatRes, bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	drive, wasOpen := m.drives[userID]
+	entry, wasOpen := m.drives[userID]
+	drive := entry.drive
 	if !wasOpen {
 		var err error
 		drive, err = m.open(userID)
@@ -91,7 +95,8 @@ func (m *DriveManager) Stats(userID uuid.UUID) (types.StorageStatRes, bool, erro
 		}
 		defer drive.Close()
 	} else {
-		m.lastUsed[userID] = time.Now()
+		entry.lastUsed = time.Now()
+		m.drives[userID] = entry
 	}
 	tree, err := drive.Tree(vfs.Root)
 	if err != nil {
@@ -112,13 +117,12 @@ func (m *DriveManager) Stats(userID uuid.UUID) (types.StorageStatRes, bool, erro
 func (m *DriveManager) CloseDrive(userID uuid.UUID) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	drive := m.drives[userID]
-	if drive == nil {
+	entry, ok := m.drives[userID]
+	if !ok {
 		return nil
 	}
 	delete(m.drives, userID)
-	delete(m.lastUsed, userID)
-	return drive.Close()
+	return entry.drive.Close()
 }
 
 func (m *DriveManager) gc() {
@@ -142,15 +146,14 @@ func (m *DriveManager) gc() {
 func (m *DriveManager) closeIdle(now time.Time) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for id, lastUsed := range m.lastUsed {
-		if now.Sub(lastUsed) < m.idleTimeout {
+	for id, entry := range m.drives {
+		if now.Sub(entry.lastUsed) < m.idleTimeout {
 			continue
 		}
-		if err := m.drives[id].Close(); err != nil {
+		if err := entry.drive.Close(); err != nil {
 			log.Errorf("failed to close idle drive: %v", err)
 		}
 		delete(m.drives, id)
-		delete(m.lastUsed, id)
 	}
 }
 
@@ -160,10 +163,9 @@ func (m *DriveManager) Close() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	var err error
-	for id, drive := range m.drives {
-		err = errors.Join(err, drive.Close())
+	for id, entry := range m.drives {
+		err = errors.Join(err, entry.drive.Close())
 		delete(m.drives, id)
-		delete(m.lastUsed, id)
 	}
 	return err
 }
