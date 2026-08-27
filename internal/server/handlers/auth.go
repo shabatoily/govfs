@@ -17,13 +17,14 @@ import (
 
 // AuthHandler는 사용자 인증 관련 요청을 처리합니다.
 type AuthHandler struct {
-	cfg   config.AuthConfig
-	users *services.UserStore
+	cfg    config.AuthConfig
+	users  *services.UserStore
+	drives *services.DriveManager
 }
 
 // NewAuthHandler는 새로운 AuthHandler 인스턴스를 생성합니다.
-func NewAuthHandler(cfg config.AuthConfig, users *services.UserStore) *AuthHandler {
-	return &AuthHandler{cfg: cfg, users: users}
+func NewAuthHandler(cfg config.AuthConfig, users *services.UserStore, drives *services.DriveManager) *AuthHandler {
+	return &AuthHandler{cfg: cfg, users: users, drives: drives}
 }
 
 // Login은 사용자 로그인을 처리합니다.
@@ -91,7 +92,11 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 // @Failure      500  {object}  fiber.Error
 // @Router       /auth/logout [post]
 // Logout은 사용자 로그아웃을 처리하고 클라이언트의 토큰 쿠키를 삭제합니다.
-func (*AuthHandler) Logout(c fiber.Ctx) error {
+func (h *AuthHandler) Logout(c fiber.Ctx) error {
+	user, ok := middlewares.CurrentUser(c)
+	if !ok {
+		return fiber.ErrUnauthorized
+	}
 	c.Cookie(&fiber.Cookie{
 		Name:     types.CookieAcessToken,
 		Value:    "",
@@ -101,6 +106,9 @@ func (*AuthHandler) Logout(c fiber.Ctx) error {
 		SameSite: fiber.CookieSameSiteStrictMode,
 	})
 
+	if err := h.drives.CloseDrive(user.ID); err != nil {
+		return err
+	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
 

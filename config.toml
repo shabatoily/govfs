@@ -32,6 +32,9 @@ swagger = false
 [server.webui]
 enabled = true
 
+[vfs]
+idleTimeout = "30m"
+
 [vfs.driver]
 type = "badger"
 

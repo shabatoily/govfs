@@ -78,7 +78,10 @@ func Init(cfg *config.Config) (*fiber.App, error) {
 	}
 	cfg.VFS.Driver.Badger.Logger = vfsLogger
 	cfg.VFS.Driver.LocalStorage.Logger = vfsLogger
-	drives := services.NewDriveManager(cfg.VFS.Driver)
+	drives := services.NewDriveManager(services.DriveManagerConfig{
+		Driver:      cfg.VFS.Driver,
+		IdleTimeout: cfg.VFS.IdleTimeout,
+	})
 
 	server := initServer(serverContext{
 		Config: cfg,
@@ -151,7 +154,7 @@ func registerRoutes(app *fiber.App, ctx serverContext) {
 
 	srvCfg := ctx.Config.Server
 
-	authHandler := handlers.NewAuthHandler(srvCfg.Auth, ctx.Users)
+	authHandler := handlers.NewAuthHandler(srvCfg.Auth, ctx.Users, ctx.Drives)
 	adminHandler := handlers.NewAdminHandler(ctx.Users, ctx.Drives, sseBroker)
 
 	sseHandler := handlers.NewSSEHandler(sseBroker)
@@ -161,7 +164,7 @@ func registerRoutes(app *fiber.App, ctx serverContext) {
 
 	app.Route("/auth", func(router fiber.Router) {
 		router.Post("/login", authHandler.Login).Name("login")
-		router.Post("/logout", authHandler.Logout).Name("logout")
+		router.Post("/logout", jwtAuth, userAuth, authHandler.Logout).Name("logout")
 		router.Get("/me", jwtAuth, userAuth, authHandler.IsLoggedIn).Name("me")
 		router.Patch("/password", jwtAuth, userAuth, middlewares.Audit(ctx.Users), authHandler.ChangePassword).Name("password")
 	}, "auth.")

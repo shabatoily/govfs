@@ -84,8 +84,9 @@ type JWTConfig struct {
 
 // VfsConfig는 VFS에서 사용할 백업, 로깅 경로 및 실제 데이터를 저장할 드라이버를 설정합니다.
 type VfsConfig struct {
-	Driver drivers.Config `json:"driver"`
-	Logger vfsLog.Config  `json:"logger"`
+	Driver      drivers.Config `json:"driver"`
+	Logger      vfsLog.Config  `json:"logger"`
+	IdleTimeout time.Duration  `json:"idleTimeout"`
 }
 
 // Config는 govfs 서비스 전체를 구성하는 최상위 설정 구조체입니다.
@@ -114,6 +115,7 @@ var DefaultConfig = &Config{
 		Port: 3000,
 	},
 	VFS: VfsConfig{
+		IdleTimeout: 30 * time.Minute,
 		Driver: drivers.Config{
 			Type: drivers.DriverTypeBadger,
 			Badger: badger.Config{
