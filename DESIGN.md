@@ -8,7 +8,7 @@ govfs는 Fiber 기반 서버, Svelte 웹 UI, HTTP CLI로 구성된 다중 사용
 
 ```mermaid
 flowchart TB
-    CLI["CLI\ncmd/cli"] -->|HTTP + JWT| API
+    CLI["CLI\ncmd/govfs-cli"] -->|HTTP + JWT| API
     UI["Svelte Web UI\nwebui"] -->|HTTP + JWT / SSE| API
 
     subgraph Server["Fiber Server · internal/server"]
@@ -23,7 +23,7 @@ flowchart TB
     DriveManager --> UserDrive[("BadgerDB or LocalStorage\ndrives/{user UUID}")]
 ```
 
-서버 시작 흐름은 `cmd/server/main.go` → `internal/config.LoadWithViper` →
+서버 시작 흐름은 `cmd/govfs/main.go` → `internal/config.LoadWithViper` →
 `internal/server.Init` 순서다. `Init`은 시스템 사용자 DB와 최초 관리자를 준비하고
 `DriveManager`를 생성한 뒤 라우트와 종료 훅을 등록한다
 (`internal/server/init.go`).
@@ -61,7 +61,7 @@ flowchart TB
 ### Configuration
 
 서버는 `-config`가 없으면 `~/.govfs/config.toml`을 읽는다
-(`cmd/server/main.go`). Viper는 점을 밑줄로 바꾼 대문자 환경 변수로 설정을
+(`cmd/govfs/main.go`). Viper는 점을 밑줄로 바꾼 대문자 환경 변수로 설정을
 덮어쓸 수 있다. `~`로 시작하는 로그와 드라이버 경로는 사용자 홈으로 확장된다
 (`internal/config/viper.go`).
 
@@ -144,7 +144,7 @@ CLI는 `govfs login`에서 서버 URL, 사용자 이름, 비밀번호를 입력�
 
 ## Updated Date
 
-- 분석일: 2026-08-25
-- 기준 커밋: `5d4cc4a`
-- Source of truth: `cmd/server/main.go`, `internal/config/`,
+- 분석일: 2026-08-27
+- 기준 커밋: `64256d2`
+- Source of truth: `cmd/govfs/main.go`, `internal/config/`,
   `internal/server/`, `internal/cli/root.go`, `pkg/drivers/`

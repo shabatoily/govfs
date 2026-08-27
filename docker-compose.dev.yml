@@ -10,8 +10,8 @@ services:
     env_file:
       - .env
     volumes:
-      - "${VOLUME_DATA:-./data}:/app/data"
-      - "${CONFIG_PATH:-./config.toml}:/govfs/config.toml"
+      - "${DATA_PATH:-./data}:/home/govfs/.govfs"
+      - "${CONFIG_PATH:-./config.toml}:/etc/govfs/config.toml"
     ports:
       - "${OUTBOUND_PORT:-3000}:${SERVER_PORT:-3000}"
     healthcheck:

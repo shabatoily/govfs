@@ -68,13 +68,13 @@ export SERVER_AUTH_ADMIN_USERNAME=admin
 export SERVER_AUTH_ADMIN_PASSWORD='change-this-password'
 export SERVER_AUTH_JWT_SECRET='change-this-to-a-long-random-secret'
 
-go run ./cmd/server
+go run ./cmd/govfs
 ```
 
 다른 설정 파일은 명시적으로 지정합니다.
 
 ```bash
-go run ./cmd/server -config /path/to/config.toml
+go run ./cmd/govfs -config /path/to/config.toml
 ```
 
 `server.auth.admin`은 시스템 DB가 비어 있을 때 최초 관리자 한 명을 만드는
@@ -157,7 +157,7 @@ Viper는 설정 키의 점을 밑줄로 바꾼 환경 변수로 값을 덮어씁
 서버를 먼저 실행한 뒤 로그인합니다.
 
 ```bash
-go run ./cmd/cli login
+go run ./cmd/govfs-cli login
 ```
 
 로그인 성공 시 서버 URL, 사용자 이름, access token과 만료 시각이 mode `0600`의
@@ -197,8 +197,8 @@ CLI의 `--config`, `-c`는 세션 저장 기준 디렉터리를 지정합니다.
 make build-docker tag=latest
 docker run --rm -p 3000:3000 \
   --env-file .env \
-  -v "$HOME/.govfs/config.toml:/govfs/config.toml:ro" \
-  -v "$HOME/.govfs:/root/.govfs" \
+  -v "$HOME/.govfs/config.toml:/etc/govfs/config.toml:ro" \
+  -v "$HOME/.govfs:/home/govfs/.govfs" \
   ghcr.io/shabatoily/govfs:latest
 ```
 
