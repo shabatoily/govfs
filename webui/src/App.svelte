@@ -125,8 +125,7 @@
     </div>
 {:else if !appState.isLoggedIn}
     <Login />
-{/if}
-
+{:else}
 <div class="bg-gray-900 text-gray-300 h-screen w-screen flex overflow-hidden">
     <!-- SideBar -->
     <Sidebar />
@@ -196,3 +195,4 @@
 
     <Toast />
 </div>
+{/if}

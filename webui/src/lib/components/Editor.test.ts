@@ -32,6 +32,7 @@ describe('Editor Component', () => {
         mockEditorInstance = {
             setValue: vi.fn(),
             getValue: vi.fn(() => 'current content'),
+            destroy: vi.fn(),
         };
 
         // Mock init to return our instance
@@ -41,6 +42,14 @@ describe('Editor Component', () => {
     it('should initialize OverType on mount', () => {
         render(Editor);
         expect(OverType.init).toHaveBeenCalled();
+    });
+
+    it('should destroy OverType on unmount', () => {
+        const { unmount } = render(Editor);
+
+        unmount();
+
+        expect(mockEditorInstance.destroy).toHaveBeenCalledOnce();
     });
 
     it('should load content when file is selected', async () => {

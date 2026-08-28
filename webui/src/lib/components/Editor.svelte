@@ -118,6 +118,8 @@
     onDestroy(() => {
         window.removeEventListener("keydown", handleKeydown);
         appState.saveHandler = null;
+        instance?.destroy();
+        instance = null;
     });
     const headerText = $derived(
         appState.currentFile?.name ?? "No file selected",
