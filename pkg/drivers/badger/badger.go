@@ -893,9 +893,8 @@ func (bvfs *BadgerVFS) Copy(id uuid.UUID, dst string) (vfs.Meta, error) {
 
 // Close는 VFS 드라이버를 안전하게 종료합니다. (진행 중인 GC 중단 및 DB 연결 종료)
 func (bvfs *BadgerVFS) Close() error {
-	// Cancel the context to stop background GC goroutines
+	// 백그라운드 GC 고루틴을 중단합니다.
 	bvfs.cancel()
-	// Close BadgerDB and Logger
 	return bvfs.close()
 }
 
@@ -1097,11 +1096,6 @@ func (bvfs *BadgerVFS) close() error {
 		if badgerErr != nil {
 			bvfs.logger.Error().Err(badgerErr).Msg("Close Badger VFS error")
 			err = errors.Join(err, badgerErr)
-		}
-
-		closeLogErr := bvfs.logger.Close()
-		if closeLogErr != nil {
-			err = errors.Join(err, closeLogErr)
 		}
 	})
 
