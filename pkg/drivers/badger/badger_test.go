@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,6 +21,26 @@ import (
 )
 
 var logger = log.Default
+
+func TestCloseDoesNotCloseSharedLogger(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "vfs.log")
+	sharedLogger, err := log.NewLogger(log.Config{Path: logPath})
+	require.NoError(t, err)
+
+	first, err := New(&Config{InMemory: true, Logger: sharedLogger})
+	require.NoError(t, err)
+	second, err := New(&Config{InMemory: true, Logger: sharedLogger})
+	require.NoError(t, err)
+
+	require.NoError(t, first.Close())
+	sharedLogger.Info().Msg("shared logger is still open")
+	require.NoError(t, second.Close())
+	require.NoError(t, sharedLogger.Close())
+
+	content, err := os.ReadFile(logPath)
+	require.NoError(t, err)
+	assert.True(t, strings.Contains(string(content), "shared logger is still open"))
+}
 
 func Test_NewBadgerVFS(t *testing.T) {
 	tests := []struct {
