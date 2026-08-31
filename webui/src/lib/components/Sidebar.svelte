@@ -10,6 +10,8 @@
         ServerCog,
         Users,
         KeyRound,
+        Search,
+        X,
     } from "lucide-svelte";
     import { appState } from "../state.svelte";
     import vfs, { type FileInfo } from "../vfs";
@@ -18,6 +20,7 @@
 
     let rootFiles = $state<FileInfo[]>([]);
     let loading = $state(false);
+    let searchQuery = $state("");
     let treeElement = $state<HTMLDivElement>();
     let selectedItems = $state<
         Map<string, Pick<FileInfo, "id" | "path" | "name" | "isDir">>
@@ -156,7 +159,7 @@
             selectedItems = new Map();
             focusedId = null;
             selectionAnchorId = null;
-            await loadRootFiles();
+            await reloadFiles();
         } catch (error: any) {
             appState.addToast(
                 error.message ?? "Failed to delete items",
@@ -222,7 +225,7 @@
     async function handleRefresh() {
         loading = true;
         try {
-            await Promise.all([loadRootFiles(), appState.refresh()]);
+            await Promise.all([reloadFiles(), appState.refresh()]);
         } finally {
             loading = false;
         }
@@ -247,9 +250,39 @@
         }
     }
 
+    async function searchFiles() {
+        const query = searchQuery.trim();
+        if (!query) {
+            await loadRootFiles();
+            return;
+        }
+
+        loading = true;
+        try {
+            rootFiles = await vfs.search(query);
+        } catch (e: any) {
+            appState.addToast(e.message ?? "Failed to search files", "error");
+        } finally {
+            loading = false;
+        }
+    }
+
+    async function reloadFiles() {
+        if (searchQuery.trim()) {
+            await searchFiles();
+        } else {
+            await loadRootFiles();
+        }
+    }
+
+    async function clearSearch() {
+        searchQuery = "";
+        await loadRootFiles();
+    }
+
     async function goHome() {
         appState.setCurrentPath("/");
-        await loadRootFiles();
+        await clearSearch();
     }
 
     async function createNewFile() {
@@ -282,7 +315,7 @@
     }
 
     onMount(() => {
-        loadRootFiles();
+        reloadFiles();
     });
 
     // Remove SSE direct handling
@@ -295,12 +328,12 @@
         // If root path needs refresh
         if (signal.type === "PATH") {
             if (signal.value === "/") {
-                loadRootFiles();
+                reloadFiles();
             }
         } else if (signal.type === "ID") {
             // If the deleted ID is one of root files?
             if (rootFiles.some((f) => f.id === signal.value)) {
-                loadRootFiles();
+                reloadFiles();
             }
         }
     });
@@ -366,6 +399,37 @@
         </div>
     </div>
 
+    <form
+        class="border-b border-gray-700 p-2"
+        onsubmit={(event) => {
+            event.preventDefault();
+            searchFiles();
+        }}
+    >
+        <div
+            class="flex items-center rounded bg-gray-800 px-2 focus-within:ring-1 focus-within:ring-blue-500"
+        >
+            <Search size={14} class="text-gray-500" />
+            <input
+                bind:value={searchQuery}
+                type="search"
+                aria-label="Search files and directories"
+                placeholder="Search by name"
+                class="min-w-0 flex-1 bg-transparent px-2 py-1.5 text-xs text-gray-200 outline-none"
+            />
+            {#if searchQuery}
+                <button
+                    type="button"
+                    onclick={clearSearch}
+                    title="Clear Search"
+                    class="text-gray-500 hover:text-white"
+                >
+                    <X size={14} />
+                </button>
+            {/if}
+        </div>
+    </form>
+
     <!-- File List Tree -->
     <div
         bind:this={treeElement}
@@ -383,14 +447,14 @@
                     {focusedId}
                     onSelect={selectItem}
                     onDelete={deleteSelected}
-                    onRefresh={loadRootFiles}
+                    onRefresh={reloadFiles}
                 />
             {/each}
         </ul>
 
         {#if rootFiles.length === 0 && !loading}
             <div class="text-center mt-10 text-xs text-gray-500">
-                No files found
+                {searchQuery.trim() ? "No search results" : "No files found"}
             </div>
         {/if}
     </div>

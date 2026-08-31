@@ -16,8 +16,36 @@ import (
 // RegisterCommands는 VFS와 관련된 모든 CLI 명령을 등록합니다.
 func RegisterCommands(target *cobra.Command) {
 	target.AddCommand(NewBackupCommand(), NewRestoreCommand(), NewRotateCommand(),
-		NewListCommand(), NewTreeCommand(), NewStatCommand(), NewCopyCommand(),
+		NewListCommand(), NewSearchCommand(), NewTreeCommand(), NewStatCommand(), NewCopyCommand(),
 		NewMkdirCommand(), NewRemoveCommand())
+}
+
+// NewSearchCommand는 파일 및 디렉터리를 이름으로 검색하는 커맨드를 반환합니다.
+func NewSearchCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "search <query>",
+		Short: "Search files and directories by name",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			h, err := NewHandler(cmd)
+			if err != nil {
+				return err
+			}
+
+			metas, err := h.client.VFS().Search(cmd.Context(), args[0])
+			if err != nil {
+				return err
+			}
+
+			w := table.NewWriter()
+			appendTableHeaderForMeta(w)
+			for i := range metas {
+				appendTableRowFromMeta(w, &metas[i])
+			}
+			cmd.Println(w.Render())
+			return nil
+		},
+	}
 }
 
 // NewBackupCommand는 VFS 데이터를 지정된 로컬 파일로 백업하는 커맨드를 반환합니다.

@@ -37,6 +37,20 @@ func (c *VFSClient) List(ctx context.Context, q string) ([]types.MetaRes, error)
 	return res.Payload, nil
 }
 
+// Search는 파일 및 디렉터리를 이름으로 검색합니다.
+func (c *VFSClient) Search(ctx context.Context, query string) ([]types.MetaRes, error) {
+	resp, err := c.c.Get("/vfs/search?q="+url.QueryEscape(query), client.Config{Ctx: ctx})
+	if err != nil {
+		return nil, err
+	}
+
+	var res []types.MetaRes
+	if checkErr := checkResponse(resp, fiber.StatusOK, &res); checkErr != nil {
+		return nil, checkErr
+	}
+	return res, nil
+}
+
 // Read는 파일의 데이터와 메타데이터를 함께 조회합니다.
 func (c *VFSClient) Read(ctx context.Context, id uuid.UUID) (io.Reader, types.MetaRes, error) {
 	u := fmt.Sprintf("/vfs/%s", id.String())

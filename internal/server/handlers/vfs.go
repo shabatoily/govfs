@@ -79,6 +79,32 @@ func (h *VfsHandler) List(ctx fiber.Ctx) error {
 	}
 }
 
+// Search는 파일 및 디렉터리를 이름으로 검색합니다.
+//
+//	@Summary      파일 및 디렉터리 검색
+//	@Description  전체 VFS에서 이름에 검색어가 포함된 파일 및 디렉터리를 검색합니다.
+//	@Tags         vfs
+//	@Produce      json
+//	@Param        q    query     string  true  "검색어"
+//	@Success      200  {array}   types.MetaRes
+//	@Failure      400  {object}  fiber.Error
+//	@Failure      500  {object}  fiber.Error
+//	@Router       /vfs/search [get]
+//
+// Search는 파일 및 디렉터리 이름을 대소문자 구분 없이 검색합니다.
+func (h *VfsHandler) Search(ctx fiber.Ctx) error {
+	query := strings.TrimSpace(ctx.Query("q"))
+	if query == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "missing search query")
+	}
+
+	results, err := h.srv.Search(query)
+	if err != nil {
+		return err
+	}
+	return ctx.Status(fiber.StatusOK).JSON(results)
+}
+
 // Read response file binary
 //
 //	@Summary      파일 읽기
