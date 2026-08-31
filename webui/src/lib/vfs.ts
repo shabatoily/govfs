@@ -16,6 +16,7 @@ export interface TreeNode {
 
 export interface VFS {
     list: (path: string) => Promise<FileInfo[]>;
+    search: (query: string) => Promise<FileInfo[]>;
     tree: (path: string) => Promise<TreeNode>;
     stat: (id: string) => Promise<FileInfo | null>;
     read: (id: string) => Promise<string | Blob | null>;
@@ -55,11 +56,19 @@ async function vfsFetch(input: RequestInfo | URL, init?: RequestInit): Promise<R
 const vfs: VFS = {
     // 파일 목록
     async list(path: string = '/'): Promise<FileInfo[]> {
-        const res = await vfsFetch(`/vfs?q=${path}`, {
+        const res = await vfsFetch(`/vfs?q=${encodeURIComponent(path)}`, {
             headers: getHeaders()
         });
         if (!res.ok) throw new Error(await res.text());
         return (await res.json()).payload as FileInfo[]; // [{id, name, size, modified}, ...]
+    },
+
+    async search(query: string): Promise<FileInfo[]> {
+        const res = await vfsFetch(`/vfs/search?q=${encodeURIComponent(query)}`, {
+            headers: getHeaders()
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return await res.json() as FileInfo[];
     },
 
     async tree(path: string = '/'): Promise<TreeNode> {

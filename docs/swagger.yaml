@@ -1262,6 +1262,40 @@ paths:
       summary: 전체 복구
       tags:
       - vfs
+  /vfs/search:
+    get:
+      description: 전체 VFS에서 이름에 검색어가 포함된 파일 및 디렉터리를 검색합니다.
+      parameters:
+      - description: 검색어
+        in: query
+        name: q
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/types.MetaRes'
+                type: array
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/fiber.Error'
+          description: Internal Server Error
+      summary: 파일 및 디렉터리 검색
+      tags:
+      - vfs
 servers:
 - description: Localhost
   url: http://localhost:3000

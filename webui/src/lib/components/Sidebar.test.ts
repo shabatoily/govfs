@@ -8,6 +8,7 @@ import { appState } from '../state.svelte';
 vi.mock('../vfs', () => ({
     default: {
         list: vi.fn(),
+        search: vi.fn(),
         delete: vi.fn(),
         create: vi.fn(),
         mkdir: vi.fn(),
@@ -32,6 +33,7 @@ describe('Sidebar Component', () => {
 
         // Default mock implementation
         (vfs.list as any).mockResolvedValue(mockFiles);
+        (vfs.search as any).mockResolvedValue([]);
     });
 
     it('should render file list on mount', async () => {
@@ -43,6 +45,22 @@ describe('Sidebar Component', () => {
 
         expect(screen.getByText('folder1')).toBeInTheDocument();
         expect(screen.getByText('file1.txt')).toBeInTheDocument();
+    });
+
+    it('should search files by name and clear the results', async () => {
+        const result = { ...mockFiles[1], id: '3', name: 'report.txt', path: '/docs/report.txt' };
+        (vfs.search as any).mockResolvedValue([result]);
+        render(Sidebar);
+
+        const input = screen.getByRole('searchbox', { name: 'Search files and directories' });
+        await fireEvent.input(input, { target: { value: 'report' } });
+        await fireEvent.submit(input.closest('form')!);
+
+        await waitFor(() => expect(vfs.search).toHaveBeenCalledWith('report'));
+        expect(screen.getByText('report.txt')).toBeInTheDocument();
+
+        await fireEvent.click(screen.getByTitle('Clear Search'));
+        await waitFor(() => expect(vfs.list).toHaveBeenCalledTimes(2));
     });
 
     it('should navigate to folder when folder is clicked', async () => {

@@ -62,6 +62,21 @@ func TestVFSClient_List(t *testing.T) {
 	require.NotEmpty(t, res)
 }
 
+func TestVFSClient_Search(t *testing.T) {
+	expected := []types.MetaRes{newRandomMetaRes(false)}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/vfs/search", r.URL.Path)
+		assert.Equal(t, "annual report", r.URL.Query().Get("q"))
+		assert.NoError(t, json.NewEncoder(w).Encode(expected))
+	}))
+	defer server.Close()
+
+	res, err := client.New(server.URL).VFS().Search(context.Background(), "annual report")
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	assert.Equal(t, expected[0].ID, res[0].ID)
+}
+
 func TestVFSClient_Read(t *testing.T) {
 	id := uuid.New()
 	content := "hello world"
