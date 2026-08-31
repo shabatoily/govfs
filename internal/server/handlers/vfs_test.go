@@ -164,6 +164,56 @@ func TestVfsHandler_List(t *testing.T) {
 	mockVFS.AssertExpectations(t)
 }
 
+func TestVfsHandler_Search(t *testing.T) {
+	mockVFS := new(MockVFS)
+	broker := services.NewSSEBroker(services.SSEConfig{})
+	defer broker.Shutdown()
+	handler := NewVfsHandler(services.NewVfsService(mockVFS, "/vfs"), broker)
+
+	app := fiber.New()
+	app.Get("/vfs/search", handler.Search)
+
+	fileID := uuid.New()
+	mockVFS.On("Tree", vfs.Root).Return(&vfs.TreeNode{
+		Meta: vfs.Meta{Path: vfs.Root, Name: vfs.Root, IsDir: true},
+		Children: []*vfs.TreeNode{
+			{Meta: vfs.Meta{ID: uuid.New(), Path: "/Reports", Name: "Reports", IsDir: true}},
+			{Meta: vfs.Meta{ID: fileID, Path: "/annual-report.pdf", Name: "annual-report.pdf", Extension: "pdf"}},
+			{Meta: vfs.Meta{ID: uuid.New(), Path: "/notes.txt", Name: "notes.txt", Extension: "txt"}},
+		},
+	}, nil)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/vfs/search?q=REPORT", http.NoBody)
+	require.NoError(t, err)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	var results []types.MetaRes
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&results))
+	require.Len(t, results, 2)
+	assert.Equal(t, "Reports", results[0].Name)
+	assert.Equal(t, "/vfs?q=/Reports", results[0].URL)
+	assert.Equal(t, fileID, results[1].ID)
+	assert.Equal(t, "/vfs/"+fileID.String(), results[1].URL)
+	mockVFS.AssertExpectations(t)
+}
+
+func TestVfsHandler_SearchRequiresQuery(t *testing.T) {
+	handler := NewVfsHandler(nil, nil)
+	app := fiber.New()
+	app.Get("/vfs/search", handler.Search)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/vfs/search", http.NoBody)
+	require.NoError(t, err)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
 func TestVfsHandler_Stat(t *testing.T) {
 	// Setup
 	mockVFS := new(MockVFS)

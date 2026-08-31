@@ -192,6 +192,7 @@ func registerRoutes(app *fiber.App, ctx serverContext) {
 		router.Post("/restore", withVFS(ctx.Drives, sseBroker, (*handlers.VfsHandler).Restore)).Name("restore")
 		router.Post("/", withVFS(ctx.Drives, sseBroker, (*handlers.VfsHandler).Create)).Name("create")
 		router.Get("/", withVFS(ctx.Drives, sseBroker, (*handlers.VfsHandler).List)).Name("list")
+		router.Get("/search", withVFS(ctx.Drives, sseBroker, (*handlers.VfsHandler).Search)).Name("search")
 		router.Get("/:id", withVFS(ctx.Drives, sseBroker, (*handlers.VfsHandler).Read)).Name("read")
 		router.Get("/:id/stat", withVFS(ctx.Drives, sseBroker, (*handlers.VfsHandler).Stat)).Name("stat")
 		router.Put("/:id", withVFS(ctx.Drives, sseBroker, (*handlers.VfsHandler).Write)).Name("write")

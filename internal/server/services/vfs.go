@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"io"
 	"path/filepath"
+	"strings"
 
 	"github.com/google/uuid"
 	vfs "github.com/shabatoily/govfs"
@@ -46,6 +47,24 @@ func (s *VfsService) Tree(path string) (*types.TreeNodeRes, error) {
 		return nil, err
 	}
 	return mapTreeNodeRes(s.prefix, treeNodes), nil
+}
+
+// Search는 전체 VFS에서 이름에 검색어가 포함된 파일과 디렉터리를 반환합니다.
+func (s *VfsService) Search(query string) ([]types.MetaRes, error) {
+	tree, err := s.vfs.Tree(vfs.Root)
+	if err != nil {
+		return nil, err
+	}
+
+	query = strings.ToLower(query)
+	results := make([]types.MetaRes, 0)
+	for node := range tree.Walk() {
+		if node.Meta.Path == vfs.Root || !strings.Contains(strings.ToLower(node.Meta.Name), query) {
+			continue
+		}
+		results = append(results, types.MetaRes{Meta: node.Meta, URL: parseURL(s.prefix, &node.Meta)})
+	}
+	return results, nil
 }
 
 // Read는 지정된 ID의 파일 핸들을 엽니다.
