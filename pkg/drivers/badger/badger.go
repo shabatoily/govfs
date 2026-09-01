@@ -106,7 +106,7 @@ func (cfg *Config) Options() badger.Options {
 		WithInMemory(cfg.InMemory).
 		WithEncryptionKey(cfg.EncryptKey).
 		WithEncryptionKeyRotationDuration(cfg.EncryptionKeyRotationDuration).
-		WithIndexCacheSize(cfg.CacheSize)
+		WithIndexCacheSize(cfg.CacheSize * MiB)
 }
 
 // BadgerVFS는 BadgerDB를 백엔드로 사용하는 VFS 구현체입니다.

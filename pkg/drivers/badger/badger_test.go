@@ -22,6 +22,14 @@ import (
 
 var logger = log.Default
 
+func TestConfigOptionsConvertsIndexCacheMiBToBytes(t *testing.T) {
+	cfg := Config{InMemory: true, CacheSize: 32}
+	require.Equal(t, int64(32*MiB), cfg.Options().IndexCacheSize)
+
+	cfg = Config{InMemory: true}
+	require.Equal(t, DefaultIndexCacheSize*MiB, cfg.Options().IndexCacheSize)
+}
+
 func TestCloseDoesNotCloseSharedLogger(t *testing.T) {
 	logPath := filepath.Join(t.TempDir(), "vfs.log")
 	sharedLogger, err := log.NewLogger(log.Config{Path: logPath})
