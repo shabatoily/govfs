@@ -5,6 +5,15 @@
         users: number;
         openDrives: number;
         system: { items: number; size: number };
+        badgerDrives: BadgerDrive[];
+    }
+
+    interface BadgerDrive {
+        userId: string;
+        lsmSize: number;
+        vlogSize: number;
+        blockCacheMaxCost: number;
+        indexCacheMaxCost: number;
     }
 
     interface SystemEntry {
@@ -75,6 +84,37 @@
                 <div class="rounded bg-gray-900 p-3">Open drives<br /><strong>{status.openDrives}</strong></div>
                 <div class="rounded bg-gray-900 p-3">System items<br /><strong>{status.system.items}</strong></div>
                 <div class="rounded bg-gray-900 p-3">System size<br /><strong>{formatBytes(status.system.size)}</strong></div>
+            </div>
+            <div class="mb-5 overflow-hidden rounded bg-gray-900 text-sm">
+                <h3 class="border-b border-gray-700 p-3 font-semibold text-white">Open Badger drives</h3>
+                {#if status.badgerDrives.length}
+                    <div class="overflow-auto">
+                        <table class="w-full text-left">
+                            <thead class="text-gray-400">
+                                <tr>
+                                    <th class="p-3">User ID</th>
+                                    <th class="p-3">LSM</th>
+                                    <th class="p-3">VLog</th>
+                                    <th class="p-3">Block cache</th>
+                                    <th class="p-3">Index cache</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {#each status.badgerDrives as drive}
+                                    <tr class="border-t border-gray-700">
+                                        <td class="p-3 font-mono text-xs">{drive.userId}</td>
+                                        <td class="p-3">{formatBytes(drive.lsmSize)}</td>
+                                        <td class="p-3">{formatBytes(drive.vlogSize)}</td>
+                                        <td class="p-3">{formatBytes(drive.blockCacheMaxCost)}</td>
+                                        <td class="p-3">{formatBytes(drive.indexCacheMaxCost)}</td>
+                                    </tr>
+                                {/each}
+                            </tbody>
+                        </table>
+                    </div>
+                {:else}
+                    <p class="p-3 text-gray-400">No open Badger drives</p>
+                {/if}
             </div>
             <div class="mb-5">
                 <button class="text-sm text-blue-300 hover:text-blue-200" onclick={() => loadEntries(1).catch((e) => error = e.message)}>System DB details</button>
