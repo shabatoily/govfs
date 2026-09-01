@@ -11,6 +11,7 @@ vi.mock('../vfs', () => ({
         mkdir: vi.fn(),
         delete: vi.fn(),
         tree: vi.fn(),
+        search: vi.fn(),
     }
 }));
 
@@ -79,6 +80,22 @@ describe('Terminal Component', () => {
         await waitFor(() => {
             expect(vfs.list).toHaveBeenCalledWith('/');
             expect(screen.getByText(/- 100 now file1/)).toBeInTheDocument();
+        });
+    });
+
+    it('should handle "find" command', async () => {
+        (vfs.search as any).mockResolvedValue([
+            { name: 'report.txt', path: '/docs/report.txt' },
+        ]);
+        render(Terminal);
+        const input = screen.getByRole('textbox');
+
+        await fireEvent.input(input, { target: { value: 'find report' } });
+        await fireEvent.keyDown(input, { key: 'Enter' });
+
+        await waitFor(() => {
+            expect(vfs.search).toHaveBeenCalledWith('report');
+            expect(screen.getByText('/docs/report.txt')).toBeInTheDocument();
         });
     });
 });
