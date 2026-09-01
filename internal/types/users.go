@@ -39,9 +39,18 @@ type UpdateUserReq struct {
 }
 
 type StatusRes struct {
-	Users      int            `json:"users"`
-	OpenDrives int            `json:"openDrives"`
-	System     StorageStatRes `json:"system"`
+	Users        int                 `json:"users"`
+	OpenDrives   int                 `json:"openDrives"`
+	System       StorageStatRes      `json:"system"`
+	BadgerDrives []BadgerResourceRes `json:"badgerDrives"`
+}
+
+type BadgerResourceRes struct {
+	UserID            uuid.UUID `json:"userId"`
+	LSMSize           int64     `json:"lsmSize"`
+	VlogSize          int64     `json:"vlogSize"`
+	BlockCacheMaxCost int64     `json:"blockCacheMaxCost"`
+	IndexCacheMaxCost int64     `json:"indexCacheMaxCost"`
 }
 
 type StorageStatRes struct {

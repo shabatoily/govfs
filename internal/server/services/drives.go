@@ -6,11 +6,13 @@ import (
 	"sync"
 	"time"
 
+	badgerdb "github.com/dgraph-io/badger/v4"
 	"github.com/gofiber/fiber/v3/log"
 	"github.com/google/uuid"
 	vfs "github.com/shabatoily/govfs"
 	"github.com/shabatoily/govfs/internal/types"
 	"github.com/shabatoily/govfs/pkg/drivers"
+	driverbadger "github.com/shabatoily/govfs/pkg/drivers/badger"
 )
 
 // DriveManagerConfig는 사용자 드라이브의 생성과 수명주기를 설정합니다.
@@ -80,6 +82,34 @@ func (m *DriveManager) OpenCount() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return len(m.drives)
+}
+
+// BadgerResources는 열려 있는 Badger 드라이브의 리소스 현황을 반환합니다.
+func (m *DriveManager) BadgerResources() ([]types.BadgerResourceRes, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	resources := make([]types.BadgerResourceRes, 0, len(m.drives))
+	for userID, entry := range m.drives {
+		drive, ok := entry.drive.(*driverbadger.BadgerVFS)
+		if !ok {
+			continue
+		}
+		db := drive.DB()
+		lsm, vlog := db.Size()
+		blockCache, err := db.CacheMaxCost(badgerdb.BlockCache, -1)
+		if err != nil {
+			return nil, err
+		}
+		indexCache, err := db.CacheMaxCost(badgerdb.IndexCache, -1)
+		if err != nil {
+			return nil, err
+		}
+		resources = append(resources, types.BadgerResourceRes{
+			UserID: userID, LSMSize: lsm, VlogSize: vlog,
+			BlockCacheMaxCost: blockCache, IndexCacheMaxCost: indexCache,
+		})
+	}
+	return resources, nil
 }
 
 func (m *DriveManager) Stats(userID uuid.UUID) (types.StorageStatRes, bool, error) {

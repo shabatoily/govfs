@@ -82,3 +82,25 @@ func TestDriveManagerClosesIdleDrive(t *testing.T) {
 		t.Fatal("유휴 드라이브가 닫히지 않았습니다")
 	}
 }
+
+func TestDriveManagerBadgerResources(t *testing.T) {
+	manager := NewDriveManager(DriveManagerConfig{
+		Driver: drivers.Config{
+			Type:   drivers.DriverTypeBadger,
+			Badger: badger.Config{Path: filepath.Join(t.TempDir(), "drives")},
+		},
+	})
+	t.Cleanup(func() { _ = manager.Close() })
+	userID := uuid.New()
+	if _, err := manager.Drive(userID); err != nil {
+		t.Fatal(err)
+	}
+
+	resources, err := manager.BadgerResources()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resources) != 1 || resources[0].UserID != userID || resources[0].BlockCacheMaxCost <= 0 {
+		t.Fatalf("Badger 리소스 현황 = %#v", resources)
+	}
+}

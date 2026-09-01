@@ -79,6 +79,26 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
+            "types.BadgerResourceRes": {
+                "properties": {
+                    "blockCacheMaxCost": {
+                        "type": "integer"
+                    },
+                    "indexCacheMaxCost": {
+                        "type": "integer"
+                    },
+                    "lsmSize": {
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "string"
+                    },
+                    "vlogSize": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
             "types.BadgerStatRes": {
                 "properties": {
                     "prefixBy": {
@@ -302,6 +322,13 @@ const docTemplate = `{
             },
             "types.StatusRes": {
                 "properties": {
+                    "badgerDrives": {
+                        "items": {
+                            "$ref": "#/components/schemas/types.BadgerResourceRes"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "openDrives": {
                         "type": "integer"
                     },

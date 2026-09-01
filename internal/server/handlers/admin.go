@@ -112,7 +112,13 @@ func (h *AdminHandler) Status(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(types.StatusRes{Users: len(list), OpenDrives: h.drives.OpenCount(), System: system})
+	badgerDrives, err := h.drives.BadgerResources()
+	if err != nil {
+		return err
+	}
+	return c.JSON(types.StatusRes{
+		Users: len(list), OpenDrives: h.drives.OpenCount(), System: system, BadgerDrives: badgerDrives,
+	})
 }
 
 // UserStatus는 한 사용자의 드라이브와 연결 상태를 반환합니다.
