@@ -38,7 +38,7 @@ func main() {
 
 	opts := badger.DefaultOptions(path).
 		WithEncryptionKey(secretKey).
-		WithIndexCacheSize(badgervfs.DefaultIndexCacheSize)
+		WithIndexCacheSize(badgervfs.DefaultIndexCacheSize * badgervfs.MiB)
 
 	db, err := badger.Open(opts)
 	if err != nil {
