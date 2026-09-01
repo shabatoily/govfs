@@ -29,6 +29,7 @@
             switch (cmd) {
                 case "help":
                     log("  ls <path> show file list");
+                    log("  find <keyword> search files and directories");
                     log("  tree <path> show file tree");
                     log("  mkdir <name> create new dir");
                     log("  new <name> create new file on current path");
@@ -56,6 +57,14 @@
                             `${f.isDir ? "D" : "-"} ${f.size} ${f.modified} ${f.name}`,
                         );
                     });
+                    break;
+                case "find":
+                    if (!args.length) {
+                        log("usage: find <keyword>");
+                        break;
+                    }
+                    const results = await vfs.search(args.join(" "));
+                    results.forEach((file) => log(file.path));
                     break;
                 case "cd":
                     if (!args[0]) break;
