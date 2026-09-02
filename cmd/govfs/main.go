@@ -7,24 +7,18 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime/debug"
 	"strconv"
 	"syscall"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/joho/godotenv"
+	"github.com/shabatoily/govfs/cmd"
 	_ "github.com/shabatoily/govfs/docs"
 	"github.com/shabatoily/govfs/internal/config"
 	"github.com/shabatoily/govfs/internal/server"
 )
 
-var (
-	name        = "govfs"
-	version     = "dev"
-	buildTime   = "unknown"
-	description = "govfs is a virtual file system server"
-	configPath  = "config.toml"
-)
+var configPath = "config.toml"
 
 // @title govfs
 // @version 1.0.0
@@ -54,14 +48,8 @@ func main() {
 	}
 
 	// load config
-	buildInfo, _ := debug.ReadBuildInfo()
-	cfg, err := config.LoadWithViper(configPath, config.AppInfo{
-		Name:        name,
-		Version:     version,
-		BuildTime:   buildTime,
-		Description: description,
-		BuildInfo:   buildInfo,
-	})
+	appInfo := cmd.GetAppInfo()
+	cfg, err := config.LoadWithViper(configPath, appInfo)
 	if err != nil {
 		panic(err)
 	}

@@ -98,7 +98,7 @@ func newInfoCommand() *cobra.Command {
 		Use:   "info",
 		Short: "Print system information",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			info := cmd.Context().Value(ContextKeyAppInfo{}).(*config.AppInfo)
+			info := cmd.Context().Value(ContextKeyAppInfo{}).(config.AppInfo)
 			if !verbose {
 				cmd.Printf("%s %s - %s\n", info.Name, info.Version, info.BuildTime)
 				return nil
@@ -141,7 +141,7 @@ func newInfoCommand() *cobra.Command {
 }
 
 // NewRootCommand는 govfs CLI의 최상위(Root) 커맨드를 생성하고 초기화합니다.
-func NewRootCommand(appInfo *config.AppInfo) *cobra.Command {
+func NewRootCommand(appInfo config.AppInfo) *cobra.Command {
 	root := &cobra.Command{
 		Use:   appInfo.Name,
 		Short: appInfo.Name,

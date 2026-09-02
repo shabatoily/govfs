@@ -27,10 +27,10 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/cmd/cli/main.go",
+            "program": "${workspaceFolder}/cmd/govfs-cli/main.go",
             "cwd": "${workspaceFolder}",
             "args": [
-                "config",
+                "info",
             ],
             "console": "integratedTerminal"
         },
@@ -39,7 +39,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/cmd/server/main.go",
+            "program": "${workspaceFolder}/cmd/govfs/main.go",
             "cwd": "${workspaceFolder}",
         },
     ]
