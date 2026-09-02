@@ -17,9 +17,9 @@ func NewMCPCommand(version string) *cobra.Command {
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			userConfig, ok := cmd.Context().Value(ContextKeyUserConfig{}).(*UserConfig)
-			if !ok {
-				return errors.New("config not found")
+			userConfig, err := GetUserConfig()
+			if err != nil {
+				return fmt.Errorf("config not found: %w", err)
 			}
 
 			c := client.New(userConfig.ServerURL)
@@ -27,7 +27,7 @@ func NewMCPCommand(version string) *cobra.Command {
 				return errors.New("session expired: run govfs login")
 			}
 			c.SetToken(userConfig.TokenInfo.Token)
-			if _, err := c.Auth().Me(cmd.Context()); err != nil {
+			if _, err = c.Auth().Me(cmd.Context()); err != nil {
 				return fmt.Errorf("authenticate MCP client: run govfs login: %w", err)
 			}
 

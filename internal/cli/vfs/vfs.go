@@ -29,9 +29,9 @@ type Handler struct {
 
 // NewHandler는 로그인 세션을 사용하는 VFS 핸들러를 반환합니다.
 func NewHandler(cmd *cobra.Command) (*Handler, error) {
-	u, ok := cmd.Context().Value(cli.ContextKeyUserConfig{}).(*cli.UserConfig)
-	if !ok {
-		return nil, errors.New("config not found")
+	u, err := cli.GetUserConfig()
+	if err != nil {
+		return nil, fmt.Errorf("config not found: %w", err)
 	}
 
 	c := client.New(u.ServerURL)

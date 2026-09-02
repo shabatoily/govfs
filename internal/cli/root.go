@@ -26,12 +26,6 @@ const (
 
 var configPath string
 
-// ContextKeyAppInfo 및 ContextKeyUserConfig는 Cobra 커맨드 컨텍스트에서 정보를 저장하기 위한 키 타입입니다.
-type (
-	ContextKeyAppInfo    struct{}
-	ContextKeyUserConfig struct{}
-)
-
 // UserConfig는 CLI 클라이언트가 서버에 접속하기 위해 필요한 사용자 설정을 정의합니다.
 type UserConfig struct {
 	ServerURL string    // 서버 접속 주소
@@ -67,8 +61,8 @@ func GetUserConfig() (UserConfig, error) {
 	return userConfig, err
 }
 
-// SetUserConfig는 사용자 설정을 로컬 파일 시스템에 저장합니다.
-func SetUserConfig(u *UserConfig) error {
+// setUserConfig는 사용자 설정을 로컬 파일 시스템에 저장합니다.
+func setUserConfig(u *UserConfig) error {
 	file, err := os.OpenFile(filepath.Join(configPath, "config"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
@@ -91,20 +85,19 @@ func newLoginCommand() *cobra.Command {
 	}
 }
 
-func newInfoCommand() *cobra.Command {
+func newInfoCommand(appInfo config.AppInfo) *cobra.Command {
 	var verbose bool
 
 	info := &cobra.Command{
 		Use:   "info",
 		Short: "Print system information",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			info := cmd.Context().Value(ContextKeyAppInfo{}).(config.AppInfo)
 			if !verbose {
-				cmd.Printf("%s %s - %s\n", info.Name, info.Version, info.BuildTime)
+				cmd.Printf("%s %s - %s\n", appInfo.Name, appInfo.Version, appInfo.BuildTime)
 				return nil
 			}
 
-			b, err := toml.Marshal(info)
+			b, err := toml.Marshal(appInfo)
 			if err != nil {
 				return err
 			}
@@ -147,8 +140,6 @@ func NewRootCommand(appInfo config.AppInfo) *cobra.Command {
 		Short: appInfo.Name,
 		Long:  appInfo.Description,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			ctx := context.WithValue(cmd.Context(), ContextKeyAppInfo{}, appInfo)
-
 			if configPath == "" {
 				baseDir, err := os.UserHomeDir()
 				if err != nil {
@@ -166,7 +157,6 @@ func NewRootCommand(appInfo config.AppInfo) *cobra.Command {
 			}
 
 			if cmd.Name() == "login" || (cmd.Name() == "info" && !cmd.Flag("verbose").Changed) {
-				cmd.SetContext(ctx)
 				return nil
 			}
 
@@ -178,17 +168,13 @@ func NewRootCommand(appInfo config.AppInfo) *cobra.Command {
 				return errors.New("session expired: run govfs login")
 			}
 
-			ctx = context.WithValue(ctx, ContextKeyUserConfig{}, &u)
-
-			cmd.SetContext(ctx)
-
 			return nil
 		},
 	}
 
 	root.PersistentFlags().StringVarP(&configPath, "config", "c", "", "path to config file or directory (default: ~/.govfs/config)")
 
-	root.AddCommand(newInfoCommand())
+	root.AddCommand(newInfoCommand(appInfo))
 
 	root.AddCommand(newLoginCommand())
 
@@ -232,7 +218,7 @@ func promptLogin(cmd *cobra.Command) error {
 		return err
 	}
 	u.TokenInfo = TokenInfo{TokenRes: token}
-	err = SetUserConfig(&u)
+	err = setUserConfig(&u)
 	if err != nil {
 		return err
 	}

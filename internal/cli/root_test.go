@@ -15,7 +15,7 @@ func TestSetUserConfigUsesPrivatePermissions(t *testing.T) {
 	if err := os.WriteFile(path, nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := SetUserConfig(&UserConfig{ServerURL: "http://localhost:3000"}); err != nil {
+	if err := setUserConfig(&UserConfig{ServerURL: "http://localhost:3000"}); err != nil {
 		t.Fatal(err)
 	}
 	info, err := os.Stat(path)
