@@ -9,8 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/shabatoily/govfs/cmd"
 	"github.com/shabatoily/govfs/internal/cli"
-	"github.com/shabatoily/govfs/internal/cli/secret"
-	"github.com/shabatoily/govfs/internal/cli/vfs"
+	vfsCLI "github.com/shabatoily/govfs/internal/cli/vfs"
 )
 
 func main() {
@@ -21,10 +20,7 @@ func main() {
 	root := cli.NewRootCommand(appInfo)
 
 	// vfs commands
-	vfs.RegisterCommands(root)
-
-	// secret commands
-	secret.RegisterCommands(root)
+	vfsCLI.RegisterCommands(root)
 
 	// mcp command
 	root.AddCommand(cli.NewMCPCommand(appInfo.Version))
