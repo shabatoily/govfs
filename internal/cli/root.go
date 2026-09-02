@@ -104,25 +104,26 @@ func newInfoCommand(appInfo config.AppInfo) *cobra.Command {
 
 			cmd.Printf("\n[Client]\n%s\n", string(b))
 
-			u, err := GetUserConfig()
-			if err != nil {
-				return err
-			}
+			// toml mashaling 오류로 인해 server쪽 설정 출력은 보류
+			// u, err := GetUserConfig()
+			// if err != nil {
+			// 	return err
+			// }
 
-			c := client.New(u.ServerURL)
-			c.SetToken(u.TokenInfo.Token)
+			// c := client.New(u.ServerURL)
+			// c.SetToken(u.TokenInfo.Token)
 
-			cfg, err := c.Config(cmd.Context())
-			if err != nil {
-				return err
-			}
+			// cfg, err := c.Config(cmd.Context())
+			// if err != nil {
+			// 	return err
+			// }
 
-			b, err = toml.Marshal(cfg)
-			if err != nil {
-				return err
-			}
+			// b, err = toml.Marshal(cfg)
+			// if err != nil {
+			// 	return err
+			// }
 
-			cmd.Printf("\n[Server]\n%s\n", string(b))
+			// cmd.Printf("\n[Server]\n%s\n", string(b))
 
 			return nil
 		},
