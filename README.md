@@ -77,6 +77,28 @@ go run ./cmd/govfs
 go run ./cmd/govfs -config /path/to/config.toml
 ```
 
+설치된 서버 바이너리는 사용자 서비스로 등록해 터미널과 분리하여 실행할 수 있습니다.
+Linux는 systemd 사용자 서비스, macOS는 LaunchAgent를 사용하며 Windows에서는 관리자
+권한으로 Windows Service를 등록합니다.
+
+```bash
+govfs service install
+govfs service start
+govfs service stop
+govfs service restart
+govfs service uninstall
+```
+
+다른 설정 파일을 서비스에서도 사용하려면 등록할 때 `-config`를 앞에 지정합니다.
+
+```bash
+govfs --config /path/to/config.toml service install
+```
+
+서비스 등록 시 현재 설정 파일의 절대 경로와 설정된 `SERVER_AUTH_ADMIN_USERNAME`,
+`SERVER_AUTH_ADMIN_PASSWORD`, `SERVER_AUTH_JWT_SECRET` 환경 변수가 저장됩니다. 환경
+변수를 변경한 경우 서비스를 제거한 뒤 다시 등록합니다.
+
 `server.auth.admin`은 시스템 DB가 비어 있을 때 최초 관리자 한 명을 만드는
 용도로만 사용됩니다. 이후 사용자 관리는 관리자 API 또는 웹 UI에서 수행합니다.
 운영 환경에서는 재시작 후에도 기존 token을 검증할 수 있도록 JWT secret을 고정해야

@@ -3,22 +3,91 @@ package main
 
 import (
 	"context"
-	"flag"
+	"errors"
+	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/joho/godotenv"
+	"github.com/kardianos/service"
 	"github.com/shabatoily/govfs/cmd"
 	_ "github.com/shabatoily/govfs/docs"
 	"github.com/shabatoily/govfs/internal/config"
 	"github.com/shabatoily/govfs/internal/server"
+	"github.com/spf13/cobra"
 )
 
+const serviceShutdownTimeout = 5 * time.Second
+
 var configPath = "config.toml"
+
+type program struct {
+	appInfo    config.AppInfo
+	configPath string
+	app        *fiber.App
+	cancel     context.CancelFunc
+	logger     service.Logger
+}
+
+// Start는 서비스 관리자를 차단하지 않고 HTTP 서버를 시작합니다.
+func (p *program) Start(_ service.Service) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	app, port, err := p.initServer(ctx)
+	if err != nil {
+		cancel()
+		return err
+	}
+
+	p.app = app
+	p.cancel = cancel
+	go func() {
+		if err := app.Listen(":" + strconv.Itoa(port)); err != nil && !errors.Is(err, context.Canceled) {
+			_ = p.logger.Error(err)
+		}
+	}()
+	return nil
+}
+
+// Stop은 HTTP 서버와 연결된 저장소를 정상적으로 종료합니다.
+func (p *program) Stop(_ service.Service) error {
+	if p.cancel != nil {
+		p.cancel()
+	}
+	if p.app == nil {
+		return nil
+	}
+	return p.app.ShutdownWithTimeout(serviceShutdownTimeout)
+}
+
+func (p *program) runForeground() error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	app, port, err := p.initServer(ctx)
+	if err != nil {
+		return err
+	}
+	return app.Listen(":"+strconv.Itoa(port), fiber.ListenConfig{GracefulContext: ctx})
+}
+
+func (p *program) initServer(ctx context.Context) (*fiber.App, int, error) {
+	cfg, err := config.LoadWithViper(p.configPath, p.appInfo)
+	if err != nil {
+		return nil, 0, err
+	}
+	cfg.SetContext(ctx)
+
+	app, err := server.Init(cfg)
+	if err != nil {
+		return nil, 0, err
+	}
+	return app, cfg.Server.Port, nil
+}
 
 // @title govfs
 // @version 1.0.0
@@ -32,45 +101,107 @@ var configPath = "config.toml"
 // @name Authorization
 // @description Bearer 토큰을 "Bearer {token}" 형식으로 입력합니다.
 func main() {
-	// signal context
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
 
-	// load .env
+func run() error {
 	_ = godotenv.Load()
+	return newRootCommand(cmd.GetAppInfo()).Execute()
+}
 
-	// parse flags
-	flag.StringVar(&configPath, "config", "", "config file path")
-	flag.Parse()
+func newRootCommand(appInfo config.AppInfo) *cobra.Command {
+	var prg *program
+	var svc service.Service
 
-	if configPath == "" {
-		baseDir, err := os.UserHomeDir()
+	var root *cobra.Command
+	root = &cobra.Command{
+		Use:               appInfo.Name,
+		Short:             appInfo.Description,
+		Args:              cobra.NoArgs,
+		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
+		PersistentPreRunE: func(command *cobra.Command, _ []string) error {
+			path, err := absoluteConfigPath(configPath)
+			if err != nil {
+				return err
+			}
+			prg = &program{appInfo: appInfo, configPath: path}
+			if command == root && service.Interactive() {
+				return nil
+			}
+
+			svc, err = newService(prg)
+			if err != nil {
+				return err
+			}
+			prg.logger, err = svc.Logger(nil)
+			return err
+		},
+		RunE: func(_ *cobra.Command, _ []string) error {
+			if service.Interactive() {
+				return prg.runForeground()
+			}
+			return svc.Run()
+		},
+	}
+	root.PersistentFlags().StringVarP(&configPath, "config", "c", "", "config file path")
+
+	serviceCommand := &cobra.Command{
+		Use:   "service",
+		Short: "Manage the system service",
+		Args:  cobra.NoArgs,
+	}
+	for _, action := range service.ControlAction {
+		serviceCommand.AddCommand(&cobra.Command{
+			Use:   action,
+			Short: action + " the system service",
+			Args:  cobra.NoArgs,
+			RunE: func(_ *cobra.Command, _ []string) error {
+				return service.Control(svc, action)
+			},
+		})
+	}
+	root.AddCommand(serviceCommand)
+	return root
+}
+
+func newService(prg *program) (service.Service, error) {
+	return service.New(prg, &service.Config{
+		Name:        prg.appInfo.Name,
+		DisplayName: prg.appInfo.Name,
+		Description: prg.appInfo.Description,
+		Arguments:   []string{"--config", prg.configPath},
+		EnvVars:     serviceEnv(),
+		Option: service.KeyValue{
+			"UserService": true,
+			"RunAtLoad":   true,
+		},
+	})
+}
+
+func absoluteConfigPath(path string) (string, error) {
+	if path == "" {
+		home, err := os.UserHomeDir()
 		if err != nil {
-			panic(err)
+			return "", err
 		}
-		configPath = filepath.Join(baseDir, ".govfs", "config.toml")
+		return filepath.Join(home, ".govfs", "config.toml"), nil
 	}
+	return filepath.Abs(path)
+}
 
-	// load config
-	appInfo := cmd.GetAppInfo()
-	cfg, err := config.LoadWithViper(configPath, appInfo)
-	if err != nil {
-		panic(err)
+func serviceEnv() map[string]string {
+	env := make(map[string]string)
+	for _, name := range []string{
+		"SERVER_AUTH_ADMIN_USERNAME",
+		"SERVER_AUTH_ADMIN_PASSWORD",
+		"SERVER_AUTH_JWT_SECRET",
+		"USERPROFILE",
+	} {
+		if value, ok := os.LookupEnv(name); ok {
+			env[name] = value
+		}
 	}
-
-	// set context
-	cfg.SetContext(ctx)
-
-	// init server
-	app, err := server.Init(cfg)
-	if err != nil {
-		panic(err)
-	}
-
-	// listen
-	if err := app.Listen(":"+strconv.Itoa(cfg.Server.Port), fiber.ListenConfig{
-		GracefulContext: ctx,
-	}); err != nil {
-		panic(err)
-	}
+	return env
 }
