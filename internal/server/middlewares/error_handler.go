@@ -40,8 +40,8 @@ func handleVfsError(err error) *fiber.Error {
 	if errors.Is(err, vfs.ErrNotDir) {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
-	if errors.Is(err, vfs.ErrNotFound) {
-		return fiber.NewError(fiber.StatusFound, err.Error())
+	if errors.Is(err, vfs.ErrInvalidPath) {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 	if errors.Is(err, vfs.ErrNotSupported) {
 		return fiber.NewError(fiber.StatusNotImplemented, err.Error())
