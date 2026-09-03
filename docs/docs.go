@@ -19,17 +19,6 @@ const docTemplate = `{
                 },
                 "type": "object"
             },
-            "fiber.Error": {
-                "properties": {
-                    "code": {
-                        "type": "integer"
-                    },
-                    "message": {
-                        "type": "string"
-                    }
-                },
-                "type": "object"
-            },
             "payload": {
                 "properties": {
                     "payload": {
@@ -570,6 +559,14 @@ const docTemplate = `{
                 },
                 "type": "object"
             }
+        },
+        "securitySchemes": {
+            "BearerAuth": {
+                "description": "Bearer 토큰을 \"Bearer {token}\" 형식으로 입력합니다.",
+                "in": "header",
+                "name": "Authorization",
+                "type": "apiKey"
+            }
         }
     },
     "info": {
@@ -627,8 +624,53 @@ const docTemplate = `{
                             }
                         },
                         "description": "OK"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "사용자 이벤트",
                 "tags": [
                     "admin"
@@ -647,8 +689,43 @@ const docTemplate = `{
                             }
                         },
                         "description": "OK"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "사용자 시스템 상태",
                 "tags": [
                     "admin"
@@ -688,8 +765,53 @@ const docTemplate = `{
                             }
                         },
                         "description": "OK"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "시스템 DB 상세",
                 "tags": [
                     "admin"
@@ -711,8 +833,43 @@ const docTemplate = `{
                             }
                         },
                         "description": "OK"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "사용자 목록",
                 "tags": [
                     "admin"
@@ -742,8 +899,53 @@ const docTemplate = `{
                             }
                         },
                         "description": "Created"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "사용자 생성",
                 "tags": [
                     "admin"
@@ -786,8 +988,63 @@ const docTemplate = `{
                             }
                         },
                         "description": "OK"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Not Found"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "사용자 수정",
                 "tags": [
                     "admin"
@@ -810,8 +1067,63 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Not Found"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "사용자 이벤트 전체 삭제",
                 "tags": [
                     "admin"
@@ -841,8 +1153,63 @@ const docTemplate = `{
                             }
                         },
                         "description": "OK"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Not Found"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "사용자 드라이브 상태",
                 "tags": [
                     "admin"
@@ -887,7 +1254,7 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
@@ -897,7 +1264,7 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
@@ -907,7 +1274,7 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
@@ -925,26 +1292,34 @@ const docTemplate = `{
                 "description": "클라이언트의 JWT 토큰 쿠키를 삭제하여 로그아웃 처리합니다.",
                 "responses": {
                     "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
-                        "description": "No Content"
+                        "description": "Unauthorized"
                     },
                     "500": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "로그아웃",
                 "tags": [
                     "auth"
@@ -965,17 +1340,32 @@ const docTemplate = `{
                         },
                         "description": "OK"
                     },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
                     "500": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "로그인 상태 확인",
                 "tags": [
                     "auth"
@@ -1000,8 +1390,43 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "비밀번호 변경",
                 "tags": [
                     "auth"
@@ -1036,13 +1461,18 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "키 목록 조회",
                 "tags": [
                     "badger"
@@ -1075,7 +1505,7 @@ const docTemplate = `{
                 "responses": {
                     "202": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
                                     "type": "string"
                                 }
@@ -1085,9 +1515,9 @@ const docTemplate = `{
                     },
                     "400": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
@@ -1095,15 +1525,20 @@ const docTemplate = `{
                     },
                     "500": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "암호화 키 교체",
                 "tags": [
                     "badger"
@@ -1118,10 +1553,7 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "additionalProperties": {
-                                        "$ref": "#/components/schemas/types.BadgerStatRes"
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/types.BadgerStatRes"
                                 }
                             }
                         },
@@ -1131,22 +1563,64 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "DB 통계 조회",
                 "tags": [
                     "badger"
                 ]
             }
         },
-        "/sse/:id/publish": {
+        "/sse/clients": {
+            "get": {
+                "description": "연결된 모든 SSE 클라이언트의 정보를 반환합니다.",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/types.ClientList"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "SSE 클라이언트 목록 조회",
+                "tags": [
+                    "SSE"
+                ]
+            }
+        },
+        "/sse/publish/{id}": {
             "post": {
                 "description": "지정된 클라이언트(또는 전체)에 Server-Sent Event 메시지를 발행합니다.",
+                "parameters": [
+                    {
+                        "description": "client id",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -1175,35 +1649,19 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Bad Request"
                     }
                 },
-                "summary": "SSE 메시지 발행",
-                "tags": [
-                    "SSE"
-                ]
-            }
-        },
-        "/sse/clients": {
-            "get": {
-                "description": "연결된 모든 SSE 클라이언트의 정보를 반환합니다.",
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/types.ClientList"
-                                }
-                            }
-                        },
-                        "description": "OK"
+                "security": [
+                    {
+                        "BearerAuth": []
                     }
-                },
-                "summary": "SSE 클라이언트 목록 조회",
+                ],
+                "summary": "SSE 메시지 발행",
                 "tags": [
                     "SSE"
                 ]
@@ -1223,17 +1681,22 @@ const docTemplate = `{
                         },
                         "description": "OK"
                     },
-                    "500": {
+                    "503": {
                         "content": {
                             "text/event-stream": {
                                 "schema": {
-                                    "type": "object"
+                                    "type": "string"
                                 }
                             }
                         },
-                        "description": "Internal Server Error"
+                        "description": "Service Unavailable"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "SSE 구독",
                 "tags": [
                     "SSE"
@@ -1245,10 +1708,11 @@ const docTemplate = `{
                 "description": "지정된 경로의 하위 파일 및 디렉터리 목록을 가져옵니다.",
                 "parameters": [
                     {
-                        "description": "name search by q",
+                        "description": "path",
                         "in": "query",
                         "name": "q",
                         "schema": {
+                            "default": "/",
                             "type": "string"
                         }
                     },
@@ -1333,17 +1797,27 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Bad Request"
                     },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
                     "404": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
@@ -1353,13 +1827,18 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "파일 및 디렉터리 목록 조회",
                 "tags": [
                     "vfs"
@@ -1393,13 +1872,12 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "description": "is directory | name | file",
-                    "required": true
+                    "description": "is directory | name | file (isDir=false인 경우 필수)"
                 },
                 "responses": {
                     "202": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
                                     "type": "string"
                                 }
@@ -1409,42 +1887,236 @@ const docTemplate = `{
                     },
                     "400": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Bad Request"
                     },
-                    "404": {
+                    "401": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
-                        "description": "Not Found"
+                        "description": "Unauthorized"
                     },
                     "500": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "생성 (파일/디렉터리)",
                 "tags": [
                     "vfs"
                 ]
             }
         },
-        "/vfs/:id": {
+        "/vfs/backup": {
+            "post": {
+                "description": "전체 가상 파일 시스템의 데이터를 백업 파일(tar.gz)로 다운로드합니다.",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "401": {
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "전체 백업",
+                "tags": [
+                    "vfs"
+                ]
+            }
+        },
+        "/vfs/restore": {
+            "post": {
+                "description": "업로드된 백업 파일을 통해 파일 시스템을 복구합니다.",
+                "requestBody": {
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "title": "file",
+                                "type": "file"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "file",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "400": {
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "전체 복구",
+                "tags": [
+                    "vfs"
+                ]
+            }
+        },
+        "/vfs/search": {
+            "get": {
+                "description": "전체 VFS에서 이름에 검색어가 포함된 파일 및 디렉터리를 검색합니다.",
+                "parameters": [
+                    {
+                        "description": "검색어",
+                        "in": "query",
+                        "name": "q",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/types.MetaRes"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "파일 및 디렉터리 검색",
+                "tags": [
+                    "vfs"
+                ]
+            }
+        },
+        "/vfs/{id}": {
             "delete": {
                 "description": "지정된 파일 또는 디렉터리를 삭제합니다.",
                 "parameters": [
@@ -1461,7 +2133,7 @@ const docTemplate = `{
                 "responses": {
                     "202": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
                                     "type": "string"
                                 }
@@ -1471,35 +2143,40 @@ const docTemplate = `{
                     },
                     "400": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Bad Request"
                     },
-                    "404": {
+                    "401": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
-                        "description": "Not Found"
+                        "description": "Unauthorized"
                     },
                     "500": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "삭제",
                 "tags": [
                     "vfs"
@@ -1529,21 +2206,41 @@ const docTemplate = `{
                         },
                         "description": "OK"
                     },
+                    "206": {
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "Partial Content"
+                    },
                     "400": {
                         "content": {
                             "application/octet-stream": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Bad Request"
                     },
+                    "401": {
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
                     "404": {
                         "content": {
                             "application/octet-stream": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
@@ -1553,13 +2250,18 @@ const docTemplate = `{
                         "content": {
                             "application/octet-stream": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "파일 읽기",
                 "tags": [
                     "vfs"
@@ -1601,7 +2303,7 @@ const docTemplate = `{
                 "responses": {
                     "202": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
                                     "type": "string"
                                 }
@@ -1611,35 +2313,40 @@ const docTemplate = `{
                     },
                     "400": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Bad Request"
                     },
-                    "404": {
+                    "401": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
-                        "description": "Not Found"
+                        "description": "Unauthorized"
                     },
                     "500": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "이동 및 이름 변경",
                 "tags": [
                     "vfs"
@@ -1681,7 +2388,7 @@ const docTemplate = `{
                 "responses": {
                     "202": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
                                     "type": "string"
                                 }
@@ -1691,42 +2398,47 @@ const docTemplate = `{
                     },
                     "400": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Bad Request"
                     },
-                    "404": {
+                    "401": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
-                        "description": "Not Found"
+                        "description": "Unauthorized"
                     },
                     "500": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "파일 쓰기",
                 "tags": [
                     "vfs"
                 ]
             }
         },
-        "/vfs/:id/comments": {
+        "/vfs/{id}/comments": {
             "patch": {
                 "description": "파일 또는 디렉터리에 부가적인 코멘트를 작성합니다.",
                 "parameters": [
@@ -1763,7 +2475,7 @@ const docTemplate = `{
                 "responses": {
                     "202": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
                                     "type": "string"
                                 }
@@ -1773,42 +2485,47 @@ const docTemplate = `{
                     },
                     "400": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Bad Request"
                     },
-                    "404": {
+                    "401": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
-                        "description": "Not Found"
+                        "description": "Unauthorized"
                     },
                     "500": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "주석(코멘트) 작성",
                 "tags": [
                     "vfs"
                 ]
             }
         },
-        "/vfs/:id/copy": {
+        "/vfs/{id}/copy": {
             "post": {
                 "description": "파일 또는 디렉터리를 새로운 경로로 복사합니다.",
                 "parameters": [
@@ -1845,7 +2562,7 @@ const docTemplate = `{
                 "responses": {
                     "202": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
                                     "type": "string"
                                 }
@@ -1855,42 +2572,47 @@ const docTemplate = `{
                     },
                     "400": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Bad Request"
                     },
-                    "404": {
+                    "401": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
-                        "description": "Not Found"
+                        "description": "Unauthorized"
                     },
                     "500": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Internal Server Error"
                     }
                 },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "summary": "복사",
                 "tags": [
                     "vfs"
                 ]
             }
         },
-        "/vfs/:id/stat": {
+        "/vfs/{id}/stat": {
             "get": {
                 "description": "파일 또는 디렉터리의 메타데이터를 조회합니다.",
                 "parameters": [
@@ -1919,17 +2641,27 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
                         "description": "Bad Request"
                     },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Unauthorized"
+                    },
                     "404": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
+                                    "type": "string"
                                 }
                             }
                         },
@@ -1939,158 +2671,19 @@ const docTemplate = `{
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
-                                }
-                            }
-                        },
-                        "description": "Internal Server Error"
-                    }
-                },
-                "summary": "메타데이터 조회",
-                "tags": [
-                    "vfs"
-                ]
-            }
-        },
-        "/vfs/backup": {
-            "post": {
-                "description": "전체 가상 파일 시스템의 데이터를 백업 파일(tar.gz)로 다운로드합니다.",
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/octet-stream": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    },
-                    "500": {
-                        "content": {
-                            "application/octet-stream": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
-                                }
-                            }
-                        },
-                        "description": "Internal Server Error"
-                    }
-                },
-                "summary": "전체 백업",
-                "tags": [
-                    "vfs"
-                ]
-            }
-        },
-        "/vfs/restore": {
-            "post": {
-                "description": "업로드된 백업 파일을 통해 파일 시스템을 복구합니다.",
-                "requestBody": {
-                    "content": {
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "title": "file",
-                                "type": "file"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "type": "object"
-                            }
-                        }
-                    },
-                    "description": "file",
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
                                     "type": "string"
                                 }
                             }
                         },
-                        "description": "OK"
-                    },
-                    "400": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
-                                }
-                            }
-                        },
-                        "description": "Bad Request"
-                    },
-                    "500": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
-                                }
-                            }
-                        },
                         "description": "Internal Server Error"
                     }
                 },
-                "summary": "전체 복구",
-                "tags": [
-                    "vfs"
-                ]
-            }
-        },
-        "/vfs/search": {
-            "get": {
-                "description": "전체 VFS에서 이름에 검색어가 포함된 파일 및 디렉터리를 검색합니다.",
-                "parameters": [
+                "security": [
                     {
-                        "description": "검색어",
-                        "in": "query",
-                        "name": "q",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
+                        "BearerAuth": []
                     }
                 ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "items": {
-                                        "$ref": "#/components/schemas/types.MetaRes"
-                                    },
-                                    "type": "array"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    },
-                    "400": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
-                                }
-                            }
-                        },
-                        "description": "Bad Request"
-                    },
-                    "500": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/fiber.Error"
-                                }
-                            }
-                        },
-                        "description": "Internal Server Error"
-                    }
-                },
-                "summary": "파일 및 디렉터리 검색",
+                "summary": "메타데이터 조회",
                 "tags": [
                     "vfs"
                 ]

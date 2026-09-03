@@ -24,7 +24,8 @@ func NewBadgerHandler(bvfs *badger.BadgerVFS) *BadgerHandler {
 // @Produce      json
 // @Param        prefix    query     string  false  "prefix"
 // @Success      200  {object}  types.BadgerKeyRes
-// @Failure      500  {object}  fiber.Error
+// @Failure      500  {string}  string
+// @Security     BearerAuth
 // @Router       /badger/keys [get]
 func (h *BadgerHandler) AllKeys(ctx fiber.Ctx) error {
 	var keys []string
@@ -54,8 +55,9 @@ func (h *BadgerHandler) AllKeys(ctx fiber.Ctx) error {
 // @Description  DB 내의 메타, 블롭, 인덱스 별 통계를 조회합니다.
 // @Tags         badger
 // @Produce      json
-// @Success      200  {object}  map[string]types.BadgerStatRes
-// @Failure      500  {object}  fiber.Error
+// @Success      200  {object}  types.BadgerStatRes
+// @Failure      500  {string}  string
+// @Security     BearerAuth
 // @Router       /badger/stats [get]
 func (h *BadgerHandler) Stats(ctx fiber.Ctx) error {
 	stats, err := h.bvfs.Stats()
@@ -77,16 +79,17 @@ func (h *BadgerHandler) Stats(ctx fiber.Ctx) error {
 	})
 }
 
-// Rotate 데이터 암호화 키를 교체합니다. (비동기 처리)
+// Rotate는 데이터 암호화 키를 교체합니다.
 // @Summary      암호화 키 교체
 // @Description  데이터베이스의 암호화 키를 교체(Rotate)합니다.
 // @Tags         badger
 // @Accept       json
-// @Produce      json
+// @Produce      plain
 // @Param        key    body    types.RotateKeyReq  true  "new key"
 // @Success      202  {string}  string "Accepted"
-// @Failure      400  {object}  fiber.Error
-// @Failure      500  {object}  fiber.Error
+// @Failure      400  {string}  string
+// @Failure      500  {string}  string
+// @Security     BearerAuth
 // @Router       /badger/rotate [post]
 func (h *BadgerHandler) Rotate(ctx fiber.Ctx) error {
 	req := new(types.RotateKeyReq)

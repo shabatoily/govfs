@@ -27,6 +27,10 @@ var configPath = "config.toml"
 // @contact.email miniyu97@gmail.com
 // @servers.url http://localhost:3000
 // @servers.description Localhost
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Bearer 토큰을 "Bearer {token}" 형식으로 입력합니다.
 func main() {
 	// signal context
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
