@@ -36,13 +36,15 @@ func (h *VfsHandler) Prefix() string {
 //	@Description  지정된 경로의 하위 파일 및 디렉터리 목록을 가져옵니다.
 //	@Tags         vfs
 //	@Produce      json
-//	@Param        q    query     string  false  "name search by q"
+//	@Param        q    query     string  false  "path" default(/)
 //	@Param        viewType    query     string  false  "view type" Enums(list,tree)
 //	@Success      200  {object}  types.VfsRes{payload=[]types.MetaRes}
 //	@Success      200  {object}  types.VfsRes{payload=types.TreeNodeRes}
-//	@Failure      400  {object}  fiber.Error
-//	@Failure      404  {object}  fiber.Error
-//	@Failure      500  {object}  fiber.Error
+//	@Failure      400  {string}  string
+//	@Failure      401  {string}  string
+//	@Failure      404  {string}  string
+//	@Failure      500  {string}  string
+//	@Security     BearerAuth
 //	@Router       /vfs [get]
 //
 // List는 파일 및 디렉토리 목록을 조회하여 반환합니다. (목록형 또는 트리형)
@@ -87,8 +89,10 @@ func (h *VfsHandler) List(ctx fiber.Ctx) error {
 //	@Produce      json
 //	@Param        q    query     string  true  "검색어"
 //	@Success      200  {array}   types.MetaRes
-//	@Failure      400  {object}  fiber.Error
-//	@Failure      500  {object}  fiber.Error
+//	@Failure      400  {string}  string
+//	@Failure      401  {string}  string
+//	@Failure      500  {string}  string
+//	@Security     BearerAuth
 //	@Router       /vfs/search [get]
 //
 // Search는 파일 및 디렉터리 이름을 대소문자 구분 없이 검색합니다.
@@ -112,11 +116,14 @@ func (h *VfsHandler) Search(ctx fiber.Ctx) error {
 //	@Tags         vfs
 //	@Produce      octet-stream
 //	@Param        id    path     string  true  "file id"
-//	@Success      200  {file}	 string
-//	@Failure      400  {object}  fiber.Error
-//	@Failure      404  {object}  fiber.Error
-//	@Failure      500  {object}  fiber.Error
-//	@Router       /vfs/:id [get]
+//	@Success      200  {file}    binary
+//	@Success      206  {file}    binary
+//	@Failure      400  {string}  string
+//	@Failure      401  {string}  string
+//	@Failure      404  {string}  string
+//	@Failure      500  {string}  string
+//	@Security     BearerAuth
+//	@Router       /vfs/{id} [get]
 //
 // Read는 지정된 ID의 파일 바이너리 데이터를 스트리밍 응답으로 반환합니다. (Range 요청 지원)
 func (h *VfsHandler) Read(ctx fiber.Ctx) error {
@@ -179,10 +186,12 @@ func (h *VfsHandler) Read(ctx fiber.Ctx) error {
 // @Produce      json
 // @Param        id    path     string  true  "file id"
 // @Success      200  {object}  types.MetaRes
-// @Failure      400  {object}  fiber.Error
-// @Failure      404  {object}  fiber.Error
-// @Failure      500  {object}  fiber.Error
-// @Router       /vfs/:id/stat [get]
+// @Failure      400  {string}  string
+// @Failure      401  {string}  string
+// @Failure      404  {string}  string
+// @Failure      500  {string}  string
+// @Security     BearerAuth
+// @Router       /vfs/{id}/stat [get]
 // Stat은 지정된 ID의 메타데이터 정보를 조회하여 반환합니다.
 func (h *VfsHandler) Stat(ctx fiber.Ctx) error {
 	parsedID, err := fiber.Convert(ctx.Params("id"), uuid.Parse)
@@ -203,14 +212,15 @@ func (h *VfsHandler) Stat(ctx fiber.Ctx) error {
 // @Description  새로운 파일이나 디렉터리를 생성합니다.
 // @Tags         vfs
 // @Accept       multipart/form-data
-// @Produce      json
+// @Produce      plain
 // @Param        isDir    formData     string  false  "is directory"
 // @Param        name    formData     string  false  "name"
-// @Param        file    formData  file    true    "file"
+// @Param        file    formData  file    false   "file (isDir=false인 경우 필수)"
 // @Success      202  {string}  string "Accepted"
-// @Failure      400  {object}  fiber.Error
-// @Failure      404  {object}  fiber.Error
-// @Failure      500  {object}  fiber.Error
+// @Failure      400  {string}  string
+// @Failure      401  {string}  string
+// @Failure      500  {string}  string
+// @Security     BearerAuth
 // @Router       /vfs [post]
 // Create은 새로운 파일 또는 디렉토리를 생성합니다. (비동기 처리)
 func (h *VfsHandler) Create(ctx fiber.Ctx) error {
@@ -288,14 +298,15 @@ func (h *VfsHandler) Create(ctx fiber.Ctx) error {
 // @Description  파일의 내용을 새로운 데이터로 덮어씁니다.
 // @Tags         vfs
 // @Accept       json
-// @Produce      json
+// @Produce      plain
 // @Param        id    path     string  true  "file id"
 // @Param        content    body    types.WriteReq  true  "content"
 // @Success      202  {string}  string "Accepted"
-// @Failure      400  {object}  fiber.Error
-// @Failure      404  {object}  fiber.Error
-// @Failure      500  {object}  fiber.Error
-// @Router       /vfs/:id [put]
+// @Failure      400  {string}  string
+// @Failure      401  {string}  string
+// @Failure      500  {string}  string
+// @Security     BearerAuth
+// @Router       /vfs/{id} [put]
 // Write는 파일 내용을 업데이트합니다. (비동기 처리)
 func (h *VfsHandler) Write(ctx fiber.Ctx) error {
 	parsedID, err := fiber.Convert(ctx.Params("id"), uuid.Parse)
@@ -324,14 +335,15 @@ func (h *VfsHandler) Write(ctx fiber.Ctx) error {
 // @Description  파일 또는 디렉터리를 새로운 경로로 이동시키거나 이름을 변경합니다.
 // @Tags         vfs
 // @Accept       json
-// @Produce      json
+// @Produce      plain
 // @Param        id    path     string  true  "file id"
 // @Param        dst   body    types.DstReq  true  "destination"
 // @Success      202  {string}  string "Accepted"
-// @Failure      400  {object}  fiber.Error
-// @Failure      404  {object}  fiber.Error
-// @Failure      500  {object}  fiber.Error
-// @Router       /vfs/:id [patch]
+// @Failure      400  {string}  string
+// @Failure      401  {string}  string
+// @Failure      500  {string}  string
+// @Security     BearerAuth
+// @Router       /vfs/{id} [patch]
 // Move는 파일 또는 디렉토리의 경로를 변경합니다. (비동기 처리)
 func (h *VfsHandler) Move(ctx fiber.Ctx) error {
 	return h.asyncModify(ctx, "vfs.move", h.srv.Move)
@@ -342,14 +354,15 @@ func (h *VfsHandler) Move(ctx fiber.Ctx) error {
 // @Description  파일 또는 디렉터리를 새로운 경로로 복사합니다.
 // @Tags         vfs
 // @Accept       json
-// @Produce      json
+// @Produce      plain
 // @Param        id    path     string  true  "file id"
 // @Param        dst   body    types.DstReq  true  "destination"
 // @Success      202  {string}  string "Accepted"
-// @Failure      400  {object}  fiber.Error
-// @Failure      404  {object}  fiber.Error
-// @Failure      500  {object}  fiber.Error
-// @Router       /vfs/:id/copy [post]
+// @Failure      400  {string}  string
+// @Failure      401  {string}  string
+// @Failure      500  {string}  string
+// @Security     BearerAuth
+// @Router       /vfs/{id}/copy [post]
 // Copy는 파일 또는 디렉토리를 지정된 경로로 복사합니다. (비동기 처리)
 func (h *VfsHandler) Copy(ctx fiber.Ctx) error {
 	return h.asyncModify(ctx, "vfs.copy", h.srv.Copy)
@@ -359,13 +372,14 @@ func (h *VfsHandler) Copy(ctx fiber.Ctx) error {
 // @Summary      삭제
 // @Description  지정된 파일 또는 디렉터리를 삭제합니다.
 // @Tags         vfs
-// @Produce      json
+// @Produce      plain
 // @Param        id    path     string  true  "file id"
 // @Success      202  {string}  string "Accepted"
-// @Failure      400  {object}  fiber.Error
-// @Failure      404  {object}  fiber.Error
-// @Failure      500  {object}  fiber.Error
-// @Router       /vfs/:id [delete]
+// @Failure      400  {string}  string
+// @Failure      401  {string}  string
+// @Failure      500  {string}  string
+// @Security     BearerAuth
+// @Router       /vfs/{id} [delete]
 // Delete는 지정된 ID의 파일 또는 디렉토리를 삭제합니다. (비동기 처리)
 func (h *VfsHandler) Delete(ctx fiber.Ctx) error {
 	parsedID, err := fiber.Convert(ctx.Params("id"), uuid.Parse)
@@ -390,14 +404,15 @@ func (h *VfsHandler) Delete(ctx fiber.Ctx) error {
 // @Description  파일 또는 디렉터리에 부가적인 코멘트를 작성합니다.
 // @Tags         vfs
 // @Accept       json
-// @Produce      json
+// @Produce      plain
 // @Param        id    		path     string  true  "file id"
 // @Param        comment    body    types.WriteCommentReq  true  "comment"
 // @Success      202  {string}  string "Accepted"
-// @Failure      400  {object}  fiber.Error
-// @Failure      404  {object}  fiber.Error
-// @Failure      500  {object}  fiber.Error
-// @Router       /vfs/:id/comments [patch]
+// @Failure      400  {string}  string
+// @Failure      401  {string}  string
+// @Failure      500  {string}  string
+// @Security     BearerAuth
+// @Router       /vfs/{id}/comments [patch]
 // WriteComments는 파일 또는 디렉토리에 설명을 추가/수정합니다. (비동기 처리)
 func (h *VfsHandler) WriteComments(ctx fiber.Ctx) error {
 	parsedID, err := fiber.Convert(ctx.Params("id"), uuid.Parse)
@@ -427,7 +442,9 @@ func (h *VfsHandler) WriteComments(ctx fiber.Ctx) error {
 // @Tags         vfs
 // @Produce      octet-stream
 // @Success      200  {file}	 string
-// @Failure      500  {object}  fiber.Error
+// @Failure      401  {string}  string
+// @Failure      500  {string}  string
+// @Security     BearerAuth
 // @Router       /vfs/backup [post]
 // Backup은 전체 VFS 데이터를 tar.gz 파일 형식으로 스트리밍 다운로드합니다.
 func (h *VfsHandler) Backup(ctx fiber.Ctx) error {
@@ -453,11 +470,13 @@ func (h *VfsHandler) Backup(ctx fiber.Ctx) error {
 // @Description  업로드된 백업 파일을 통해 파일 시스템을 복구합니다.
 // @Tags         vfs
 // @Accept       multipart/form-data
-// @Produce      json
+// @Produce      plain
 // @Param        file    formData  file    true    "file"
 // @Success      200  {string}  string
-// @Failure      400  {object}  fiber.Error
-// @Failure      500  {object}  fiber.Error
+// @Failure      400  {string}  string
+// @Failure      401  {string}  string
+// @Failure      500  {string}  string
+// @Security     BearerAuth
 // @Router       /vfs/restore [post]
 // Restore는 업로드된 백업 파일로부터 VFS 데이터를 복구합니다.
 func (h *VfsHandler) Restore(ctx fiber.Ctx) error {

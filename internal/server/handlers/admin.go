@@ -24,6 +24,10 @@ func NewAdminHandler(users *services.UserStore, drives *services.DriveManager, b
 // @Summary 사용자 목록
 // @Tags admin
 // @Success 200 {array} types.UserRes
+// @Failure 401 {string} string
+// @Failure 403 {string} string
+// @Failure 500 {string} string
+// @Security BearerAuth
 // @Router /admin/users [get]
 func (h *AdminHandler) ListUsers(c fiber.Ctx) error {
 	list, err := h.users.List()
@@ -42,6 +46,11 @@ func (h *AdminHandler) ListUsers(c fiber.Ctx) error {
 // @Tags admin
 // @Param request body types.CreateUserReq true "user"
 // @Success 201 {object} types.UserRes
+// @Failure 400 {string} string
+// @Failure 401 {string} string
+// @Failure 403 {string} string
+// @Failure 500 {string} string
+// @Security BearerAuth
 // @Router /admin/users [post]
 func (h *AdminHandler) CreateUser(c fiber.Ctx) error {
 	var req types.CreateUserReq
@@ -64,6 +73,12 @@ func (h *AdminHandler) CreateUser(c fiber.Ctx) error {
 // @Param id path string true "user id"
 // @Param request body types.UpdateUserReq true "changes"
 // @Success 200 {object} types.UserRes
+// @Failure 400 {string} string
+// @Failure 401 {string} string
+// @Failure 403 {string} string
+// @Failure 404 {string} string
+// @Failure 500 {string} string
+// @Security BearerAuth
 // @Router /admin/users/{id} [patch]
 func (h *AdminHandler) UpdateUser(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
@@ -102,6 +117,10 @@ func userResponse(user services.User) types.UserRes {
 // @Summary 사용자 시스템 상태
 // @Tags admin
 // @Success 200 {object} types.StatusRes
+// @Failure 401 {string} string
+// @Failure 403 {string} string
+// @Failure 500 {string} string
+// @Security BearerAuth
 // @Router /admin/status [get]
 func (h *AdminHandler) Status(c fiber.Ctx) error {
 	list, err := h.users.List()
@@ -126,6 +145,12 @@ func (h *AdminHandler) Status(c fiber.Ctx) error {
 // @Tags admin
 // @Param id path string true "user id"
 // @Success 200 {object} types.UserDriveStatusRes
+// @Failure 400 {string} string
+// @Failure 401 {string} string
+// @Failure 403 {string} string
+// @Failure 404 {string} string
+// @Failure 500 {string} string
+// @Security BearerAuth
 // @Router /admin/users/{id}/status [get]
 func (h *AdminHandler) UserStatus(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
@@ -157,6 +182,11 @@ func (h *AdminHandler) UserStatus(c fiber.Ctx) error {
 // @Param page query int false "page" default(1)
 // @Param pageSize query int false "page size" default(20) maximum(100)
 // @Success 200 {object} types.UserEventPageRes
+// @Failure 400 {string} string
+// @Failure 401 {string} string
+// @Failure 403 {string} string
+// @Failure 500 {string} string
+// @Security BearerAuth
 // @Router /admin/events [get]
 func (h *AdminHandler) Events(c fiber.Ctx) error {
 	page, pageSize, err := pagination(c)
@@ -188,6 +218,11 @@ func (h *AdminHandler) Events(c fiber.Ctx) error {
 // @Param page query int false "page" default(1)
 // @Param pageSize query int false "page size" default(20) maximum(100)
 // @Success 200 {object} types.SystemEntryPageRes
+// @Failure 400 {string} string
+// @Failure 401 {string} string
+// @Failure 403 {string} string
+// @Failure 500 {string} string
+// @Security BearerAuth
 // @Router /admin/system/entries [get]
 func (h *AdminHandler) SystemEntries(c fiber.Ctx) error {
 	page, pageSize, err := pagination(c)
@@ -218,6 +253,12 @@ func pagination(c fiber.Ctx) (int, int, error) {
 // @Tags admin
 // @Param id path string true "user id"
 // @Success 204
+// @Failure 400 {string} string
+// @Failure 401 {string} string
+// @Failure 403 {string} string
+// @Failure 404 {string} string
+// @Failure 500 {string} string
+// @Security BearerAuth
 // @Router /admin/users/{id}/events [delete]
 func (h *AdminHandler) ClearUserEvents(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))

@@ -34,9 +34,9 @@ func NewAuthHandler(cfg config.AuthConfig, users *services.UserStore, drives *se
 // @Accept       json
 // @Param request body types.LoginReq true "login request"
 // @Success      200  {object}  types.TokenRes
-// @Failure      400  {object}  fiber.Error
-// @Failure      401  {object}  fiber.Error
-// @Failure      500  {object}  fiber.Error
+// @Failure      400  {string}  string
+// @Failure      401  {string}  string
+// @Failure      500  {string}  string
 // @Router       /auth/login [post]
 // Login은 사용자 로그인을 처리하고 JWT 토큰을 발급합니다.
 func (h *AuthHandler) Login(c fiber.Ctx) error {
@@ -88,8 +88,10 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 // @Summary      로그아웃
 // @Description  클라이언트의 JWT 토큰 쿠키를 삭제하여 로그아웃 처리합니다.
 // @Tags         auth
-// @Success      204  {object}  fiber.Error
-// @Failure      500  {object}  fiber.Error
+// @Success      204
+// @Failure      401  {string}  string
+// @Failure      500  {string}  string
+// @Security     BearerAuth
 // @Router       /auth/logout [post]
 // Logout은 사용자 로그아웃을 처리하고 클라이언트의 토큰 쿠키를 삭제합니다.
 func (h *AuthHandler) Logout(c fiber.Ctx) error {
@@ -117,7 +119,9 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 // @Description  현재 토큰의 유효성을 검증하고 사용자 정보를 반환합니다.
 // @Tags         auth
 // @Success      200  {object}  types.TokenRes
-// @Failure      500  {object}  fiber.Error
+// @Failure      401  {string}  string
+// @Failure      500  {string}  string
+// @Security     BearerAuth
 // @Router       /auth/me [get]
 // IsLoggedIn은 현재 사용자의 로그인 상태를 확인하고 정보를 반환합니다.
 func (*AuthHandler) IsLoggedIn(c fiber.Ctx) error {
@@ -146,6 +150,10 @@ func (*AuthHandler) IsLoggedIn(c fiber.Ctx) error {
 // @Tags auth
 // @Param request body types.ChangePasswordReq true "passwords"
 // @Success 204
+// @Failure 400 {string} string
+// @Failure 401 {string} string
+// @Failure 500 {string} string
+// @Security BearerAuth
 // @Router /auth/password [patch]
 func (h *AuthHandler) ChangePassword(c fiber.Ctx) error {
 	user, ok := middlewares.CurrentUser(c)

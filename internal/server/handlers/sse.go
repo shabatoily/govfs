@@ -30,7 +30,8 @@ type SSEHandler struct {
 // @Tags SSE
 // @Produce text/event-stream
 // @Success 200 {object} types.SSEMessage
-// @Failure 500 {object} any
+// @Failure 503 {string} string
+// @Security BearerAuth
 // @Router /sse/subscribe [get]
 func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 	user := userIDFromContext(ctx)
@@ -85,11 +86,12 @@ func (h *SSEHandler) Subscribe(ctx fiber.Ctx) error {
 // @Description  지정된 클라이언트(또는 전체)에 Server-Sent Event 메시지를 발행합니다.
 // @Tags SSE
 // @Accept json
-// @Produce json
 // @Param metaData body types.SSEMeta true "meta data"
+// @Param id path string true "client id"
 // @Success 204
-// @Failure 400 {object} fiber.Error
-// @Router /sse/:id/publish [post]
+// @Failure 400 {string} string
+// @Security BearerAuth
+// @Router /sse/publish/{id} [post]
 func (h *SSEHandler) Publish(ctx fiber.Ctx) error {
 	var metaData types.SSEMeta
 	if err := ctx.Bind().Body(&metaData); err != nil {
@@ -122,6 +124,7 @@ func (h *SSEHandler) Publish(ctx fiber.Ctx) error {
 // @Tags SSE
 // @Produce json
 // @Success 200 {object} types.ClientList
+// @Security BearerAuth
 // @Router /sse/clients [get]
 func (h *SSEHandler) Clients(ctx fiber.Ctx) error {
 	return ctx.JSON(types.ClientList{
