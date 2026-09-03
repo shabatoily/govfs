@@ -162,7 +162,16 @@ func newRootCommand(appInfo config.AppInfo) *cobra.Command {
 			},
 		})
 	}
+
 	root.AddCommand(serviceCommand)
+	root.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: "Show govfs version",
+		Args:  cobra.NoArgs,
+		Run: func(c *cobra.Command, _ []string) {
+			c.Println(appInfo.Name + " " + appInfo.Version)
+		},
+	})
 	return root
 }
 
