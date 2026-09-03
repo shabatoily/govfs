@@ -317,7 +317,7 @@ func (h *VfsHandler) Write(ctx fiber.Ctx) error {
 	req := new(types.WriteReq)
 	err = ctx.Bind().JSON(req)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "failed to parse request body")
+		return fiber.NewError(fiber.StatusBadRequest, "failed to parse request body")
 	}
 
 	// Deep Copy content for async processing
@@ -510,8 +510,11 @@ func NewVfsHandler(srv *services.VfsService, broker *services.SSEBroker, user ..
 // parseDstReq는 요청 구조체에서 대상 경로 정보(DstReq)를 파싱합니다.
 func parseDstReq(ctx fiber.Ctx) (*types.DstReq, error) {
 	req := new(types.DstReq)
-	if err := ctx.Bind().JSON(req); err != nil || req.Name == "" {
+	if err := ctx.Bind().JSON(req); err != nil {
 		return nil, err
+	}
+	if req.Name == "" {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "missing name")
 	}
 	return req, nil
 }

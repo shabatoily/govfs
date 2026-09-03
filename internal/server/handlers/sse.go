@@ -102,9 +102,10 @@ func (h *SSEHandler) Publish(ctx fiber.Ctx) error {
 	var targetID uuid.UUID
 	if id != "" {
 		parsedID, err := uuid.Parse(id)
-		if err == nil {
-			targetID = parsedID
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid client id")
 		}
+		targetID = parsedID
 	}
 
 	data := types.SSEData{

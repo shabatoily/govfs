@@ -412,6 +412,36 @@ func TestVfsHandler_Move(t *testing.T) {
 	mockVFS.AssertExpectations(t)
 }
 
+func TestVfsHandler_MoveRejectsMissingName(t *testing.T) {
+	handler := NewVfsHandler(nil, nil)
+	app := fiber.New()
+	app.Patch("/vfs/:id", handler.Move)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPatch, "/vfs/"+uuid.NewString(), bytes.NewBufferString(`{}`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestVfsHandler_WriteRejectsInvalidJSON(t *testing.T) {
+	handler := NewVfsHandler(nil, nil)
+	app := fiber.New()
+	app.Put("/vfs/:id", handler.Write)
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, "/vfs/"+uuid.NewString(), bytes.NewBufferString(`{`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
 func TestVfsHandler_AsyncExecuteTargetsClient(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
