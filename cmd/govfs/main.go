@@ -162,6 +162,19 @@ func newRootCommand(appInfo config.AppInfo) *cobra.Command {
 			},
 		})
 	}
+	serviceCommand.AddCommand(&cobra.Command{
+		Use:   "status",
+		Short: "Show the system service status",
+		Args:  cobra.NoArgs,
+		RunE: func(command *cobra.Command, _ []string) error {
+			status, err := svc.Status()
+			if err != nil {
+				return err
+			}
+			command.Println(serviceStatusText(status))
+			return nil
+		},
+	})
 
 	root.AddCommand(serviceCommand)
 	root.AddCommand(&cobra.Command{
@@ -173,6 +186,17 @@ func newRootCommand(appInfo config.AppInfo) *cobra.Command {
 		},
 	})
 	return root
+}
+
+func serviceStatusText(status service.Status) string {
+	switch status {
+	case service.StatusRunning:
+		return "running"
+	case service.StatusStopped:
+		return "stopped"
+	default:
+		return "unknown"
+	}
 }
 
 func newService(prg *program) (service.Service, error) {

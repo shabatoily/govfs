@@ -84,6 +84,7 @@ Linux는 systemd 사용자 서비스, macOS는 LaunchAgent를 사용하며 Windo
 ```bash
 govfs service install
 govfs service start
+govfs service status
 govfs service stop
 govfs service restart
 govfs service uninstall
