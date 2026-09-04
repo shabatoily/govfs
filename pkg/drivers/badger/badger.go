@@ -130,7 +130,7 @@ func New(cfg *Config) (*BadgerVFS, error) {
 	}
 
 	if cfg.Logger == nil {
-		cfg.Logger = log.Default
+		cfg.Logger = log.Default()
 	}
 
 	if cfg.Context == nil {

@@ -11,10 +11,7 @@ import (
 	vfs "github.com/shabatoily/govfs"
 )
 
-// Default는 애플리케이션 시작 시 사용되는 기본 로거 인스턴스입니다.
-var Default = &Logger{
-	Logger: zerolog.New(os.Stdout).Level(zerolog.InfoLevel).With().Timestamp().Logger(),
-}
+var defaultLogger *Logger
 
 // Config는 로거 생성을 위한 설정 정보를 정의합니다.
 type Config struct {
@@ -34,6 +31,15 @@ func (l *Logger) Close() error {
 		return l.close()
 	}
 	return nil
+}
+
+func Default() *Logger {
+	if defaultLogger == nil {
+		defaultLogger = &Logger{
+			Logger: zerolog.New(os.Stdout).Level(zerolog.InfoLevel).With().Timestamp().Logger(),
+		}
+	}
+	return defaultLogger
 }
 
 // NewLogger는 설정을 바탕으로 새로운 로거 인스턴스를 생성하여 반환합니다.

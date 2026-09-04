@@ -21,7 +21,7 @@ func setupVFS(t *testing.T) (*LocalStorage, func()) {
 	dir, err := os.MkdirTemp("", "vfs-local-test-*")
 	require.NoError(t, err)
 
-	ls, err := New(&Config{Path: dir, Logger: log.Default})
+	ls, err := New(&Config{Path: dir, Logger: log.Default()})
 	require.NoError(t, err)
 
 	return ls, func() {

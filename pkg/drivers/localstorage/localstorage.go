@@ -43,7 +43,7 @@ type LocalStorage struct {
 // New는 주어진 설정을 기반으로 새로운 LocalStorage 드라이버 인스턴스를 생성합니다.
 func New(cfg *Config) (*LocalStorage, error) {
 	if cfg.Logger == nil {
-		cfg.Logger = log.Default
+		cfg.Logger = log.Default()
 	}
 
 	// 1. basePath를 미리 깔끔하게 정리하고 구분자를 붙여 경계를 명확히 합니다.

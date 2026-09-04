@@ -14,7 +14,7 @@ import (
 func openBenchLS(b *testing.B) (*LocalStorage, func()) {
 	dir, err := os.MkdirTemp("", "vfs-bench-local-*")
 	require.NoError(b, err)
-	ls, err := New(&Config{Path: dir, Logger: log.Default})
+	ls, err := New(&Config{Path: dir, Logger: log.Default()})
 	require.NoError(b, err)
 
 	return ls, func() {
