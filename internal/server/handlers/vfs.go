@@ -140,7 +140,7 @@ func (h *VfsHandler) Read(ctx fiber.Ctx) error {
 	defer file.Close()
 
 	maxAge := "no-cache"
-	cacheableMimeTypes := []string{"image", "video", "audio", "application/pdf", "application/octet-stream"}
+	cacheableMimeTypes := []string{"image", "video", "audio", "application/pdf"}
 	for _, mime := range cacheableMimeTypes {
 		if strings.HasPrefix(file.Meta.MIME(), mime) {
 			maxAge = "max-age=31536000"
