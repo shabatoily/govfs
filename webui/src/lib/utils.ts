@@ -54,16 +54,24 @@ export function normalizePath(path: string): string {
     return stack.join("/");
 }
 
+export function isPreviewType(type: string): boolean {
+    const mime = type.split(';', 1)[0].trim().toLowerCase();
+    return mime.startsWith('image/') || mime.startsWith('video/') ||
+        mime.startsWith('audio/') || mime === 'application/pdf';
+}
+
 export function inferType(filename: string) {
     const ext = filename.split('.').pop();
     const map: { [key: string]: string } = {
-        ts: 'application/typescript', js: 'application/javascript',
+        ts: 'application/typescript', js: 'text/javascript', mjs: 'text/javascript',
+        xml: 'application/xml', html: 'text/html', htm: 'text/html',
+        css: 'text/css', csv: 'text/csv',
         md: 'text/markdown',
         txt: 'text/plain',
         json: 'application/json',
         jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
         gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml',
-        mp4: 'video/mp4', webm: 'video/webm', mp3: 'audio/mpeg', wav: 'audio/wav',
+        mpeg: 'video/mpeg', mpg: 'video/mpeg', mp4: 'video/mp4', webm: 'video/webm', mp3: 'audio/mpeg', wav: 'audio/wav',
         avi: 'video/x-msvideo', mov: 'video/quicktime', mkv: 'video/x-matroska',
         pdf: 'application/pdf'
     };

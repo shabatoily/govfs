@@ -34,6 +34,7 @@ export interface VFS {
 
 /// ----------- VFS API (Server is generic, client decides type) -----------------
 import { appState } from "./state.svelte";
+import { isPreviewType } from "./utils";
 
 function getHeaders(contentType?: string): HeadersInit {
     const headers: HeadersInit = {};
@@ -103,7 +104,7 @@ const vfs: VFS = {
         return await res.json() as FileInfo; // {id, name, size, modified}
     },
 
-    // 파일 읽기 (텍스트/바이너리 구분은 클라이언트가 확장자 기반으로 처리)
+    // 미디어와 PDF는 Blob으로, 나머지는 에디터용 문자열로 읽습니다.
     async read(id: string) {
         const res = await vfsFetch(`/vfs/${encodeURIComponent(id)}`, {
             headers: getHeaders()
@@ -113,9 +114,8 @@ const vfs: VFS = {
             throw new Error(await res.text());
         }
 
-        const blobMimeTypes = ["image", "video", "audio", "application/pdf", "application/octet-stream"];
         const contentType = res.headers.get("content-type");
-        if (contentType && blobMimeTypes.some(c => contentType.includes(c))) {
+        if (contentType && isPreviewType(contentType)) {
             return await res.blob();
         }
 

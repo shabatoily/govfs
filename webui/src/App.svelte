@@ -13,20 +13,12 @@
     import { appState } from "./lib/state.svelte";
     import vfs from "./lib/vfs";
     import sseClient, { type SSEMessage } from "./lib/sse";
-    import { inferType, resolvePath } from "./lib/utils";
+    import { inferType, isPreviewType, resolvePath } from "./lib/utils";
 
-    // Determine what to show in main area
-    let showPreview = $derived.by(() => {
-        if (!appState.currentFile) return false;
-        const type = inferType(appState.currentFile.name);
-        return (
-            !type.startsWith("text/") &&
-            type !== "application/json" &&
-            type !== "application/javascript" &&
-            type !== "application/typescript" &&
-            type !== "application/octet-stream"
-        );
-    });
+    // 미디어와 PDF만 미리보기로 열고 나머지는 에디터로 엽니다.
+    let showPreview = $derived(
+        !!appState.currentFile && isPreviewType(inferType(appState.currentFile.name)),
+    );
 
     // Drag and Drop Logic
     let isDragging = $state(false);

@@ -1,32 +1,11 @@
 package vfs
 
 import (
-	"errors"
 	"io"
 	"iter"
+	"strings"
 	"time"
 	"uuid"
-)
-
-// 기본 디렉터리 및 권한 설정 상수입니다.
-const (
-	// Root는 최상위 디렉터리 경로를 나타냅니다.
-	Root = "/"
-
-	// DefaultFileMode는 파일 생성 시 사용되는 기본 권한(0644)입니다.
-	DefaultFileMode = 0o644
-	// DefaultDirMode는 디렉터리 생성 시 사용되는 기본 권한(0755)입니다.
-	DefaultDirMode = 0o755
-)
-
-// VFS 작업 중 발생할 수 있는 주요 에러들입니다.
-var (
-	ErrNotFound         = errors.New("no such file or directory")
-	ErrAlreadyExists    = errors.New("file exists")
-	ErrNotDir           = errors.New("not a directory")
-	ErrInvalidPath      = errors.New("invalid path")
-	ErrNotSupported     = errors.New("not supported")
-	ErrNotSupportedSeek = errors.New("seek not supported")
 )
 
 // Meta는 가상 파일 시스템(VFS) 내 파일 또는 디렉터리의 메타데이터 정보를 담고 있습니다.
@@ -43,39 +22,53 @@ type Meta struct {
 
 // MIME은 파일 확장자를 기반으로 적절한 MIME 타입을 반환합니다.
 func (m *Meta) MIME() string {
-	switch m.Extension {
+	switch strings.ToLower(m.Extension) {
 	case "md":
-		return "text/markdown"
+		return MIMETextMarkdown
 	case "txt":
-		return "text/plain"
+		return MIMETextPlain
 	case "json":
-		return "application/json"
+		return MIMEApplicationJSON
 	case "jpg", "jpeg":
-		return "image/jpeg"
+		return MIMEImageJpeg
 	case "png":
-		return "image/png"
+		return MIMEImagePng
 	case "webp":
-		return "image/webp"
+		return MIMEImageWebp
 	case "gif":
-		return "image/gif"
+		return MIMEImageGif
 	case "svg":
-		return "image/svg+xml"
-	case "html":
-		return "text/html"
+		return MIMEImageSvg
+	case "xml":
+		return MIMEApplicationXML
+	case "js", "mjs":
+		return MIMETextJavaScript
+	case "css":
+		return MIMETextCSS
+	case "csv":
+		return MIMETextCsv
+	case "html", "htm":
+		return MIMETextHTML
 	case "pdf":
-		return "application/pdf"
+		return MIMEApplicationPdf
+	case "mp3":
+		return MIMEAudioMpeg
+	case "wav":
+		return MIMEAudioWav
+	case "mpeg", "mpg":
+		return MIMEVideoMpeg
 	case "mp4":
-		return "video/mp4"
+		return MIMEVideoMp4
 	case "webm":
-		return "video/webm"
+		return MIMEVideoWebm
 	case "avi":
-		return "video/x-msvideo"
+		return MIMEVideoXmsvideo
 	case "mov":
-		return "video/quicktime"
+		return MIMEVideoQuicktime
 	case "mkv":
-		return "video/x-matroska"
+		return MIMEVideoXmatroska
 	default:
-		return "application/octet-stream"
+		return MIMEOctetStream
 	}
 }
 
