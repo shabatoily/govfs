@@ -45,7 +45,9 @@
 
 `manifest.json`에는 파일별 상대 경로, 바이트 수, SHA-256, 예상 MIME, 예상 화면(editor/image/video/audio/pdf)을 기록한다. UUID는 매 실행 새로 얻으며 이전 실행 값을 재사용하지 않는다. 랜덤 생성 결과를 보존하면 같은 입력으로 재현할 수 있다.
 
-## 4. 사전 점검
+## 4. 코드화된 실행기와 사전 점검
+
+[tests/e2e](../../tests/e2e/README.md)의 실행기를 먼저 사용한다. 실행 명령, fixture 재사용, JSON/Markdown 보고서 생성 방법은 해당 README를 따른다. 자동 범위에 없는 브라우저·상세 SSE·관리자 사례는 아래 행렬에 따라 추가 실행한다. 실행기의 SKIP은 전수 테스트 보고서에서 BLOCKED로 남긴다.
 
 1. `git status --short --branch`, `git rev-parse HEAD`로 기준 상태를 기록한다. 사용자 변경을 지우거나 자동 커밋하지 않는다.
 2. Go 버전은 `go.mod`, Node/Yarn은 프로젝트 환경을 따른다. FFmpeg의 `libx264` 지원 및 브라우저 제어 도구 사용 가능 여부를 확인한다.
@@ -101,7 +103,7 @@ go build -o "$RUN_DIR/bin/govfs-cli" ./cmd/govfs-cli
 "$RUN_DIR/bin/govfs-server" --config "$RUN_DIR/badger/server.toml"
 ```
 
-서버는 별도 터미널 또는 관리 가능한 프로세스로 유지하고 PID와 로그를 기록한다. `/healthz` 응답과 로그인 성공을 확인한 뒤 진행한다. 같은 저장소를 여러 서버에서 동시에 열지 않는다.
+서버 작업 디렉터리는 저장소 밖의 실행 디렉터리로 설정하여 프로젝트 `.env`가 테스트 설정을 덮어쓰지 않게 한다. 서버는 별도 터미널 또는 관리 가능한 프로세스로 유지하고 PID와 로그를 기록한다. `/healthz` 응답과 로그인 성공을 확인한 뒤 진행한다. 같은 저장소를 여러 서버에서 동시에 열지 않는다.
 
 ## 6. 로그인과 MCP 연결
 
@@ -123,9 +125,9 @@ tool_timeout_sec = 60
 
 설정 형식: [공식 MCP 문서](https://learn.chatgpt.com/docs/extend/mcp?surface=cli). 이 서버는 stdio 방식이며 `/mcp` HTTP 주소를 등록하는 방식이 아니다. Codex 타임아웃과 내부 SSE 30초 제한은 별개다.
 
-연결 후 도구 목록에 5개 도구가 있는지 확인하고 `vfs_tree`를 호출한다. 도구가 노출되지 않으면 MCP 사례는 BLOCKED다. 연결 불가를 이유로 HTTP 호출을 MCP 성공으로 보고하지 않는다.
+연결 후 도구 목록에 5개 도구가 있는지 확인하고 `vfs_tree`를 호출한다. 에이전트 도구가 노출되지 않으면 직접 호출 사례는 BLOCKED지만 아래 SDK 실행기로 프로토콜 검증은 계속할 수 있다. 연결 불가를 이유로 HTTP 호출을 MCP 성공으로 보고하지 않는다.
 
-대량 Base64를 대화에 출력하지 않는다. 큰 입력·경계값은 기존 Go MCP SDK를 사용하는 작은 테스트 실행기에서 로컬 파일을 인코딩하여 실제 stdio 서버의 `CallTool`로 보낸다. 이 실행기는 현재 제공되지 않으므로 필요 시 테스트 보조 코드로 작성하고 실행 명령·소스를 증거에 보존한다. 서버 도구 추가는 하지 않는다.
+대량 Base64를 대화에 출력하지 않는다. [Go 실행기](../../tests/e2e/e2e_test.go)는 기존 MCP SDK로 로컬 파일을 인코딩하여 실제 stdio 서버의 `CallTool`로 보낸다. Codex 도구 등록 없이도 MCP 프로토콜 검증이 가능하다. 에이전트 직접 호출 검증과 SDK 실행기 검증을 구분해 기록한다. 서버 도구 추가는 하지 않는다.
 
 ## 7. 샘플 생성과 기대값
 
@@ -168,7 +170,7 @@ go run ./tools/gen/text -count 3 -bytes 4096 -out "$RUN_DIR/fixtures"
 | API-03 | HTTP | 이동·복사 정상/충돌/덮어쓰기 보호, 원본 유지·제거 및 대상 해시 확인 |
 | API-04 | HTTP+CLI | 이름 부분 검색, 대소문자·한글·공백·불일치·빈 검색어. root 제외 및 사용자 범위 확인 |
 | API-05 | HTTP | Range 정상 요청의 206·Content-Range·바이트 일치, 범위 밖 요청 오류 확인 |
-| API-06 | HTTP/CLI | 백업 → 데이터 변경 → 복원 → 경로·내용 검증. 같은 계정의 격리된 저장소에서 수행 |
+| API-06 | HTTP/CLI | 백업 → 데이터 변경 → 복원 → 경로·내용 검증. Badger는 같은 DB에 Load 시 더 최신 버전이 유지되는 것이 정상이며 시점 되돌리기를 기대하지 않는다. 같은 계정의 격리된 저장소에서 수행 |
 | CLI-01 | CLI | ls/tree/stat/search/cp/mkdir/rm 및 backup/restore를 현재 --help에 따라 실제 호출 |
 | SSE-01 | MCP/HTTP/UI | 변경 완료 이벤트와 최종 상태 일치, 다른 사용자의 이벤트가 전달되지 않음 |
 | UI-01 | 브라우저 | 로그인 → 업로드 → 목록/검색/선택. 콘솔·요청 실패 수집 |
@@ -226,6 +228,8 @@ go run ./tools/gen/text -count 3 -bytes 4096 -out "$RUN_DIR/fixtures"
 
 ```text
 현재 저장소의 docs/testing/AGENT_E2E.md를 읽고 전수 테스트를 실행하세요.
+먼저 tests/e2e/README.md의 기존 실행기로 자동 범위를 검증하고,
+결과와 별도로 브라우저 및 나머지 수동 사례를 실행하세요.
 
 범위는 Badger와 LocalStorage, 기존 MCP 5개 도구, HTTP/CLI,
 브라우저 WebUI, 사용자/관리자 기능입니다. MCP 기능은 추가하지 마세요.
