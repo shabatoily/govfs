@@ -137,7 +137,6 @@ func (h *VfsHandler) Read(ctx fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
 	maxAge := "no-cache"
 	cacheableMimeTypes := []string{"image", "video", "audio", "application/pdf"}
@@ -153,10 +152,15 @@ func (h *VfsHandler) Read(ctx fiber.Ctx) error {
 
 	fileSize := file.Meta.Size
 
-	// Range Request Handling
-	ranges, err := ctx.Range(fileSize)
-	if err == nil && len(ranges.Ranges) > 0 {
-		// Only support single range for simple video streaming
+	// 단일 범위 요청을 처리하고 실제 읽기 길이도 제한합니다.
+	ctx.Set(fiber.HeaderAcceptRanges, "bytes")
+	if ctx.Get(fiber.HeaderRange) != "" {
+		ranges, err := ctx.Range(fileSize)
+		if err != nil || len(ranges.Ranges) == 0 {
+			_ = file.Close()
+			ctx.Set(fiber.HeaderContentRange, fmt.Sprintf("bytes */%d", fileSize))
+			return ctx.SendStatus(fiber.StatusRequestedRangeNotSatisfiable)
+		}
 		r := ranges.Ranges[0]
 		start := r.Start
 		end := r.End
@@ -165,6 +169,7 @@ func (h *VfsHandler) Read(ctx fiber.Ctx) error {
 		}
 
 		if _, err := file.Seek(start, io.SeekStart); err != nil {
+			_ = file.Close()
 			return fiber.NewError(fiber.StatusInternalServerError, "failed to seek file")
 		}
 
@@ -172,7 +177,12 @@ func (h *VfsHandler) Read(ctx fiber.Ctx) error {
 		ctx.Status(fiber.StatusPartialContent)
 		ctx.Set(fiber.HeaderContentRange, fmt.Sprintf("bytes %d-%d/%d", start, end, fileSize))
 		ctx.Set(fiber.HeaderContentLength, strconv.FormatInt(contentLength, 10))
-		return ctx.SendStream(file, int(contentLength))
+		// 응답 전송이 끝날 때 원본 파일도 닫히도록 Closer를 함께 전달합니다.
+		stream := struct {
+			io.Reader
+			io.Closer
+		}{io.LimitReader(file, contentLength), file}
+		return ctx.SendStream(stream, int(contentLength))
 	}
 
 	ctx.Set(fiber.HeaderContentLength, strconv.FormatInt(fileSize, 10))
