@@ -51,7 +51,7 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 
 // Backup은 서버의 전체 VFS 데이터를 로컬 파일로 백업합니다.
 func (h *Handler) Backup(backupFile string) error {
-	backupFileName := fmt.Sprintf(backupFile, time.Now().Format("2006-01-02_15-04-05"))
+	backupFileName := strings.ReplaceAll(backupFile, "%s", time.Now().Format("2006-01-02_15-04-05"))
 	f, err := os.Create(backupFileName)
 	if err != nil {
 		return err

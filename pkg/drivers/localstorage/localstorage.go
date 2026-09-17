@@ -687,6 +687,9 @@ func (ls *LocalStorage) Tree(path string) (*vfs.TreeNode, error) {
 
 	rootMeta, ok := ls.pathMap[path]
 	if !ok {
+		rootMeta, ok = ls.pathMap[strings.TrimSuffix(path, "/")+"/"]
+	}
+	if !ok {
 		// Mock root if invalid? BadgerVFS handles virtual root.
 		if path == "/" {
 			rootMeta = vfs.Meta{

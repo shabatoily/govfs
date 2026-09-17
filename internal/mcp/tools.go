@@ -138,7 +138,7 @@ func cleanPath(value string) (string, error) {
 }
 
 func decodeContent(value string) ([]byte, error) {
-	if base64.StdEncoding.DecodedLen(len(value)) > maxUploadSize {
+	if len(value) > base64.StdEncoding.EncodedLen(maxUploadSize) {
 		return nil, errors.New("decoded upload exceeds 10 MiB")
 	}
 	content, err := base64.StdEncoding.DecodeString(value)
