@@ -116,9 +116,10 @@ func newInfoCommand(appInfo config.AppInfo) *cobra.Command {
 // NewRootCommand는 govfs CLI의 최상위(Root) 커맨드를 생성하고 초기화합니다.
 func NewRootCommand(appInfo config.AppInfo) *cobra.Command {
 	root := &cobra.Command{
-		Use:   appInfo.Name,
-		Short: appInfo.Name,
-		Long:  appInfo.Description,
+		Use:     appInfo.Name,
+		Short:   appInfo.Name,
+		Long:    appInfo.Description,
+		Version: appInfo.Version,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			if configPath == "" {
 				baseDir, err := os.UserHomeDir()

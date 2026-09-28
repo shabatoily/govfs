@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/kardianos/service"
@@ -31,5 +32,27 @@ func TestServiceStatusText(t *testing.T) {
 		if got := serviceStatusText(status); got != want {
 			t.Errorf("serviceStatusText(%d) = %q, 기대값 %q", status, got, want)
 		}
+	}
+}
+
+func TestVersionWithoutConfig(t *testing.T) {
+	for _, arg := range []string{"--version", "version"} {
+		t.Run(arg, func(t *testing.T) {
+			root := newRootCommand(config.AppInfo{Name: "govfs", Version: "v1.2.3"})
+			var output bytes.Buffer
+			root.SetOut(&output)
+			root.SetErr(&output)
+			root.SetArgs([]string{"--config", "/dev/null/missing", arg})
+			if err := root.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			want := "govfs version v1.2.3\n"
+			if arg == "version" {
+				want = "govfs v1.2.3\n"
+			}
+			if got := output.String(); got != want {
+				t.Fatalf("version output = %q, want %q", got, want)
+			}
+		})
 	}
 }

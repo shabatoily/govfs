@@ -118,6 +118,7 @@ func newRootCommand(appInfo config.AppInfo) *cobra.Command {
 	root = &cobra.Command{
 		Use:               appInfo.Name,
 		Short:             appInfo.Description,
+		Version:           appInfo.Version,
 		Args:              cobra.NoArgs,
 		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
 		PersistentPreRunE: func(command *cobra.Command, _ []string) error {
@@ -180,9 +181,10 @@ func newRootCommand(appInfo config.AppInfo) *cobra.Command {
 
 	root.AddCommand(serviceCommand)
 	root.AddCommand(&cobra.Command{
-		Use:   "version",
-		Short: "Show govfs version",
-		Args:  cobra.NoArgs,
+		Use:               "version",
+		Short:             "Show govfs version",
+		Args:              cobra.NoArgs,
+		PersistentPreRunE: func(_ *cobra.Command, _ []string) error { return nil },
 		Run: func(c *cobra.Command, _ []string) {
 			c.Println(appInfo.Name + " " + appInfo.Version)
 		},
