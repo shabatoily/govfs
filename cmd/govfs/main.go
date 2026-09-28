@@ -113,8 +113,8 @@ func run() error {
 func newRootCommand(appInfo config.AppInfo) *cobra.Command {
 	var prg *program
 	var svc service.Service
-
 	var root *cobra.Command
+
 	root = &cobra.Command{
 		Use:               appInfo.Name,
 		Short:             appInfo.Description,
@@ -144,6 +144,7 @@ func newRootCommand(appInfo config.AppInfo) *cobra.Command {
 			return svc.Run()
 		},
 	}
+
 	root.PersistentFlags().StringVarP(&configPath, "config", "c", "", "config file path")
 
 	serviceCommand := &cobra.Command{
@@ -151,6 +152,7 @@ func newRootCommand(appInfo config.AppInfo) *cobra.Command {
 		Short: "Manage the system service",
 		Args:  cobra.NoArgs,
 	}
+
 	for _, action := range service.ControlAction {
 		serviceCommand.AddCommand(&cobra.Command{
 			Use:   action,
@@ -161,6 +163,7 @@ func newRootCommand(appInfo config.AppInfo) *cobra.Command {
 			},
 		})
 	}
+
 	serviceCommand.AddCommand(&cobra.Command{
 		Use:   "status",
 		Short: "Show the system service status",
@@ -184,6 +187,7 @@ func newRootCommand(appInfo config.AppInfo) *cobra.Command {
 			c.Println(appInfo.Name + " " + appInfo.Version)
 		},
 	})
+
 	return root
 }
 
@@ -225,12 +229,14 @@ func absoluteConfigPath(path string) (string, error) {
 
 func serviceEnv() map[string]string {
 	env := make(map[string]string)
-	for _, name := range []string{
+	envKeys := []string{
 		"SERVER_AUTH_ADMIN_USERNAME",
 		"SERVER_AUTH_ADMIN_PASSWORD",
 		"SERVER_AUTH_JWT_SECRET",
 		"USERPROFILE",
-	} {
+	}
+
+	for _, name := range envKeys {
 		if value, ok := os.LookupEnv(name); ok {
 			env[name] = value
 		}
