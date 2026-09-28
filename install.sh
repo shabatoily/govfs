@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 # Configuration
 APP_NAME="govfs"
 CLI_NAME="govfs-cli"
@@ -59,6 +61,11 @@ else
     wget -qO "$TMP_CLI_BIN" "$CLI_BIN_URL" || { echo "❌ Error: Failed to download CLI binary $CLI_BIN_NAME."; exit 1; }
 fi
 
+chmod +x "$TMP_BIN" "$TMP_CLI_BIN"
+echo "📦 Versions to install:"
+"$TMP_BIN" version
+"$TMP_CLI_BIN" info
+
 echo "⚙️  Installing binaries to /usr/local/bin (requires sudo)..."
 sudo mv "$TMP_BIN" "$INSTALL_PATH"
 sudo chmod +x "$INSTALL_PATH"
@@ -67,3 +74,7 @@ sudo mv "$TMP_CLI_BIN" "$CLI_INSTALL_PATH"
 sudo chmod +x "$CLI_INSTALL_PATH"
 
 echo "✅ Installation successful!"
+echo "📦 Installed versions:"
+"$INSTALL_PATH" version
+"$CLI_INSTALL_PATH" info
+echo "ℹ️  Check versions anytime: govfs version / govfs-cli info"
