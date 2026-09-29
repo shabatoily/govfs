@@ -27,6 +27,10 @@ Go 언어에서 권장하는 표준을 준수합니다.
 
 ## 워크플로우
 
+### Coding
+
+코딩 작업을 마친 뒤 `make lint`를 실행하고, 보고된 린트 경고와 오류를 해결합니다. 수정 후 다시 실행하여 통과 여부를 확인합니다.
+
 ### Branch
 
 작업을 시작하기 전에 현재 브랜치와 변경 사항을 확인합니다.
@@ -55,6 +59,7 @@ git switch -c <type>/<description> main
 ### Commit
 
 현재 변경 사항 전체를 빠르게 검증하고, Conventional Commits 형식의 커밋 메시지로 커밋하는 워크플로우입니다.
+커밋 후 현재 브랜치가 `main`이 아니면 아래 `Pull Request Body` 절차에 따라 병합을 위한 PR 본문 작성까지 하나의 작업으로 완료합니다.
 
 1. 패키지 취약점 점검
 
@@ -91,6 +96,8 @@ git switch -c <type>/<description> main
    ```bash
    git push
    ```
+
+7. 현재 브랜치가 `main`이 아니면 `Pull Request Body` 절차에 따라 PR 본문 작성
 
 ### Pull Request Body
 
