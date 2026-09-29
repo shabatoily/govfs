@@ -428,7 +428,7 @@ func (ls *LocalStorage) transfer(id uuid.UUID, dst string, copyItem bool, replac
 		if exists {
 			if rollbackErr := os.Rename(backup, ls.toLocalPath(target.Path)); rollbackErr != nil {
 				keepTemp = true
-				return vfs.Meta{}, fmt.Errorf("transfer failed: %w; restore failed: %v; original retained at %s", err, rollbackErr, backup)
+				return vfs.Meta{}, fmt.Errorf("transfer failed: %w; restore failed: %w; original retained at %s", err, rollbackErr, backup)
 			}
 		}
 		return vfs.Meta{}, err
