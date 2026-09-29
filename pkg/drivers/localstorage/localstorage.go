@@ -357,7 +357,7 @@ func (ls *LocalStorage) StatByPath(p string) (vfs.Meta, error) {
 
 // Move는 파일 또는 디렉토리를 새로운 경로로 이동시킵니다.
 func (ls *LocalStorage) Move(id uuid.UUID, dst string, replaceID ...uuid.UUID) (vfs.Meta, error) {
-	return ls.transfer(id, dst, false, replaceID)
+	return ls.transfer(id, dst, replaceID, false)
 }
 
 // Copy는 파일 또는 디렉터리를 하위 항목과 함께 복사합니다.
@@ -365,10 +365,10 @@ func (ls *LocalStorage) Copy(id uuid.UUID, dst string, replaceID ...uuid.UUID) (
 	if len(replaceID) == 0 {
 		replaceID = []uuid.UUID{uuid.Nil()}
 	}
-	return ls.transfer(id, dst, true, replaceID)
+	return ls.transfer(id, dst, replaceID, true)
 }
 
-func (ls *LocalStorage) transfer(id uuid.UUID, dst string, copyItem bool, replaceID []uuid.UUID) (vfs.Meta, error) {
+func (ls *LocalStorage) transfer(id uuid.UUID, dst string, replaceID []uuid.UUID, copyItem bool) (vfs.Meta, error) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 	src, ok := ls.idMap[id]
@@ -391,9 +391,17 @@ func (ls *LocalStorage) transfer(id uuid.UUID, dst string, copyItem bool, replac
 		return vfs.Meta{}, err
 	}
 
+	if err := ls.transferFiles(src, dst, copyItem, targetMeta); err != nil {
+		return vfs.Meta{}, err
+	}
+	return ls.transferMetadata(src, dst, copyItem, targetMeta), nil
+}
+
+// transferFiles는 디스크 전송 실패 시 교체 대상을 복구하고, 복구에 실패하면 임시 백업을 보존합니다.
+func (ls *LocalStorage) transferFiles(src vfs.Meta, dst string, copyItem bool, target *vfs.Meta) error {
 	tmp, err := os.MkdirTemp(ls.basePath, ".vfs-transfer-")
 	if err != nil {
-		return vfs.Meta{}, err
+		return err
 	}
 	keepTemp := false
 	defer func() {
@@ -410,38 +418,43 @@ func (ls *LocalStorage) transfer(id uuid.UUID, dst string, copyItem bool, replac
 			err = copyFile(sourcePath, staged)
 		}
 		if err != nil {
-			return vfs.Meta{}, err
+			return err
 		}
 		sourcePath = staged
 	}
 	destination := ls.toLocalPath(dst)
 	if err := os.MkdirAll(filepath.Dir(strings.TrimSuffix(destination, "/")), vfs.DefaultDirMode); err != nil {
-		return vfs.Meta{}, err
+		return err
 	}
 	backup := filepath.Join(tmp, "previous")
-	if exists {
+	if target != nil {
 		if err := os.Rename(ls.toLocalPath(target.Path), backup); err != nil {
-			return vfs.Meta{}, err
+			return err
 		}
 	}
 	if err := os.Rename(strings.TrimSuffix(sourcePath, "/"), strings.TrimSuffix(destination, "/")); err != nil {
-		if exists {
+		if target != nil {
 			if rollbackErr := os.Rename(backup, ls.toLocalPath(target.Path)); rollbackErr != nil {
 				keepTemp = true
-				return vfs.Meta{}, fmt.Errorf("transfer failed: %w; restore failed: %w; original retained at %s", err, rollbackErr, backup)
+				return fmt.Errorf("transfer failed: %w; restore failed: %w; original retained at %s", err, rollbackErr, backup)
 			}
 		}
-		return vfs.Meta{}, err
+		return err
 	}
 
+	return nil
+}
+
+// transferMetadata는 transfer가 잠금을 보유한 상태에서 전송 결과를 인덱스에 반영합니다.
+func (ls *LocalStorage) transferMetadata(src vfs.Meta, dst string, copyItem bool, target *vfs.Meta) vfs.Meta {
 	// 실제 파일 전송이 성공한 뒤에만 인덱스를 변경합니다.
 	var items []vfs.Meta
 	for _, meta := range ls.idMap {
-		if meta.ID == id || (src.IsDir && strings.HasPrefix(meta.Path, src.Path)) {
+		if meta.ID == src.ID || (src.IsDir && strings.HasPrefix(meta.Path, src.Path)) {
 			items = append(items, meta)
 		}
 	}
-	if exists {
+	if target != nil {
 		for uid, meta := range ls.idMap {
 			if uid == target.ID || (target.IsDir && strings.HasPrefix(meta.Path, target.Path)) {
 				delete(ls.idMap, uid)
@@ -463,11 +476,11 @@ func (ls *LocalStorage) transfer(id uuid.UUID, dst string, copyItem bool, replac
 		meta.Modified = time.Now()
 		ls.idMap[meta.ID] = meta
 		ls.pathMap[meta.Path] = meta
-		if originalID == id {
+		if originalID == src.ID {
 			result = meta
 		}
 	}
-	return result, nil
+	return result
 }
 
 // copyFile은 복사가 완료된 임시 파일만 전송에 사용하도록 닫기 오류도 확인합니다.
