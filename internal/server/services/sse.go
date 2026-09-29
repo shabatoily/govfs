@@ -232,6 +232,7 @@ func (b *SSEBroker) listen() {
 		}
 		// 맵 초기화
 		b.clients = make(map[uuid.UUID]*client)
+		b.isRunning.Store(false)
 
 		log.Info("SSE Broker stopped")
 	}()
@@ -240,7 +241,6 @@ func (b *SSEBroker) listen() {
 		select {
 		case <-b.ctx.Done():
 			log.Info("SSE Broker shutting down...")
-			b.isRunning.Store(false)
 			return
 		case newClient := <-b.newClients:
 			b.clients[newClient.ID] = newClient

@@ -310,7 +310,7 @@ func systemEntry(item *badgerdb.Item) (types.SystemEntryRes, error) {
 				CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt,
 			}
 		case bytes.HasPrefix(key, usernamePrefix):
-			if len(data) != 16 {
+			if len(data) != len(uuid.Nil()) {
 				return fmt.Errorf("invalid UUID (got %d bytes)", len(data))
 			}
 			id := uuid.UUID(data)
