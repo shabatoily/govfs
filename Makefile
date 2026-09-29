@@ -96,11 +96,13 @@ build:
 	@echo "[build] tag: $(tag)"
 	@echo "[build] target: bin/$(PRJ_NAME)-$(os)-$(arch)"
 	@GOOS=$(os) GOARCH=$(arch) go build -trimpath -ldflags "-s -w \
+	-X github.com/shabatoily/govfs/cmd.name=$(PRJ_NAME) \
 	-X github.com/shabatoily/govfs/pkg/version.version=$(tag) \
 	-X github.com/shabatoily/govfs/pkg/version.buildTime=$(DATE_UTC)" \
 	-o bin/$(PRJ_NAME)-$(os)-$(arch) cmd/$(PRJ_NAME)/main.go
 	@echo "[build] target: bin/$(PRJ_NAME)-cli-$(os)-$(arch)"
 	@GOOS=$(os) GOARCH=$(arch) go build -trimpath -ldflags "-s -w \
+	-X github.com/shabatoily/govfs/cmd.name=$(PRJ_NAME)-cli \
 	-X github.com/shabatoily/govfs/pkg/version.version=$(tag) \
 	-X github.com/shabatoily/govfs/pkg/version.buildTime=$(DATE_UTC)" \
 	-o bin/$(PRJ_NAME)-cli-$(os)-$(arch) cmd/$(PRJ_NAME)-cli/main.go

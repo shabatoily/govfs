@@ -25,6 +25,18 @@ CONFIG_URL="https://github.com/${GITHUB_REPO}/releases/latest/download/config.to
 echo "🚀 Starting installation for ${GITHUB_REPO}..."
 echo "📍 Workspace: $APP_DIR"
 
+echo "📦 Currently installed versions:"
+if [[ -x "$INSTALL_PATH" ]]; then
+    "$INSTALL_PATH" version || echo "⚠️  Could not determine $APP_NAME version."
+else
+    echo "$APP_NAME: not installed"
+fi
+if [[ -x "$CLI_INSTALL_PATH" ]]; then
+    "$CLI_INSTALL_PATH" info || echo "⚠️  Could not determine $CLI_NAME version."
+else
+    echo "$CLI_NAME: not installed"
+fi
+
 echo "📁 Setup workspace directory..."
 mkdir -p "$APP_DIR"
 

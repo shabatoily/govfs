@@ -9,7 +9,7 @@ import (
 
 var (
 	name        = "govfs"
-	description = "govfs is a virtual file system server"
+	description = "govfs is a virtual file system"
 )
 
 func GetAppInfo() config.AppInfo {
