@@ -11,12 +11,13 @@ import (
 
 const (
 	defaultDirMode = 0o755
+	maxTextBytes   = 1024 * 1024
 	minVal         = 32
 	maxVal         = 126
 )
 
 func main() {
-	bytes := rand.IntN(1024 * 1024)
+	bytes := rand.IntN(maxTextBytes) //nolint:gosec // 테스트 데이터 크기 생성에만 사용하며 보안 난수가 필요하지 않습니다.
 	count := 1
 	outDir := "."
 
@@ -45,7 +46,7 @@ func generateText(filename string, bytes int) error {
 	sb := strings.Builder{}
 
 	for range bytes {
-		r := minVal + rand.Int32N(maxVal-minVal+1)
+		r := minVal + rand.Int32N(maxVal-minVal+1) //nolint:gosec // 테스트 텍스트 생성에만 사용하며 보안 난수가 필요하지 않습니다.
 		sb.WriteRune(r)
 	}
 

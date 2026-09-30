@@ -40,7 +40,7 @@ func TestTransfers(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEqual(t, file.ID, child.ID)
 			require.Equal(t, "preserve me", child.Comments)
-			readContents(t, fs, child.ID, "source contents")
+			readContents(t, fs, child.ID)
 
 			_, err = fs.Copy(source.ID, "/copied")
 			require.ErrorIs(t, err, vfs.ErrAlreadyExists)
@@ -48,7 +48,7 @@ func TestTransfers(t *testing.T) {
 			require.ErrorIs(t, err, vfs.ErrAlreadyExists)
 			_, err = fs.Copy(source.ID, "/missing", copied.ID)
 			require.ErrorIs(t, err, vfs.ErrAlreadyExists)
-			readContents(t, fs, child.ID, "source contents")
+			readContents(t, fs, child.ID)
 
 			for _, dst := range []string{"/source", "/source/child", "/", "/source/../source"} {
 				_, err = fs.Move(source.ID, dst)
@@ -62,7 +62,7 @@ func TestTransfers(t *testing.T) {
 			require.ErrorIs(t, err, vfs.ErrNotFound)
 			_, err = fs.StatByPath("/source")
 			require.ErrorIs(t, err, vfs.ErrNotFound)
-			readContents(t, fs, file.ID, "source contents")
+			readContents(t, fs, file.ID)
 
 			target, err := fs.Create("/target.txt", strings.NewReader("old"))
 			require.NoError(t, err)
@@ -71,7 +71,7 @@ func TestTransfers(t *testing.T) {
 			require.NotEqual(t, file.ID, newFile.ID)
 			_, err = fs.Stat(target.ID)
 			require.ErrorIs(t, err, vfs.ErrNotFound)
-			readContents(t, fs, newFile.ID, "source contents")
+			readContents(t, fs, newFile.ID)
 
 			// 파일과 디렉터리의 끝 슬래시가 달라도 충돌을 검사합니다.
 			_, err = fs.Copy(moved.ID, "/target.txt")
@@ -85,12 +85,12 @@ func TestTransfers(t *testing.T) {
 	}
 }
 
-func readContents(t *testing.T, fs vfs.VFS, id uuid.UUID, want string) {
+func readContents(t *testing.T, fs vfs.VFS, id uuid.UUID) {
 	t.Helper()
 	file, err := fs.Open(id)
 	require.NoError(t, err)
 	defer file.Close()
 	data, err := io.ReadAll(file)
 	require.NoError(t, err)
-	require.Equal(t, want, string(data))
+	require.Equal(t, "source contents", string(data))
 }

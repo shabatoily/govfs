@@ -73,12 +73,12 @@ func (m *MockVFS) StatByPath(p string) (vfs.Meta, error) {
 	return args.Get(0).(vfs.Meta), args.Error(1)
 }
 
-func (m *MockVFS) Move(id uuid.UUID, dst string, replaceID ...uuid.UUID) (vfs.Meta, error) {
+func (m *MockVFS) Move(id uuid.UUID, dst string, _ ...uuid.UUID) (vfs.Meta, error) {
 	args := m.Called(id, dst)
 	return args.Get(0).(vfs.Meta), args.Error(1)
 }
 
-func (m *MockVFS) Copy(id uuid.UUID, dst string, replaceID ...uuid.UUID) (vfs.Meta, error) {
+func (m *MockVFS) Copy(id uuid.UUID, dst string, _ ...uuid.UUID) (vfs.Meta, error) {
 	args := m.Called(id, dst)
 	return args.Get(0).(vfs.Meta), args.Error(1)
 }

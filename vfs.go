@@ -22,54 +22,10 @@ type Meta struct {
 
 // MIME은 파일 확장자를 기반으로 적절한 MIME 타입을 반환합니다.
 func (m *Meta) MIME() string {
-	switch strings.ToLower(m.Extension) {
-	case "md":
-		return MIMETextMarkdown
-	case "txt":
-		return MIMETextPlain
-	case "json":
-		return MIMEApplicationJSON
-	case "jpg", "jpeg":
-		return MIMEImageJpeg
-	case "png":
-		return MIMEImagePng
-	case "webp":
-		return MIMEImageWebp
-	case "gif":
-		return MIMEImageGif
-	case "svg":
-		return MIMEImageSvg
-	case "xml":
-		return MIMEApplicationXML
-	case "js", "mjs":
-		return MIMETextJavaScript
-	case "css":
-		return MIMETextCSS
-	case "csv":
-		return MIMETextCsv
-	case "html", "htm":
-		return MIMETextHTML
-	case "pdf":
-		return MIMEApplicationPdf
-	case "mp3":
-		return MIMEAudioMpeg
-	case "wav":
-		return MIMEAudioWav
-	case "mpeg", "mpg":
-		return MIMEVideoMpeg
-	case "mp4":
-		return MIMEVideoMp4
-	case "webm":
-		return MIMEVideoWebm
-	case "avi":
-		return MIMEVideoXmsvideo
-	case "mov":
-		return MIMEVideoQuicktime
-	case "mkv":
-		return MIMEVideoXmatroska
-	default:
-		return MIMEOctetStream
+	if mimeType, ok := mimeByExtension[strings.ToLower(m.Extension)]; ok {
+		return mimeType
 	}
+	return MIMEOctetStream
 }
 
 // File은 열린 파일에 대한 메타데이터와 데이터를 읽을 수 있는 인터페이스를 제공하는 구조체입니다.
