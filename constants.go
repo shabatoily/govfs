@@ -51,6 +51,35 @@ const (
 	MIMEApplicationPdf        = "application/pdf"
 )
 
+var mimeByExtension = map[string]string{
+	"md":   MIMETextMarkdown,
+	"txt":  MIMETextPlain,
+	"json": MIMEApplicationJSON,
+	"jpg":  MIMEImageJpeg,
+	"jpeg": MIMEImageJpeg,
+	"png":  MIMEImagePng,
+	"webp": MIMEImageWebp,
+	"gif":  MIMEImageGif,
+	"svg":  MIMEImageSvg,
+	"xml":  MIMEApplicationXML,
+	"js":   MIMETextJavaScript,
+	"mjs":  MIMETextJavaScript,
+	"css":  MIMETextCSS,
+	"csv":  MIMETextCsv,
+	"html": MIMETextHTML,
+	"htm":  MIMETextHTML,
+	"pdf":  MIMEApplicationPdf,
+	"mp3":  MIMEAudioMpeg,
+	"wav":  MIMEAudioWav,
+	"mpeg": MIMEVideoMpeg,
+	"mpg":  MIMEVideoMpeg,
+	"mp4":  MIMEVideoMp4,
+	"webm": MIMEVideoWebm,
+	"avi":  MIMEVideoXmsvideo,
+	"mov":  MIMEVideoQuicktime,
+	"mkv":  MIMEVideoXmatroska,
+}
+
 // VFS 작업 중 발생할 수 있는 주요 에러들입니다.
 var (
 	ErrNotFound         = errors.New("no such file or directory")
