@@ -271,6 +271,24 @@ func Test_BadgerVFS_List(t *testing.T) {
 		wantErr   assert.ErrorAssertionFunc
 	}{
 		{
+			name: "List Immediate Children Only",
+			setup: func(v *BadgerVFS) {
+				for _, path := range []string{"/test", "/test/nested", "/testing"} {
+					_, err := v.Mkdir(path)
+					require.NoError(t, err)
+				}
+				for _, path := range []string{"/test/file.txt", "/test/nested/child.txt", "/testing/other.txt"} {
+					_, err := v.Create(path, bytes.NewBufferString("content"))
+					require.NoError(t, err)
+				}
+			},
+			args: args{path: " /test/ "}, wantCount: 2, wantErr: assert.NoError,
+		},
+		{
+			name: "List Missing Directory",
+			args: args{path: "/missing"}, wantErr: assert.Error,
+		},
+		{
 			name:      "List Root Empty",
 			setup:     nil,
 			args:      args{path: "/"},

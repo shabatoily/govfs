@@ -166,7 +166,6 @@ func (bvfs *BadgerVFS) DB() *badger.DB {
 
 // List는 지정된 경로의 하위 파일 및 디렉토리 목록을 반환합니다.
 func (bvfs *BadgerVFS) List(path string) ([]vfs.Meta, error) {
-	// 1. Normalize path to always end with a slash
 	path = strings.TrimSpace(path)
 	if path == "" {
 		path = vfs.Root
@@ -175,45 +174,27 @@ func (bvfs *BadgerVFS) List(path string) ([]vfs.Meta, error) {
 		path += "/"
 	}
 
-	// 2. Check if the directory itself exists (unless it's the root).
-	// The meta key for a directory is stored with a trailing slash.
-	if path != "/" {
-		err := bvfs.db.View(func(txn *badger.Txn) error {
-			metaKey := makeKey(prefixMeta, []byte(path))
-			_, internalErr := txn.Get(metaKey) // Check for key like "meta:/your/dir/"
-			if errors.Is(internalErr, badger.ErrKeyNotFound) {
-				return vfs.ErrNotFound
-			}
-			return internalErr
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// 3. Proceed to list the contents.
 	metaKey := makeKey(prefixMeta, []byte(path))
 	list := make([]vfs.Meta, 0)
 	err := bvfs.db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		if path != vfs.Root {
+			if _, err := txn.Get(metaKey); errors.Is(err, badger.ErrKeyNotFound) {
+				return vfs.ErrNotFound
+			} else if err != nil {
+				return err
+			}
+		}
+		opts := badger.DefaultIteratorOptions
+		opts.Prefix = metaKey
+		opts.PrefetchValues = false
+		it := txn.NewIterator(opts)
 		defer it.Close()
 
 		for it.Seek(metaKey); it.ValidForPrefix(metaKey); it.Next() {
 			item := it.Item()
-			key := string(item.Key())
-			subpath := strings.TrimPrefix(key, string(metaKey))
-
-			// Skip the directory itself (whose subpath is "")
-			if subpath == "" {
-				continue
-			}
-
-			// --- CRITICAL FIX ---
-			// This condition now correctly identifies immediate children.
-			// - "file.txt"        -> TrimSuffix -> "file.txt"        -> Contains("/") is false. (INCLUDED)
-			// - "subdir/"         -> TrimSuffix -> "subdir"          -> Contains("/") is false. (INCLUDED)
-			// - "subdir/file.txt" -> TrimSuffix -> "subdir/file.txt" -> Contains("/") is true.  (SKIPPED)
-			if strings.Contains(strings.TrimSuffix(subpath, "/"), "/") {
+			subpath := string(item.Key()[len(metaKey):])
+			// 디렉터리 자신과 손자 이하의 항목을 제외합니다.
+			if subpath == "" || strings.Contains(strings.TrimSuffix(subpath, "/"), "/") {
 				continue
 			}
 
@@ -232,6 +213,10 @@ func (bvfs *BadgerVFS) List(path string) ([]vfs.Meta, error) {
 		}
 		return nil
 	})
+
+	if errors.Is(err, vfs.ErrNotFound) {
+		return nil, err
+	}
 
 	bvfs.logger.Debug().Str("path", path).Int("count", len(list)).Msg("List")
 
