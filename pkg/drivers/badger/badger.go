@@ -884,6 +884,7 @@ func (bvfs *BadgerVFS) Load(r io.Reader, maxPendingWrites int) error {
 
 // Tree는 지정된 경로 이하의 파일 시스템 구조를 트리 형태로 반환합니다.
 func (bvfs *BadgerVFS) Tree(targetPath string) (*vfs.TreeNode, error) {
+	targetPath = strings.TrimSpace(targetPath)
 	if targetPath == "" {
 		targetPath = vfs.Root
 	}
@@ -893,7 +894,6 @@ func (bvfs *BadgerVFS) Tree(targetPath string) (*vfs.TreeNode, error) {
 	if !strings.HasSuffix(targetPath, "/") {
 		targetPath += "/"
 	}
-	targetPath = strings.TrimSpace(targetPath)
 
 	var rootNode *vfs.TreeNode
 	nodes := make(map[string]*vfs.TreeNode)
@@ -911,17 +911,16 @@ func (bvfs *BadgerVFS) Tree(targetPath string) (*vfs.TreeNode, error) {
 	}
 
 	err := bvfs.db.View(func(txn *badger.Txn) error {
-		// "meta:/path/"로 시작하는 모든 항목 스캔
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		metaKey := makeKey(prefixMeta, []byte(targetPath))
+		opts := badger.DefaultIteratorOptions
+		opts.Prefix = metaKey
+		it := txn.NewIterator(opts)
 		defer it.Close()
 
-		metaKey := makeKey(prefixMeta, []byte(targetPath))
 		for it.Seek(metaKey); it.ValidForPrefix(metaKey); it.Next() {
-			var im internalMeta
-			// Tree doesn't need internalID
 			im, internalErr := getMeta(it.Item())
 			if internalErr != nil {
-				continue
+				return internalErr
 			}
 
 			node := &vfs.TreeNode{
@@ -950,12 +949,14 @@ func (bvfs *BadgerVFS) Tree(targetPath string) (*vfs.TreeNode, error) {
 		}
 		return nil
 	})
-
+	if err != nil {
+		return nil, err
+	}
 	if rootNode == nil {
 		return nil, vfs.ErrNotFound
 	}
 
-	return rootNode, err
+	return rootNode, nil
 }
 
 // Rotate는 데이터 암호화 키를 새 키로 교체합니다.

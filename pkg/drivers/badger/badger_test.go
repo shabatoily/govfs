@@ -21,6 +21,39 @@ import (
 
 var logger = log.Default()
 
+func TestTreePreservesErrorsAndNormalizesPath(t *testing.T) {
+	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true).WithLogger(nil))
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+	driver := &BadgerVFS{db: db}
+	require.NoError(t, db.Update(func(txn *badger.Txn) error {
+		if err := txn.Set([]byte("meta:/clean/"), []byte(`{"path":"/clean/","isDir":true}`)); err != nil {
+			return err
+		}
+		return txn.Set([]byte("meta:/broken/"), []byte("invalid JSON"))
+	}))
+	for _, path := range []string{"/clean", " clean ", " /clean/ "} {
+		tree, err := driver.Tree(path)
+		require.NoError(t, err)
+		require.NotNil(t, tree)
+		assert.Equal(t, "/clean/", tree.Meta.Path)
+	}
+	for _, path := range []string{"/", "/broken"} {
+		tree, err := driver.Tree(path)
+		require.Error(t, err)
+		require.NotErrorIs(t, err, vfs.ErrNotFound)
+		assert.Nil(t, tree)
+	}
+	_, err = driver.Tree("/missing")
+	require.ErrorIs(t, err, vfs.ErrNotFound)
+	require.NoError(t, db.Close())
+	for _, path := range []string{"/", "/missing"} {
+		tree, err := driver.Tree(path)
+		require.ErrorIs(t, err, badger.ErrDBClosed)
+		assert.Nil(t, tree)
+	}
+}
+
 func TestFindByPathUsesExactKeys(t *testing.T) {
 	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true).WithLogger(nil))
 	require.NoError(t, err)
