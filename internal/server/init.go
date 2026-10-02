@@ -238,11 +238,12 @@ func withVFS(drives *services.DriveManager, broker *services.SSEBroker, handler 
 		if !ok {
 			return fiber.ErrUnauthorized
 		}
-		drive, err := drives.Drive(user.ID)
+		drive, release, err := drives.Acquire(user.ID)
 		if err != nil {
 			return err
 		}
-		vfsHandler := handlers.NewVfsHandler(services.NewVfsService(drive, "/vfs"), broker, user.ID.String())
+		vfsHandler := handlers.NewVfsHandler(services.NewVfsService(drive, "/vfs"), broker, release, user.ID.String())
+		defer vfsHandler.Close()
 		return handler(vfsHandler, ctx)
 	}
 }
@@ -253,10 +254,11 @@ func withBadger(drives *services.DriveManager, handler func(*handlers.BadgerHand
 		if !ok {
 			return fiber.ErrUnauthorized
 		}
-		drive, err := drives.Drive(user.ID)
+		drive, release, err := drives.Acquire(user.ID)
 		if err != nil {
 			return err
 		}
+		defer release()
 		badgerDrive, ok := drive.(*badger.BadgerVFS)
 		if !ok {
 			return vfs.ErrNotSupported

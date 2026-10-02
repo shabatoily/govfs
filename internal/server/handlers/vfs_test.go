@@ -8,7 +8,9 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 	"uuid"
@@ -123,7 +125,7 @@ func TestVfsHandler_List(t *testing.T) {
 	})
 	defer broker.Shutdown()
 	svc := services.NewVfsService(mockVFS, "/vfs")
-	handler := NewVfsHandler(svc, broker)
+	handler := NewVfsHandler(svc, broker, nil)
 
 	app := fiber.New()
 	app.Get("/vfs", handler.List)
@@ -171,7 +173,7 @@ func TestVfsHandler_Search(t *testing.T) {
 	mockVFS := new(MockVFS)
 	broker := services.NewSSEBroker(services.SSEConfig{})
 	defer broker.Shutdown()
-	handler := NewVfsHandler(services.NewVfsService(mockVFS, "/vfs"), broker)
+	handler := NewVfsHandler(services.NewVfsService(mockVFS, "/vfs"), broker, nil)
 
 	app := fiber.New()
 	app.Get("/vfs/search", handler.Search)
@@ -204,7 +206,7 @@ func TestVfsHandler_Search(t *testing.T) {
 }
 
 func TestVfsHandler_SearchRequiresQuery(t *testing.T) {
-	handler := NewVfsHandler(nil, nil)
+	handler := NewVfsHandler(nil, nil, nil)
 	app := fiber.New()
 	app.Get("/vfs/search", handler.Search)
 
@@ -226,7 +228,7 @@ func TestVfsHandler_Stat(t *testing.T) {
 	})
 	defer broker.Shutdown()
 	svc := services.NewVfsService(mockVFS, "/vfs")
-	handler := NewVfsHandler(svc, broker)
+	handler := NewVfsHandler(svc, broker, nil)
 
 	app := fiber.New()
 	app.Get("/vfs/:id/stat", handler.Stat)
@@ -276,7 +278,7 @@ func TestVfsHandler_Create(t *testing.T) {
 	})
 	defer broker.Shutdown()
 	svc := services.NewVfsService(mockVFS, "/vfs")
-	handler := NewVfsHandler(svc, broker)
+	handler := NewVfsHandler(svc, broker, nil)
 
 	app := fiber.New()
 	app.Post("/vfs", handler.Create)
@@ -344,7 +346,7 @@ func TestVfsHandler_Delete(t *testing.T) {
 	})
 	defer broker.Shutdown()
 	svc := services.NewVfsService(mockVFS, "/vfs")
-	handler := NewVfsHandler(svc, broker)
+	handler := NewVfsHandler(svc, broker, nil)
 
 	app := fiber.New()
 	app.Delete("/vfs/:id", handler.Delete)
@@ -385,7 +387,7 @@ func TestVfsHandler_Move(t *testing.T) {
 	})
 	defer broker.Shutdown()
 	svc := services.NewVfsService(mockVFS, "/vfs")
-	handler := NewVfsHandler(svc, broker)
+	handler := NewVfsHandler(svc, broker, nil)
 
 	app := fiber.New()
 	app.Patch("/vfs/:id", handler.Move)
@@ -426,7 +428,7 @@ func TestVfsHandler_Move(t *testing.T) {
 }
 
 func TestVfsHandler_MoveRejectsMissingName(t *testing.T) {
-	handler := NewVfsHandler(nil, nil)
+	handler := NewVfsHandler(nil, nil, nil)
 	app := fiber.New()
 	app.Patch("/vfs/:id", handler.Move)
 
@@ -441,7 +443,7 @@ func TestVfsHandler_MoveRejectsMissingName(t *testing.T) {
 }
 
 func TestVfsHandler_WriteRejectsInvalidJSON(t *testing.T) {
-	handler := NewVfsHandler(nil, nil)
+	handler := NewVfsHandler(nil, nil, nil)
 	app := fiber.New()
 	app.Put("/vfs/:id", handler.Write)
 
@@ -497,7 +499,7 @@ func TestVfsHandler_AsyncExecuteTargetsClient(t *testing.T) {
 
 func TestVfsHandler_CreateCopiesNameBeforeRequestReuse(t *testing.T) {
 	mockVFS := new(MockVFS)
-	handler := NewVfsHandler(services.NewVfsService(mockVFS, "/vfs"), nil)
+	handler := NewVfsHandler(services.NewVfsService(mockVFS, "/vfs"), nil, nil)
 	started, resume := make(chan struct{}), make(chan struct{})
 	var release sync.Once
 	t.Cleanup(func() { release.Do(func() { close(resume) }) })
@@ -529,5 +531,79 @@ func TestVfsHandler_CreateCopiesNameBeforeRequestReuse(t *testing.T) {
 		require.Equal(t, "original", got)
 	case <-time.After(time.Second):
 		t.Fatal("디렉터리 이름 확인 대기 시간 초과")
+	}
+}
+
+func TestVfsHandlerAsyncKeepsDriveUntilCompletion(t *testing.T) {
+	released := make(chan struct{}, 1)
+	handler := NewVfsHandler(nil, nil, func() { released <- struct{}{} })
+	started, resume := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	t.Cleanup(func() { once.Do(func() { close(resume) }) })
+	handler.asyncExecute("", func() (types.SSEMeta, error) {
+		close(started)
+		<-resume
+		return types.SSEMeta{}, nil
+	})
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("비동기 작업 시작 대기 시간 초과")
+	}
+	handler.Close()
+	select {
+	case <-released:
+		t.Fatal("비동기 작업 완료 전에 드라이브 사용이 종료되었습니다")
+	default:
+	}
+	once.Do(func() { close(resume) })
+	select {
+	case <-released:
+	case <-time.After(time.Second):
+		t.Fatal("비동기 작업 완료 후 드라이브 사용이 종료되지 않았습니다")
+	}
+}
+
+func TestVfsHandlerReadKeepsDriveUntilStreamCloses(t *testing.T) {
+	for _, byteRange := range []string{"", "bytes=1-2"} {
+		t.Run(byteRange, func(t *testing.T) {
+			mockVFS := new(MockVFS)
+			id := uuid.NewV4()
+			reader := strings.NewReader("data")
+			file := vfs.NewFile(&vfs.Meta{ID: id, Name: "test.txt", Size: 4}, struct {
+				io.ReadSeeker
+				io.Closer
+			}{reader, io.NopCloser(reader)})
+			mockVFS.On("Open", id).Return(file, nil)
+			var released atomic.Bool
+			handler := NewVfsHandler(services.NewVfsService(mockVFS, "/vfs"), nil, func() { released.Store(true) })
+			app := fiber.New()
+			app.Get("/:id", func(ctx fiber.Ctx) error {
+				if err := handler.Read(ctx); err != nil {
+					return err
+				}
+				handler.Close()
+				if released.Load() {
+					return fiber.NewError(fiber.StatusInternalServerError, "drive released before stream completion")
+				}
+				return nil
+			})
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "/"+id.String(), http.NoBody)
+			require.NoError(t, err)
+			req.Header.Set("Range", byteRange)
+			res, err := app.Test(req)
+			require.NoError(t, err)
+			defer res.Body.Close()
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			if byteRange == "" {
+				require.Equal(t, http.StatusOK, res.StatusCode)
+				require.Equal(t, "data", string(body))
+			} else {
+				require.Equal(t, http.StatusPartialContent, res.StatusCode)
+				require.Equal(t, "at", string(body))
+			}
+			require.True(t, released.Load(), "스트림을 닫으면 드라이브 사용도 종료되어야 합니다")
+		})
 	}
 }

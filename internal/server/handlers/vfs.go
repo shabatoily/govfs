@@ -22,9 +22,10 @@ const headerXClientID = "X-Client-ID"
 
 // VfsHandler는 가상 파일 시스템(VFS) 관련 HTTP 요청을 처리하는 핸들러입니다.
 type VfsHandler struct {
-	srv    *services.VfsService
-	broker *services.SSEBroker
-	user   string
+	srv     *services.VfsService
+	broker  *services.SSEBroker
+	user    string
+	release func()
 }
 
 // Prefix는 VfsHandler가 담당하는 라우트의 URL 접두사를 반환합니다.
@@ -183,12 +184,12 @@ func (h *VfsHandler) Read(ctx fiber.Ctx) error {
 			io.Reader
 			io.Closer
 		}{io.LimitReader(file, contentLength), file}
-		return ctx.SendStream(stream, int(contentLength))
+		return ctx.SendStream(&driveStream{Reader: stream, closer: stream, release: h.takeRelease()}, int(contentLength))
 	}
 
 	ctx.Set(fiber.HeaderContentLength, strconv.FormatInt(fileSize, 10))
 	ctx.Status(fiber.StatusOK)
-	return ctx.SendStream(file, int(fileSize))
+	return ctx.SendStream(&driveStream{Reader: file, closer: file, release: h.takeRelease()}, int(fileSize))
 }
 
 // Stat stat a file or directory
@@ -441,7 +442,9 @@ func (h *VfsHandler) Backup(ctx fiber.Ctx) error {
 
 	r, w := io.Pipe()
 
+	release := h.takeRelease()
 	go func() {
+		defer release()
 		_ = w.CloseWithError(h.srv.Backup(w))
 	}()
 
@@ -482,8 +485,8 @@ func (h *VfsHandler) Restore(ctx fiber.Ctx) error {
 }
 
 // NewVfsHandler는 새로운 VfsHandler 인스턴스를 생성합니다.
-func NewVfsHandler(srv *services.VfsService, broker *services.SSEBroker, user ...string) *VfsHandler {
-	handler := &VfsHandler{srv: srv, broker: broker}
+func NewVfsHandler(srv *services.VfsService, broker *services.SSEBroker, release func(), user ...string) *VfsHandler {
+	handler := &VfsHandler{srv: srv, broker: broker, release: release}
 	if len(user) > 0 {
 		handler.user = user[0]
 	}
@@ -550,7 +553,9 @@ func (h *VfsHandler) asyncModify(ctx fiber.Ctx, action string, fn ModifyFunc) er
 
 func (h *VfsHandler) asyncExecute(clientID string, do func() (types.SSEMeta, error)) {
 	cid, notifyErr := uuid.Parse(clientID)
+	release := h.takeRelease()
 	go func() {
+		defer release()
 		meta, err := do()
 		if notifyErr != nil {
 			return
@@ -590,4 +595,30 @@ func removeUploadTempFile(file *os.File) {
 	path := file.Name()
 	_ = file.Close()
 	_ = os.Remove(path)
+}
+
+// Close는 핸들러가 보유한 드라이브 사용을 종료합니다.
+func (h *VfsHandler) Close() {
+	h.takeRelease()()
+}
+
+// takeRelease는 사용 종료 책임을 비동기 작업이나 스트림으로 넘깁니다.
+func (h *VfsHandler) takeRelease() func() {
+	release := h.release
+	h.release = nil
+	if release == nil {
+		return func() {}
+	}
+	return release
+}
+
+type driveStream struct {
+	io.Reader
+	closer  io.Closer
+	release func()
+}
+
+func (s *driveStream) Close() error {
+	defer s.release()
+	return s.closer.Close()
 }
