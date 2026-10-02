@@ -532,7 +532,7 @@ func (bvfs *BadgerVFS) Delete(id uuid.UUID) error {
 			for it.Seek(seekKey); it.ValidForPrefix(seekKey); it.Next() {
 				m, err := getMeta(it.Item())
 				if err != nil {
-					continue
+					return err
 				}
 				itemsToDelete = append(itemsToDelete, m)
 			}

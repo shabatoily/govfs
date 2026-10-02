@@ -21,6 +21,39 @@ import (
 
 var logger = log.Default()
 
+func TestDeleteDirectoryPreservesDataOnMetadataError(t *testing.T) {
+	driver, err := New(&Config{InMemory: true, Logger: logger})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = driver.Close() })
+	dir, err := driver.Mkdir("/dir")
+	require.NoError(t, err)
+	file, err := driver.Create("/dir/a.txt", bytes.NewBufferString("content"))
+	require.NoError(t, err)
+	brokenKey := makeKey(prefixMeta, []byte("/dir/z.txt"))
+	require.NoError(t, driver.db.Update(func(txn *badger.Txn) error {
+		return txn.Set(brokenKey, []byte("invalid JSON"))
+	}))
+	require.Error(t, driver.Delete(dir.ID))
+	_, err = driver.StatByPath("/dir")
+	require.NoError(t, err)
+	opened, err := driver.Open(file.ID)
+	require.NoError(t, err)
+	content, err := io.ReadAll(opened)
+	require.NoError(t, err)
+	require.NoError(t, opened.Close())
+	assert.Equal(t, "content", string(content))
+	require.NoError(t, driver.db.View(func(txn *badger.Txn) error {
+		_, err := txn.Get(brokenKey)
+		return err
+	}))
+	require.NoError(t, driver.db.Update(func(txn *badger.Txn) error { return txn.Delete(brokenKey) }))
+	require.NoError(t, driver.Delete(dir.ID))
+	_, err = driver.Open(file.ID)
+	require.ErrorIs(t, err, vfs.ErrNotFound)
+	_, err = driver.StatByPath("/dir")
+	require.ErrorIs(t, err, vfs.ErrNotFound)
+}
+
 func TestFindMetaByIDMissingRecord(t *testing.T) {
 	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true).WithLogger(nil))
 	require.NoError(t, err)

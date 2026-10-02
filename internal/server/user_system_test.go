@@ -185,7 +185,7 @@ func TestUserSystemAdminBoundary(t *testing.T) {
 	}
 	passwordRes, err := app.Test(request(t, http.MethodPatch, "/auth/password", types.ChangePasswordReq{
 		CurrentPassword: "password", NewPassword: "changed-password",
-	}, memberToken))
+	}, memberToken), fiber.TestConfig{Timeout: 5 * time.Second, FailOnTimeout: true})
 	if err != nil {
 		t.Fatal(err)
 	}
