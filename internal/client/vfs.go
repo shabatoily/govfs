@@ -6,9 +6,8 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"net/url"
-	"path/filepath"
+	"path"
 	"uuid"
 
 	"github.com/gofiber/fiber/v3"
@@ -59,6 +58,8 @@ func (c *VFSClient) Read(ctx context.Context, id uuid.UUID) (io.Reader, types.Me
 		return nil, types.MetaRes{}, err
 	}
 
+	defer resp.Close()
+
 	if resp.StatusCode() != fiber.StatusOK {
 		return nil, types.MetaRes{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}
@@ -68,7 +69,8 @@ func (c *VFSClient) Read(ctx context.Context, id uuid.UUID) (io.Reader, types.Me
 		return nil, types.MetaRes{}, err
 	}
 
-	return resp.BodyStream(), meta, nil
+	// 풀 반환 후에도 읽을 수 있도록 응답 버퍼의 소유권을 분리합니다.
+	return bytes.NewReader(bytes.Clone(resp.Body())), meta, nil
 }
 
 // Stat은 파일 또는 디렉토리의 상세 정보를 조회합니다.
@@ -88,8 +90,8 @@ func (c *VFSClient) Stat(ctx context.Context, id uuid.UUID) (types.MetaRes, erro
 }
 
 // Tree는 계층적인 디렉토리 구조를 트리 형태로 조회합니다.
-func (c *VFSClient) Tree(ctx context.Context, path string) (*types.TreeNodeRes, error) {
-	u := fmt.Sprintf("/vfs?q=%s&viewType=tree", url.QueryEscape(path))
+func (c *VFSClient) Tree(ctx context.Context, vfsPath string) (*types.TreeNodeRes, error) {
+	u := fmt.Sprintf("/vfs?q=%s&viewType=tree", url.QueryEscape(vfsPath))
 	resp, err := c.c.Get(u, client.Config{Ctx: ctx})
 	if err != nil {
 		return nil, err
@@ -105,23 +107,10 @@ func (c *VFSClient) Tree(ctx context.Context, path string) (*types.TreeNodeRes, 
 
 // CreateDir은 새로운 디렉토리를 생성합니다.
 func (c *VFSClient) CreateDir(ctx context.Context, name string) error {
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	if err := writer.WriteField("isDir", "true"); err != nil {
-		return err
-	}
-	if err := writer.WriteField("name", name); err != nil {
-		return err
-	}
-	if err := writer.Close(); err != nil {
-		return err
-	}
-
-	resp, err := c.c.R().
-		SetContext(ctx).
-		SetHeader(fiber.HeaderContentType, writer.FormDataContentType()).
-		SetRawBody(body.Bytes()).
-		Post("/vfs")
+	// 파일 없이도 기존 API와 동일한 멀티파트 형식을 사용합니다.
+	resp, err := c.c.R().SetContext(ctx).
+		SetFormDataWithMap(map[string]string{"isDir": "true", "name": name}).
+		AddFiles().Post("/vfs")
 	if err != nil {
 		return err
 	}
@@ -131,32 +120,14 @@ func (c *VFSClient) CreateDir(ctx context.Context, name string) error {
 
 // CreateFile은 새로운 파일을 업로드하여 생성합니다.
 func (c *VFSClient) CreateFile(ctx context.Context, name string, r io.ReadCloser) error {
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	if err := writer.WriteField("isDir", "false"); err != nil {
-		return err
-	}
-	if err := writer.WriteField("name", name); err != nil {
-		return err
-	}
-
-	part, err := writer.CreateFormFile("file", filepath.Base(name))
-	if err != nil {
-		return err
-	}
-	if _, copyErr := io.Copy(part, r); copyErr != nil {
-		return copyErr
-	}
-
-	if closeErr := writer.Close(); closeErr != nil {
-		return closeErr
-	}
-
-	resp, err := c.c.R().
-		SetContext(ctx).
-		SetHeader(fiber.HeaderContentType, writer.FormDataContentType()).
-		SetRawBody(body.Bytes()).
-		Post("/vfs")
+	file := &client.File{}
+	file.SetFieldName("file")
+	file.SetName(path.Base(name))
+	// Fiber가 reader를 닫아도 호출자가 전달한 파일의 소유권은 유지합니다.
+	file.SetReader(io.NopCloser(r))
+	resp, err := c.c.R().SetContext(ctx).
+		SetFormDataWithMap(map[string]string{"isDir": "false", "name": name}).
+		AddFiles(file).Post("/vfs")
 	if err != nil {
 		return err
 	}
@@ -176,8 +147,7 @@ func (c *VFSClient) Write(ctx context.Context, id uuid.UUID, content string) err
 		return err
 	}
 
-	var meta types.MetaRes
-	return checkResponse(resp, fiber.StatusAccepted, &meta)
+	return checkResponse[*any](resp, fiber.StatusAccepted, nil)
 }
 
 // Move는 파일 또는 디렉토리의 이름을 변경하거나 다른 경로로 이동시킵니다. (비동기 처리)
@@ -248,11 +218,13 @@ func (c *VFSClient) Backup(ctx context.Context) (io.Reader, error) {
 		return nil, err
 	}
 
+	defer resp.Close()
+
 	if resp.StatusCode() != fiber.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}
 
-	return bytes.NewReader(resp.Body()), nil
+	return bytes.NewReader(bytes.Clone(resp.Body())), nil
 }
 
 // Restore는 백업 파일로부터 VFS 데이터를 복구합니다.
@@ -261,9 +233,6 @@ func (c *VFSClient) Restore(ctx context.Context, file io.ReadCloser) error {
 	f.SetFieldName("file")
 	f.SetReader(file)
 	f.SetName("backup")
-
-	// 여기서 파일을 수동으로 읽을 필요가 없습니다.
-	// client.Client가 f.Reader(`file`)로부터 읽기와 멀티파트 요청 구성을 자동으로 처리합니다.
 
 	resp, err := c.c.Post("/vfs/restore", client.Config{
 		Ctx:  ctx,

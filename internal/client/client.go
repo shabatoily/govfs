@@ -26,16 +26,18 @@ func (c *baseClient) SetToken(token string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.token = token
+	authorization := ""
 	if token != "" && token != "disabled" {
-		c.c.AddHeader(fiber.HeaderAuthorization, "Bearer "+token)
+		authorization = "Bearer " + token
 	}
+	c.c.SetHeader(fiber.HeaderAuthorization, authorization)
 }
 
 // SetClientID는 비동기 작업 완료 알림을 받을 SSE 클라이언트 ID를 설정합니다.
 func (c *baseClient) SetClientID(id uuid.UUID) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.c.AddHeader("X-Client-ID", id.String())
+	c.c.SetHeader("X-Client-ID", id.String())
 }
 
 // Config는 서버로부터 전체 설정 정보를 조회합니다.
@@ -48,7 +50,7 @@ func (c *baseClient) Config(ctx context.Context) (types.ConfigRes, error) {
 		return types.ConfigRes{}, err
 	}
 	var cfg types.ConfigRes
-	if err := res.JSON(&cfg); err != nil {
+	if err := checkResponse(res, fiber.StatusOK, &cfg); err != nil {
 		return types.ConfigRes{}, err
 	}
 	return cfg, nil
@@ -103,8 +105,9 @@ func createJSONConfig(ctx context.Context, data any) (client.Config, error) {
 	}, nil
 }
 
-// checkResponse는 응답 상태 코드를 확인하고 본문을 구조체로 언마샬링하는 공통 처리 함수입니다.
+// checkResponse는 응답을 검사·파싱한 뒤 요청과 응답을 풀에 반환합니다.
 func checkResponse[T any](resp *client.Response, expectedStatus int, out *T) error {
+	defer resp.Close()
 	if resp.StatusCode() != expectedStatus {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}

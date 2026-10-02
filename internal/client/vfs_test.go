@@ -176,7 +176,9 @@ func TestVFSClient_CreateFile(t *testing.T) {
 
 	c := client.New(server.URL)
 	err = c.VFS().CreateFile(context.Background(), fileName, file)
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	_, err = file.Seek(0, io.SeekStart)
+	require.NoError(t, err)
 }
 
 func TestVFSClient_FileOps_Write(t *testing.T) {
@@ -439,4 +441,45 @@ func TestVFSClient_Misc_WriteComments(t *testing.T) {
 	c := client.New(server.URL)
 	err := c.VFS().WriteComments(context.Background(), id, comment)
 	assert.NoError(t, err)
+}
+
+func TestWriteAcceptsEmptyResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer server.Close()
+	require.NoError(t, client.New(server.URL).VFS().Write(context.Background(), uuid.NewV4(), "content"))
+}
+
+// TestReturnedReadersSurviveLaterRequests는 응답 풀 재사용과 반환 데이터의 수명을 분리합니다.
+func TestReturnedReadersSurviveLaterRequests(t *testing.T) {
+	id := uuid.NewV4()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/vfs/backup":
+			_, _ = w.Write([]byte("backup"))
+		case "/vfs/" + id.String():
+			_, _ = w.Write([]byte("file"))
+		case "/vfs/" + id.String() + "/stat":
+			assert.NoError(t, json.NewEncoder(w).Encode(types.MetaRes{Meta: vfs.Meta{ID: id}}))
+		default:
+			_, _ = w.Write([]byte("{}"))
+		}
+	}))
+	defer server.Close()
+	c := client.New(server.URL)
+	file, _, err := c.VFS().Read(context.Background(), id)
+	require.NoError(t, err)
+	backup, err := c.VFS().Backup(context.Background())
+	require.NoError(t, err)
+	for range 10 {
+		_, err := c.Config(context.Background())
+		require.NoError(t, err)
+	}
+	data, err := io.ReadAll(file)
+	require.NoError(t, err)
+	require.Equal(t, "file", string(data))
+	data, err = io.ReadAll(backup)
+	require.NoError(t, err)
+	require.Equal(t, "backup", string(data))
 }
