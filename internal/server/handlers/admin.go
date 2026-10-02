@@ -164,7 +164,7 @@ func (h *AdminHandler) UserStatus(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	sseCount := len(h.broker.Clients(user.ID.String()))
+	sseCount := h.broker.ClientCount(user.ID.String())
 	return c.JSON(types.UserDriveStatusRes{
 		UserID: user.ID, Username: user.Username, Open: wasOpen,
 		Online: sseCount > 0, SSECount: sseCount, Items: stats.Items, Size: stats.Size,

@@ -50,6 +50,41 @@ func TestSSEBrokerSubscribeStopped(t *testing.T) {
 	}
 }
 
+func TestSSEBrokerClientCount(t *testing.T) {
+	b := NewSSEBroker(SSEConfig{})
+	defer b.Shutdown()
+	var firstID uuid.UUID
+	var first <-chan *types.SSEMessage
+	for _, user := range []string{"first", "first", "second"} {
+		id, ch, err := b.Subscribe(types.SubscribeReq{Ctx: context.Background(), User: user})
+		if err != nil {
+			t.Fatal(err)
+		}
+		<-ch
+		if first == nil {
+			firstID, first = id, ch
+		}
+	}
+	for user, want := range map[string]int{"first": 2, "second": 1, "missing": 0} {
+		if got := b.ClientCount(user); got != want || got != len(b.Clients(user)) {
+			t.Fatalf("사용자 %s 연결 수 = %d, 예상 = %d", user, got, want)
+		}
+	}
+	b.Unsubscribe(firstID)
+	select {
+	case <-first:
+	case <-time.After(time.Second):
+		t.Fatal("연결 해제 처리가 완료되지 않았습니다")
+	}
+	if got := b.ClientCount("first"); got != 1 {
+		t.Fatalf("연결 해제 후 연결 수 = %d", got)
+	}
+	b.Shutdown()
+	if got := b.ClientCount("first"); got != 0 {
+		t.Fatalf("종료 후 연결 수 = %d", got)
+	}
+}
+
 func TestSSEBrokerSubscribeRegistersBeforePublish(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
