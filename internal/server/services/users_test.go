@@ -3,9 +3,11 @@ package services
 import (
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	badgerdb "github.com/dgraph-io/badger/v4"
 	"github.com/shabatoily/govfs/internal/types"
 )
 
@@ -61,9 +63,9 @@ func TestStoreUserLifecycle(t *testing.T) {
 	if err != nil || total != 0 || len(events) != 0 {
 		t.Fatalf("삭제 후 이벤트 = %#v, %d, %v", events, total, err)
 	}
-	stats, err := store.Stats()
-	if err != nil || stats.Items == 0 || stats.Size == 0 {
-		t.Fatalf("시스템 DB 통계 = %#v, %v", stats, err)
+	stats, users, err := store.Stats()
+	if err != nil || stats.Items != 5 || stats.Size == 0 || users != 2 {
+		t.Fatalf("시스템 DB 통계 = %#v, 사용자 = %d, %v", stats, users, err)
 	}
 	entries, total, err := store.ListSystemEntries(1, 10)
 	if err != nil || total == 0 || len(entries) == 0 {
@@ -72,6 +74,56 @@ func TestStoreUserLifecycle(t *testing.T) {
 	for _, entry := range entries {
 		if value, ok := entry.Value.(types.UserRes); ok && value.Username == "" {
 			t.Fatal("사용자 상세 변환 실패")
+		}
+	}
+}
+
+func TestStoreSystemStatsAndPages(t *testing.T) {
+	store, err := OpenUserStore(filepath.Join(t.TempDir(), "users"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	values := map[string]string{
+		"user:one": `{"username":"one"}`,
+		"user:two": `{"username":"two","disabled":true}`,
+		"other:a":  strings.Repeat("a", 64*1024),
+		"other:b":  "b",
+	}
+	var size int64
+	if err := store.db.Update(func(txn *badgerdb.Txn) error {
+		for key, value := range values {
+			size += int64(len(key) + len(value))
+			if err := txn.Set([]byte(key), []byte(value)); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	stats, users, err := store.Stats()
+	if err != nil || stats.Items != len(values) || stats.Size != size || users != 2 {
+		t.Fatalf("시스템 DB 통계 = %#v, 사용자 = %d, %v", stats, users, err)
+	}
+	for page := 1; page <= 3; page++ {
+		entries, total, err := store.ListSystemEntries(page, 2)
+		if err != nil || total != len(values) || entries == nil {
+			t.Fatalf("페이지 %d = %#v, 전체 = %d, %v", page, entries, total, err)
+		}
+		switch page {
+		case 1:
+			if len(entries) != 2 || entries[0].Kind != "unknown" || entries[1].Kind != "unknown" || entries[0].Value != "<redacted>" {
+				t.Fatalf("시스템 값 마스킹 = %#v", entries)
+			}
+		case 2:
+			if len(entries) != 2 || entries[0].Value.(types.UserRes).Username != "one" || entries[1].Value.(types.UserRes).Username != "two" {
+				t.Fatalf("사용자 페이지 = %#v", entries)
+			}
+		case 3:
+			if len(entries) != 0 {
+				t.Fatalf("마지막 이후 페이지 = %#v", entries)
+			}
 		}
 	}
 }

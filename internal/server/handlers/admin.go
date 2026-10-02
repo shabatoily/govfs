@@ -123,11 +123,7 @@ func userResponse(user services.User) types.UserRes {
 // @Security BearerAuth
 // @Router /admin/status [get]
 func (h *AdminHandler) Status(c fiber.Ctx) error {
-	list, err := h.users.List()
-	if err != nil {
-		return err
-	}
-	system, err := h.users.Stats()
+	system, users, err := h.users.Stats()
 	if err != nil {
 		return err
 	}
@@ -136,7 +132,7 @@ func (h *AdminHandler) Status(c fiber.Ctx) error {
 		return err
 	}
 	return c.JSON(types.StatusRes{
-		Users: len(list), OpenDrives: h.drives.OpenCount(), System: system, BadgerDrives: badgerDrives,
+		Users: users, OpenDrives: h.drives.OpenCount(), System: system, BadgerDrives: badgerDrives,
 	})
 }
 
