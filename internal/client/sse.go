@@ -29,7 +29,7 @@ type SSESubscription struct {
 	Errors <-chan error
 }
 
-// Subscribe는 서버의 SSE 이벤트 스트림을 구독합니다.
+// Subscribe는 원시 SSE 응답을 반환합니다. 호출자가 응답을 Close해야 합니다.
 func (c *SSEClient) Subscribe(ctx context.Context) (*client.Response, error) {
 	return c.c.Get("/sse/subscribe", client.Config{Ctx: ctx})
 }
@@ -143,6 +143,8 @@ func (c *SSEClient) Publish(ctx context.Context, id uuid.UUID, data map[string]a
 	if err != nil {
 		return err
 	}
+
+	defer res.Close()
 
 	if res.StatusCode() != fiber.StatusNoContent {
 		return errors.New(string(res.Body()))

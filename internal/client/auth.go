@@ -32,6 +32,8 @@ func (c *AuthClient) Login(ctx context.Context, username, password string) (type
 		return types.TokenRes{}, err
 	}
 
+	defer resp.Close()
+
 	if resp.StatusCode() != fiber.StatusOK {
 		return types.TokenRes{}, fmt.Errorf("login failed: %v", resp.StatusCode())
 	}
@@ -53,6 +55,8 @@ func (c *AuthClient) Me(ctx context.Context) (types.TokenRes, error) {
 	if err != nil {
 		return res, err
 	}
+
+	defer resp.Close()
 
 	if resp.StatusCode() != fiber.StatusOK {
 		return res, fmt.Errorf("not logged in: %v", resp.StatusCode())
