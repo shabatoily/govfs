@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -11,6 +12,7 @@ import (
 	"time"
 	"uuid"
 
+	vfs "github.com/shabatoily/govfs"
 	"github.com/shabatoily/govfs/pkg/drivers"
 	"github.com/shabatoily/govfs/pkg/drivers/badger"
 	"github.com/shabatoily/govfs/pkg/drivers/localstorage"
@@ -300,4 +302,107 @@ func TestDriveManagerShutdownDeadline(t *testing.T) {
 	}
 	release()
 	release()
+}
+
+type blockedStatsDrive struct {
+	vfs.VFS
+	started chan struct{}
+	resume  chan struct{}
+	closed  chan struct{}
+	err     error
+}
+
+func (d *blockedStatsDrive) Tree(string) (*vfs.TreeNode, error) {
+	close(d.started)
+	<-d.resume
+	if d.err != nil {
+		return nil, d.err
+	}
+	return &vfs.TreeNode{Meta: vfs.Meta{Path: vfs.Root}, Children: []*vfs.TreeNode{
+		{Meta: vfs.Meta{Path: "/file.txt", Size: 7}},
+	}}, nil
+}
+
+func (d *blockedStatsDrive) Close() error {
+	close(d.closed)
+	return nil
+}
+
+func TestDriveManagerStatsDoesNotBlockOtherUsers(t *testing.T) {
+	for _, treeErr := range []error{nil, errors.New("tree failed")} {
+		name := "success"
+		if treeErr != nil {
+			name = "failure"
+		}
+		t.Run(name, func(t *testing.T) {
+			manager := NewDriveManager(DriveManagerConfig{Driver: drivers.Config{
+				Type:         drivers.DriverTypeLocalStorage,
+				LocalStorage: localstorage.Config{Path: filepath.Join(t.TempDir(), "drives")},
+			}})
+			t.Cleanup(func() { _ = manager.Close() })
+			drive := &blockedStatsDrive{started: make(chan struct{}), resume: make(chan struct{}), closed: make(chan struct{}), err: treeErr}
+			var resumeOnce sync.Once
+			t.Cleanup(func() { resumeOnce.Do(func() { close(drive.resume) }) })
+			userID := uuid.NewV4()
+			manager.drives[userID] = driveEntry{drive: drive, lastUsed: time.Now()}
+			result := make(chan error, 1)
+			go func() {
+				stats, wasOpen, err := manager.Stats(userID)
+				if !wasOpen || !errors.Is(err, treeErr) {
+					result <- fmt.Errorf("stats open=%v, err=%w", wasOpen, err)
+					return
+				}
+				if err == nil && (stats.Items != 1 || stats.Size != 7) {
+					result <- fmt.Errorf("stats = %#v", stats)
+					return
+				}
+				result <- nil
+			}()
+			select {
+			case <-drive.started:
+			case <-time.After(time.Second):
+				t.Fatal("통계 조회 시작 대기 시간 초과")
+			}
+			other := make(chan error, 1)
+			go func() {
+				id := uuid.NewV4()
+				_, release, err := manager.Acquire(id)
+				if err == nil {
+					release()
+					err = manager.CloseDrive(id)
+				}
+				other <- err
+			}()
+			select {
+			case err := <-other:
+				if err != nil {
+					t.Fatal(err)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("통계 조회가 다른 사용자의 드라이브 접근을 막았습니다")
+			}
+			if err := manager.CloseDrive(userID); err != nil {
+				t.Fatal(err)
+			}
+			select {
+			case <-drive.closed:
+				t.Fatal("통계 조회 중 드라이브가 닫혔습니다")
+			default:
+			}
+			resumeOnce.Do(func() { close(drive.resume) })
+			select {
+			case err := <-result:
+				if err != nil {
+					t.Fatal(err)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("통계 조회 완료 대기 시간 초과")
+			}
+			select {
+			case <-drive.closed:
+			default:
+				t.Fatal("통계 조회 후 드라이브가 닫히지 않았습니다")
+			}
+		})
+	}
 }
