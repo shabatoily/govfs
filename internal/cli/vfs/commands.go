@@ -100,16 +100,12 @@ func NewRotateCommand() *cobra.Command {
 		Short: "Rotate encryption key.",
 		Long:  "Rotate will rotate the encryption key.",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			var keyContent []byte
-
-			if newKeyPath != "" {
-				content, err := os.ReadFile(newKeyPath)
-				if err != nil {
-					return err
-				}
-				keyContent = content
-			} else {
+			if newKeyPath == "" {
 				return fmt.Errorf("new key path is required")
+			}
+			keyContent, err := os.ReadFile(newKeyPath)
+			if err != nil {
+				return err
 			}
 
 			h, err := NewHandler(cmd)
@@ -128,7 +124,8 @@ func NewRotateCommand() *cobra.Command {
 // NewListCommand는 VFS 상의 파일 및 디렉토리 목록을 표 형식으로 조회하는 커맨드를 반환합니다.
 func NewListCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "ls <path>",
+		Use:   "ls [path]",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Show file list",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			h, err := NewHandler(cmd)
@@ -161,7 +158,8 @@ func NewListCommand() *cobra.Command {
 // NewTreeCommand는 특정 경로 내부의 파일 및 디렉토리 구조를 트리 형태로 출력하는 커맨드를 반환합니다.
 func NewTreeCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "tree <path>",
+		Use:   "tree [path]",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Show file tree",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			h, err := NewHandler(cmd)
@@ -192,19 +190,16 @@ func NewStatCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "stat <id>",
 		Short: "Show file metadata",
-		Args:  cobra.MatchAll(cobra.RangeArgs(1, 1)),
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			h, err := NewHandler(cmd)
 			if err != nil {
 				return err
 			}
 
-			var id uuid.UUID
-			if len(args) > 0 {
-				id, err = uuid.Parse(args[0])
-				if err != nil {
-					return err
-				}
+			id, err := uuid.Parse(args[0])
+			if err != nil {
+				return err
 			}
 
 			stat, err := h.client.VFS().Stat(cmd.Context(), id)

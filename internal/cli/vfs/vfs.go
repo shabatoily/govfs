@@ -4,8 +4,8 @@ package vfs
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
+	vfsPath "path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -42,16 +42,15 @@ func NewHandler(cmd *cobra.Command) (*Handler, error) {
 // Backup은 서버의 전체 VFS 데이터를 로컬 파일로 백업합니다.
 func (h *Handler) Backup(backupFile string) error {
 	backupFileName := strings.ReplaceAll(backupFile, "%s", time.Now().Format("2006-01-02_15-04-05"))
+	r, err := h.client.VFS().Backup(h.cmd.Context())
+	if err != nil {
+		return err
+	}
 	f, err := os.Create(backupFileName)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-
-	r, err := h.client.VFS().Backup(h.cmd.Context())
-	if err != nil {
-		return err
-	}
 
 	_, err = io.Copy(f, r)
 	if err != nil {
@@ -101,10 +100,10 @@ func (h *Handler) handleUpload(srcLocal, dstVfs string) error {
 	defer f.Close()
 
 	if strings.HasSuffix(dstVfs, "/") {
-		dstVfs = filepath.Join(dstVfs, info.Name())
+		dstVfs = vfsPath.Join(dstVfs, info.Name())
 	}
 
-	// Check if dstVfs is a directory on VFS
+	// 대상이 VFS 디렉터리이면 원본 파일 이름을 덧붙입니다.
 	meta, err := h.findMetaByPath(dstVfs)
 	if err == nil && meta.IsDir {
 		dstVfs = dstVfs + "/" + info.Name()
@@ -140,47 +139,18 @@ func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 			return err
 		}
 		if relPath == "." {
-			// 베이스 디렉토리 자체
-			// dstVfs 디렉토리 생성 여부 판별:
-			// srcLocal이 "foo"이고 dstVfs가 "/bar"일 때, "bar/foo/..." 구조를 원함.
-			// 또는 dstVfs가 "/bar/"인 경우, "/bar/foo/..." 구조가 됨.
-			// 만약 dstVfs가 "/bar" (이미 존재)인 경우, "/bar/foo/..." 구조가 됨.
-			// 만약 dstVfs가 "/bar" (존재하지 않음)인 경우, "/bar/..." 구조 (이름 변경 방식)가 됨.
-
-			// cp -r 명령어의 동작 방식을 채택:
-			// dstVfs가 존재하고 디렉토리인 경우: 그 안으로 업로드 (`basename(srcLocal)` 폴더 생성)
-			// dstVfs가 존재하지 않는 경우: 새로 생성 (`srcLocal`을 `dstVfs`로 복사)
-
-			// 하지만 filepath.Walk는 루트부터 탐색을 시작합니다.
-			// 루프 외부에서 dstVfs를 한 번 확인하는 것이 더 효율적입니다.
 			return nil
 		}
 
-		// 단순화된 로직: dstVfs가 /로 끝나면 RelPath를 바로 이어붙임.
-		// dstVfs가 존재하지 않으면 (또는 타겟 이름인 경우), 동작 방식을 확인.
-
-		// `cp -r src dst`의 동작을 완벽하게 구현하는 것은 복잡함.
-		// 더 단순한 방식으로 가정: `cp -r src_dir /vfs/path` 호출 시,
-		// /vfs/path가 존재한다면 `/vfs/path/src_dir/file`을 생성하고,
-		// 존재하지 않는 타겟 이름이라면 `/vfs/path/file`을 생성함.
-
-		// 보다 간단한 의미론(semantic) 적용:
-
-		targetPath := filepath.Join(dstVfs, relPath)
-		// Windows 환경에서 filepath.Join은 백슬래시(\)를 사용하지만, VFS 경로는 항상 슬래시(/)를 사용해야 함.
-		targetPath = filepath.ToSlash(targetPath)
+		targetPath := vfsPath.Join(dstVfs, filepath.ToSlash(relPath))
 
 		if info.IsDir() {
 			err = h.client.VFS().CreateDir(h.cmd.Context(), targetPath)
 			if err != nil {
-				// Client의 CreateDir은 디렉토리가 이미 존재하면 에러를 반환함.
-				// 여기서는 미리 존재 여부를 확인하거나 에러를 무시하는 방식으로 처리.
-				// 현재는 에러를 잡아서 "파일이 존재함" 텍스트가 포함된 경우 무시할 수 있으나,
-				// 명시적으로 존재 여부를 체크하는 것이 더 바람직함.
-				if _, err = h.findMetaByPath(targetPath); err != nil {
-					return err // 실제 에러 발생
+				meta, lookupErr := h.findMetaByPath(targetPath)
+				if lookupErr != nil || !meta.IsDir {
+					return err
 				}
-				// 이미 존재한다면 계속 진행
 			}
 			return nil
 		}
@@ -201,7 +171,8 @@ func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 		return nil
 	})
 	if err == nil {
-		h.cmd.Printf("\nSummary: Uploaded %d files (%s) in %v\n", count, formatBytes(totalBytes), time.Since(startTime).Round(time.Millisecond))
+		h.cmd.Printf("\nSummary: Accepted %d file uploads (%s) in %v\n",
+			count, formatBytes(totalBytes), time.Since(startTime).Round(time.Millisecond))
 	}
 	return err
 }
@@ -211,8 +182,6 @@ func (h *Handler) handleDownload(srcVfs, dstLocal string) error {
 		return fmt.Errorf("'%s' is a directory (use -r to copy directories)", srcVfs)
 	}
 
-	// ID 파싱 처리? Client의 Read는 'id'로 UUID를 받음.
-	// 따라서 경로(Path)를 먼저 ID로 변환해야 함.
 	meta, err := h.findMetaByPath(srcVfs)
 	if err != nil {
 		return err
@@ -222,11 +191,6 @@ func (h *Handler) handleDownload(srcVfs, dstLocal string) error {
 		return fmt.Errorf("'%s' is a directory (use -r to copy directories)", srcVfs)
 	}
 
-	reader, _, err := h.client.VFS().Read(h.cmd.Context(), meta.ID)
-	if err != nil {
-		return err
-	}
-
 	// 목적지(대상) 경로 처리
 	destPath := dstLocal
 	info, err := os.Stat(dstLocal)
@@ -234,26 +198,40 @@ func (h *Handler) handleDownload(srcVfs, dstLocal string) error {
 		destPath = filepath.Join(dstLocal, meta.Name)
 	}
 
+	if err := h.downloadFile(meta, destPath); err != nil {
+		return err
+	}
+	return writeMeta(destPath, meta)
+}
+
+// downloadFile은 단일·재귀 다운로드에서 파일 쓰기와 종료 오류를 함께 처리합니다.
+func (h *Handler) downloadFile(meta types.MetaRes, destPath string) error {
+	reader, _, err := h.client.VFS().Read(h.cmd.Context(), meta.ID)
+	if err != nil {
+		return err
+	}
 	f, err := os.Create(destPath)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	_, copyErr := io.Copy(f, reader)
+	closeErr := f.Close()
+	if copyErr != nil {
+		return copyErr
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	h.cmd.Printf("Download: %s -> %s (%d bytes)\n", meta.Path, destPath, meta.Size)
+	return nil
+}
 
-	_, err = io.Copy(f, reader)
+func writeMeta(localPath string, meta types.MetaRes) error {
+	data, err := json.Marshal(meta)
 	if err != nil {
 		return err
 	}
-
-	h.cmd.Printf("Download: %s -> %s (%d bytes)\n", srcVfs, destPath, meta.Size)
-
-	metaFilePath := destPath + ".json"
-	metaFileJson, err := json.Marshal(meta)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(metaFilePath, metaFileJson, vfs.DefaultFileMode)
+	return os.WriteFile(localPath+".json", data, vfs.DefaultFileMode)
 }
 
 func (h *Handler) handleRecursiveDownload(srcVfs, dstLocal string) error {
@@ -277,47 +255,25 @@ func (h *Handler) handleRecursiveDownload(srcVfs, dstLocal string) error {
 
 	var walker func(node *types.TreeNodeRes, currentLocalPath string) error
 	walker = func(node *types.TreeNodeRes, currentLocalPath string) error {
-		fullLocalPath := currentLocalPath
-		// 이곳이 재귀 탐색의 루트가 아니거나, 현재 노드에 대한 완전한 로컬 경로로 호출된 경우
-
 		if node.Meta.IsDir {
-			if mkdirErr := os.MkdirAll(fullLocalPath, vfs.DefaultDirMode); mkdirErr != nil {
+			if mkdirErr := os.MkdirAll(currentLocalPath, vfs.DefaultDirMode); mkdirErr != nil {
 				return mkdirErr
 			}
 			for _, child := range node.Children {
-				childPath := filepath.Join(fullLocalPath, child.Meta.Name)
+				childPath := filepath.Join(currentLocalPath, child.Meta.Name)
 				if walkErr := walker(child, childPath); walkErr != nil {
-					log.Printf("error downloading %s: %s", child.Meta.ID, walkErr.Error())
+					return fmt.Errorf("download %s: %w", child.Meta.Path, walkErr)
 				}
 			}
 		} else {
-			reader, _, readErr := h.client.VFS().Read(h.cmd.Context(), node.Meta.ID)
-			if readErr != nil {
-				return readErr
+			if err := h.downloadFile(node.Meta, currentLocalPath); err != nil {
+				return err
 			}
-
-			f, createErr := os.Create(fullLocalPath)
-			if createErr != nil {
-				return createErr
-			}
-			defer f.Close()
-
-			_, copyErr := io.Copy(f, reader)
-			if copyErr != nil {
-				return copyErr
-			}
-			h.cmd.Printf("Download: %s -> %s (%d bytes)\n", node.Meta.Path, fullLocalPath, node.Meta.Size)
 			count++
 			totalBytes += node.Meta.Size
 		}
 
-		metaFilePath := fullLocalPath + ".json"
-		metaFileJson, marshalErr := json.Marshal(node.Meta)
-		if marshalErr != nil {
-			return marshalErr
-		}
-
-		return os.WriteFile(metaFilePath, metaFileJson, vfs.DefaultFileMode)
+		return writeMeta(currentLocalPath, node.Meta)
 	}
 
 	err = walker(tree, targetRoot)
@@ -351,8 +307,7 @@ func (h *Handler) findMetaByPath(path string) (types.MetaRes, error) {
 	}
 
 	for i := range metas {
-		fullName := metas[i].Name + metas[i].Extension
-		if fullName == targetName || metas[i].Name == targetName {
+		if metas[i].Name == targetName {
 			return metas[i], nil
 		}
 	}
@@ -368,7 +323,7 @@ func appendTableRowFromMeta(w table.Writer, meta *types.MetaRes) {
 	w.AppendRow(table.Row{meta.ID, meta.Path, meta.Name, meta.Extension, meta.Size, meta.IsDir, meta.Modified})
 }
 
-// buildList adds tree nodes to list.Writer
+// buildList는 트리 노드를 목록 출력에 추가합니다.
 func buildList(l list.Writer, node *types.TreeNodeRes) {
 	if node == nil {
 		return
@@ -392,39 +347,26 @@ func buildList(l list.Writer, node *types.TreeNodeRes) {
 // Mkdir은 VFS 상에 새로운 디렉토리를 생성합니다.
 func (h *Handler) Mkdir(path string, parents bool) error {
 	if parents {
-		var paths []string
-		if strings.HasPrefix(path, "/") {
-			paths = strings.Split(path, "/")[1:]
-		} else {
-			paths = strings.Split(path, "/")
-		}
-
 		parent := "/"
-		lastIdx := len(paths) - 1
-		for i, p := range paths {
-			if p != "" {
-				target := filepath.Join(parent, p)
-				err := h.client.VFS().CreateDir(h.cmd.Context(), target)
-				parent = target
-				if err != nil {
-					// Client의 CreateDir은 디렉토리가 이미 존재하거나 실패하면 에러를 반환함.
-					// 부모 폴더 생성을 옵션으로 둔 경우, "이미 존재함" 에러는 묵시적으로 무시하고 진행할 수 있음.
-					// 커맨드 구현체에서는 루프의 마지막 요소가 아니면 에러를 무시하는 로직이었음:
-					// `if err != nil { if i == lastIdx { return err } }`
-					// 이는 중간 경로에 대해서는 "이미 존재함"을 전제로 에러를 넘긴다는 뜻임.
-					if i == lastIdx {
-						return err
-					}
-				} else {
-					h.cmd.Printf("Created directory: %s\n", target)
-				}
+		for _, part := range strings.Split(strings.Trim(path, "/"), "/") {
+			if part == "" {
+				continue
 			}
+			parent = vfsPath.Join(parent, part)
+			if err := h.client.VFS().CreateDir(h.cmd.Context(), parent); err != nil {
+				meta, lookupErr := h.findMetaByPath(parent)
+				if lookupErr != nil || !meta.IsDir {
+					return err
+				}
+				continue
+			}
+			h.cmd.Printf("Directory creation accepted: %s\n", parent)
 		}
 		return nil
 	}
 	err := h.client.VFS().CreateDir(h.cmd.Context(), path)
 	if err == nil {
-		h.cmd.Printf("Created directory: %s\n", path)
+		h.cmd.Printf("Directory creation accepted: %s\n", path)
 	}
 	return err
 }
@@ -436,42 +378,15 @@ func (h *Handler) Remove(path string, recursive bool) error {
 		return err
 	}
 
-	if !recursive {
-		delErr := h.client.VFS().Delete(h.cmd.Context(), meta.ID)
-		if delErr == nil {
-			h.cmd.Printf("Removed: %s\n", path)
-		}
-		return delErr
+	if meta.IsDir && !recursive {
+		return fmt.Errorf("'%s' is a directory (use -r to remove directories)", path)
 	}
-
-	if !meta.IsDir {
-		delErr := h.client.VFS().Delete(h.cmd.Context(), meta.ID)
-		if delErr == nil {
-			h.cmd.Printf("Removed: %s\n", path)
-		}
-		return delErr
+	// 서버가 하위 항목을 함께 삭제하므로 디렉터리도 한 번만 요청합니다.
+	if err := h.client.VFS().Delete(h.cmd.Context(), meta.ID); err != nil {
+		return err
 	}
-
-	treeRes, treeErr := h.client.VFS().Tree(h.cmd.Context(), path)
-	if treeErr != nil {
-		return treeErr
-	}
-
-	var walker func(node *types.TreeNodeRes) error
-	walker = func(node *types.TreeNodeRes) error {
-		for _, child := range node.Children {
-			if walkErr := walker(child); walkErr != nil {
-				return walkErr
-			}
-		}
-		if delErr := h.client.VFS().Delete(h.cmd.Context(), node.Meta.ID); delErr != nil {
-			return delErr
-		}
-		h.cmd.Printf("Removed: %s\n", node.Meta.Path)
-		return nil
-	}
-
-	return walker(treeRes)
+	h.cmd.Printf("Removal accepted: %s\n", path)
+	return nil
 }
 
 // Copy는 로컬과 VFS 간, 또는 VFS 내부에서 파일/디렉토리를 복사합니다.
@@ -502,7 +417,12 @@ func (h *Handler) Copy(src, dst string, recursive bool) error {
 			if err == nil && meta.IsDir {
 				dstRaw = strings.TrimSuffix(dstRaw, "/") + "/" + filepath.Base(srcRaw)
 			}
-			_ = h.client.VFS().CreateDir(h.cmd.Context(), dstRaw)
+			if err := h.client.VFS().CreateDir(h.cmd.Context(), dstRaw); err != nil {
+				meta, lookupErr := h.findMetaByPath(dstRaw)
+				if lookupErr != nil || !meta.IsDir {
+					return err
+				}
+			}
 
 			return h.handleRecursiveUpload(srcRaw, dstRaw)
 		}
