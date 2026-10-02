@@ -62,6 +62,30 @@ func TestStoreUserLifecycle(t *testing.T) {
 	if err := store.RecordEvent(member, "auth.login", 200); err != nil {
 		t.Fatal(err)
 	}
+	for _, tc := range []struct {
+		page   int
+		userID *uuid.UUID
+		total  int
+		action string
+	}{
+		{page: 2, total: 3, action: "vfs.create"},
+		{page: 3, total: 3, action: "auth.login"},
+		{page: 4, total: 3},
+		{page: 2, userID: &admin.ID, total: 2, action: "auth.login"},
+		{page: 3, userID: &admin.ID, total: 2},
+	} {
+		items, count, err := store.ListEvents(tc.page, 1, tc.userID)
+		if err != nil || count != tc.total || items == nil {
+			t.Fatalf("이벤트 페이지 %d = %#v, 전체 = %d, %v", tc.page, items, count, err)
+		}
+		if tc.action == "" {
+			if len(items) != 0 {
+				t.Fatalf("마지막 이후 이벤트 = %#v", items)
+			}
+		} else if len(items) != 1 || items[0].Action != tc.action || (tc.userID != nil && items[0].UserID != *tc.userID) {
+			t.Fatalf("이벤트 페이지 순서·필터 = %#v", items)
+		}
+	}
 	events, _, err = store.ListEvents(1, 10, &admin.ID)
 	if err != nil || len(events) != 2 {
 		t.Fatalf("사용자 이벤트 = %#v, %v", events, err)

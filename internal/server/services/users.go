@@ -208,12 +208,18 @@ func (s *UserStore) ListEvents(page, pageSize int, userID *uuid.UUID) ([]UserEve
 	start := (page - 1) * pageSize
 	opts := badgerdb.DefaultIteratorOptions
 	opts.Reverse = true
+	opts.Prefix = eventPrefix
+	opts.PrefetchValues = userID != nil
 	// ponytail: 전체 개수 계산을 위해 순회합니다. 이벤트가 커지면 cursor와 별도 count key로 교체합니다.
 	err := s.db.View(func(txn *badgerdb.Txn) error {
 		it := txn.NewIterator(opts)
 		defer it.Close()
 		seek := append(append([]byte(nil), eventPrefix...), 0xff)
 		for it.Seek(seek); it.ValidForPrefix(eventPrefix); it.Next() {
+			if userID == nil && (total < start || len(events) == pageSize) {
+				total++
+				continue
+			}
 			if err := it.Item().Value(func(data []byte) error {
 				var event UserEvent
 				if err := json.Unmarshal(data, &event); err != nil {
