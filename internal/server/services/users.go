@@ -257,26 +257,35 @@ func (s *UserStore) ClearEvents(userID uuid.UUID) (int, error) {
 	return deleted, err
 }
 
-func (s *UserStore) Stats() (types.StorageStatRes, error) {
+func (s *UserStore) Stats() (types.StorageStatRes, int, error) {
 	var stats types.StorageStatRes
+	users := 0
+	opts := badgerdb.DefaultIteratorOptions
+	opts.PrefetchValues = false
 	err := s.db.View(func(txn *badgerdb.Txn) error {
-		it := txn.NewIterator(badgerdb.DefaultIteratorOptions)
+		it := txn.NewIterator(opts)
 		defer it.Close()
 		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
 			stats.Items++
-			stats.Size += int64(len(it.Item().Key())) + it.Item().ValueSize()
+			stats.Size += int64(len(item.Key())) + item.ValueSize()
+			if bytes.HasPrefix(item.Key(), userPrefix) {
+				users++
+			}
 		}
 		return nil
 	})
-	return stats, err
+	return stats, users, err
 }
 
 func (s *UserStore) ListSystemEntries(page, pageSize int) ([]types.SystemEntryRes, int, error) {
 	entries := make([]types.SystemEntryRes, 0, pageSize)
 	total := 0
 	start := (page - 1) * pageSize
+	opts := badgerdb.DefaultIteratorOptions
+	opts.PrefetchValues = false
 	err := s.db.View(func(txn *badgerdb.Txn) error {
-		it := txn.NewIterator(badgerdb.DefaultIteratorOptions)
+		it := txn.NewIterator(opts)
 		defer it.Close()
 		for it.Rewind(); it.Valid(); it.Next() {
 			if total >= start && len(entries) < pageSize {
