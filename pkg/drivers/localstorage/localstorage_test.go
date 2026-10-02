@@ -30,6 +30,38 @@ func setupVFS(t *testing.T) (*LocalStorage, func()) {
 	}
 }
 
+func TestDirectoryQueriesKeepSubtreeBoundary(t *testing.T) {
+	ls, cleanup := setupVFS(t)
+	defer cleanup()
+	for _, path := range []string{"/a", "/a/nested", "/ab"} {
+		_, err := ls.Mkdir(path)
+		require.NoError(t, err)
+	}
+	for _, path := range []string{"/a/first.txt", "/a/nested/second.txt", "/ab/other.txt"} {
+		_, err := ls.Create(path, bytes.NewBufferString("content"))
+		require.NoError(t, err)
+	}
+	for _, path := range []string{"/a", "/a/"} {
+		list, err := ls.List(path)
+		require.NoError(t, err)
+		require.Len(t, list, 2)
+		for _, meta := range list {
+			assert.Contains(t, []string{"/a/first.txt", "/a/nested/"}, meta.Path)
+		}
+		tree, err := ls.Tree(path)
+		require.NoError(t, err)
+		require.Len(t, tree.Children, 2)
+		for _, child := range tree.Children {
+			if child.Meta.IsDir {
+				require.Len(t, child.Children, 1)
+				assert.Equal(t, "/a/nested/second.txt", child.Children[0].Meta.Path)
+			} else {
+				assert.Equal(t, "/a/first.txt", child.Meta.Path)
+			}
+		}
+	}
+}
+
 func Test_NewLocalStorage(t *testing.T) {
 	ls, cleanup := setupVFS(t)
 	defer cleanup()

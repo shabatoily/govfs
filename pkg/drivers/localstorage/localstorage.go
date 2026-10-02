@@ -114,16 +114,11 @@ func (ls *LocalStorage) List(path string) ([]vfs.Meta, error) {
 		path += "/"
 	}
 
-	// Simplescan: O(N) where N is total files.
-	// For a real driver we might want a tree structure, but for benchmark simple is fine.
+	// ponytail: 전체 메타데이터를 순회합니다. 조회가 병목이 되면 부모 경로별 인덱스를 추가합니다.
 	var list []vfs.Meta
 	for _, m := range ls.pathMap {
-		// Parent check
 		parent := getParentPath(m.Path)
 		if parent == path {
-			list = append(list, m)
-		} else if strings.TrimSuffix(parent, "/")+"/" == path {
-			// Handle root edge case or trailing slashes
 			list = append(list, m)
 		}
 	}
@@ -720,18 +715,14 @@ func (ls *LocalStorage) Tree(path string) (*vfs.TreeNode, error) {
 		Children: nil,
 	}
 
-	// Optimized O(N) implementation for Tree
-	// 1. Build adjacency list (parent -> children)
+	// ponytail: 전체 메타데이터를 순회하되 대상 경로의 항목만 트리 구성에 사용합니다.
+	prefix := strings.TrimSuffix(rootMeta.Path, "/") + "/"
 	childrenMap := make(map[string][]vfs.Meta)
 	for _, m := range ls.pathMap {
-		if m.Path == "/" {
+		if m.Path == rootMeta.Path || !strings.HasPrefix(m.Path, prefix) {
 			continue
 		}
 		parent := getParentPath(m.Path)
-		// Normalize parent
-		if !strings.HasSuffix(parent, "/") {
-			parent += "/"
-		}
 		childrenMap[parent] = append(childrenMap[parent], m)
 	}
 
