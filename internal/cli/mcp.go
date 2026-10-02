@@ -1,10 +1,6 @@
 package cli
 
 import (
-	"errors"
-	"fmt"
-
-	"github.com/shabatoily/govfs/internal/client"
 	mcpserver "github.com/shabatoily/govfs/internal/mcp"
 	"github.com/spf13/cobra"
 )
@@ -17,18 +13,9 @@ func NewMCPCommand(version string) *cobra.Command {
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			userConfig, err := GetUserConfig()
+			c, err := NewAuthenticatedClient(cmd)
 			if err != nil {
-				return fmt.Errorf("config not found: %w", err)
-			}
-
-			c := client.New(userConfig.ServerURL)
-			if userConfig.TokenInfo.IsExpired() {
-				return errors.New("session expired: run govfs login")
-			}
-			c.SetToken(userConfig.TokenInfo.Token)
-			if _, err = c.Auth().Me(cmd.Context()); err != nil {
-				return fmt.Errorf("authenticate MCP client: run govfs login: %w", err)
+				return err
 			}
 
 			server, err := mcpserver.New(cmd.Context(), c, version)
