@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"uuid"
 
 	badgerdb "github.com/dgraph-io/badger/v4"
 	"github.com/shabatoily/govfs/internal/types"
@@ -26,6 +27,15 @@ func TestStoreUserLifecycle(t *testing.T) {
 	}
 	if _, err := store.Authenticate("ADMIN", "password"); err != nil {
 		t.Fatal(err)
+	}
+	for _, lookup := range []func() (User, error){
+		func() (User, error) { return store.ByID(admin.ID) },
+		func() (User, error) { return store.ByUsername(" ADMIN ") },
+	} {
+		user, err := lookup()
+		if err != nil || user.ID != admin.ID || user.Username != admin.Username || user.Role != admin.Role {
+			t.Fatalf("사용자 조회 = %#v, %v", user, err)
+		}
 	}
 	disabled := true
 	if _, err := store.Update(admin.ID, UserUpdate{Disabled: &disabled}); !errors.Is(err, ErrLastAdmin) {
@@ -75,6 +85,52 @@ func TestStoreUserLifecycle(t *testing.T) {
 		if value, ok := entry.Value.(types.UserRes); ok && value.Username == "" {
 			t.Fatal("사용자 상세 변환 실패")
 		}
+	}
+}
+
+func TestStoreUserLookupErrors(t *testing.T) {
+	store, err := OpenUserStore(filepath.Join(t.TempDir(), "users"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	id := uuid.NewV4()
+	if _, err := store.ByID(id); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("없는 ID 조회 = %v", err)
+	}
+	if _, err := store.ByUsername("missing"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("없는 사용자명 조회 = %v", err)
+	}
+	for _, tc := range []struct {
+		name  string
+		value []byte
+	}{
+		{name: "잘못된 인덱스", value: []byte("invalid")},
+		{name: "레코드 없는 인덱스", value: id[:]},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := store.db.Update(func(txn *badgerdb.Txn) error {
+				return txn.Set(usernameKey("member"), tc.value)
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := store.ByUsername("member"); err == nil {
+				t.Fatal("손상된 인덱스 조회가 성공했습니다")
+			} else if len(tc.value) == len(id) && !errors.Is(err, ErrNotFound) {
+				t.Fatalf("누락된 사용자 레코드 오류 = %v", err)
+			}
+		})
+	}
+	if err := store.db.Update(func(txn *badgerdb.Txn) error {
+		return txn.Set(userKey(id), []byte("invalid JSON"))
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.ByID(id); err == nil {
+		t.Fatal("손상된 사용자 ID 조회가 성공했습니다")
+	}
+	if _, err := store.ByUsername("member"); err == nil {
+		t.Fatal("손상된 사용자명 조회가 성공했습니다")
 	}
 }
 
