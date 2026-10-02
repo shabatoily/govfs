@@ -97,6 +97,44 @@ func TestNewRestoresSavedIndex(t *testing.T) {
 	assert.Equal(t, meta.ID, restored.ID)
 }
 
+func TestCloseReplacesIndexWithoutFollowingSymlink(t *testing.T) {
+	dir := t.TempDir()
+	ls, err := New(&Config{Path: dir})
+	require.NoError(t, err)
+	meta, err := ls.Mkdir("/dir")
+	require.NoError(t, err)
+	previous := filepath.Join(dir, "previous.json")
+	require.NoError(t, os.WriteFile(previous, []byte("[]"), vfs.DefaultFileMode))
+	require.NoError(t, os.Symlink(previous, filepath.Join(dir, IndexFileName)))
+	require.NoError(t, ls.Close())
+	data, err := os.ReadFile(previous)
+	require.NoError(t, err)
+	assert.Equal(t, "[]", string(data))
+	reopened, err := New(&Config{Path: dir})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = reopened.Close() })
+	restored, err := reopened.StatByPath("/dir/")
+	require.NoError(t, err)
+	assert.Equal(t, meta.ID, restored.ID)
+}
+
+func TestCloseCleansTemporaryIndexOnRenameError(t *testing.T) {
+	dir := t.TempDir()
+	ls, err := New(&Config{Path: dir})
+	require.NoError(t, err)
+	indexDir := filepath.Join(dir, IndexFileName)
+	require.NoError(t, os.Mkdir(indexDir, vfs.DefaultDirMode))
+	previous := filepath.Join(indexDir, "previous")
+	require.NoError(t, os.WriteFile(previous, []byte("keep"), vfs.DefaultFileMode))
+	require.Error(t, ls.Close())
+	data, err := os.ReadFile(previous)
+	require.NoError(t, err)
+	assert.Equal(t, "keep", string(data))
+	temporary, err := filepath.Glob(filepath.Join(dir, ".vfs_index-*"))
+	require.NoError(t, err)
+	assert.Empty(t, temporary)
+}
+
 func Test_LocalStorage_Mkdir(t *testing.T) {
 	type args struct {
 		path string
