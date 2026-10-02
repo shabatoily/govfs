@@ -320,8 +320,11 @@ func (s *UserStore) ListSystemEntries(page, pageSize int) ([]types.SystemEntryRe
 }
 
 func systemEntry(item *badgerdb.Item) (types.SystemEntryRes, error) {
-	key := item.KeyCopy(nil)
+	key := item.Key()
 	entry := types.SystemEntryRes{Key: hex.EncodeToString(key), Kind: "unknown", Value: "<redacted>"}
+	if !bytes.HasPrefix(key, userPrefix) && !bytes.HasPrefix(key, usernamePrefix) && !bytes.HasPrefix(key, eventPrefix) {
+		return entry, nil
+	}
 	err := item.Value(func(data []byte) error {
 		switch {
 		case bytes.HasPrefix(key, userPrefix):

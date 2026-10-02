@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/hex"
 	"errors"
 	"path/filepath"
 	"strings"
@@ -193,8 +194,11 @@ func TestStoreSystemStatsAndPages(t *testing.T) {
 		}
 		switch page {
 		case 1:
-			if len(entries) != 2 || entries[0].Kind != "unknown" || entries[1].Kind != "unknown" || entries[0].Value != "<redacted>" {
+			if len(entries) != 2 || entries[0].Kind != "unknown" || entries[1].Kind != "unknown" || entries[0].Value != "<redacted>" || entries[1].Value != "<redacted>" {
 				t.Fatalf("시스템 값 마스킹 = %#v", entries)
+			}
+			if entries[0].Key != hex.EncodeToString([]byte("other:a")) || entries[1].Key != hex.EncodeToString([]byte("other:b")) {
+				t.Fatalf("시스템 키 인코딩 = %#v", entries)
 			}
 		case 2:
 			if len(entries) != 2 || entries[0].Value.(types.UserRes).Username != "one" || entries[1].Value.(types.UserRes).Username != "two" {
