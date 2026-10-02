@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -229,4 +230,74 @@ func TestDriveManagerIdleTimeoutStartsAfterRelease(t *testing.T) {
 	if manager.OpenCount() != 0 {
 		t.Fatal("유휴 시간이 지난 드라이브가 닫히지 않았습니다")
 	}
+}
+
+func TestDriveManagerShutdownWaitsForRelease(t *testing.T) {
+	manager := NewDriveManager(DriveManagerConfig{Driver: drivers.Config{
+		Type:         drivers.DriverTypeLocalStorage,
+		LocalStorage: localstorage.Config{Path: filepath.Join(t.TempDir(), "drives")},
+	}})
+	t.Cleanup(func() { _ = manager.Close() })
+	drive, release, err := manager.Acquire(uuid.NewV4())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(release)
+	closed := make(chan error, 1)
+	go func() { closed <- manager.CloseWithContext(t.Context()) }()
+	select {
+	case <-manager.stop:
+	case <-time.After(time.Second):
+		t.Fatal("종료 시작 대기 시간 초과")
+	}
+	select {
+	case err := <-closed:
+		t.Fatalf("사용 종료 전 저장소가 닫혔습니다: %v", err)
+	case <-time.After(20 * time.Millisecond):
+	}
+	if _, err := drive.List("/"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := manager.Acquire(uuid.NewV4()); !errors.Is(err, os.ErrClosed) {
+		t.Fatalf("종료 중 신규 개방: %v", err)
+	}
+	release()
+	select {
+	case err := <-closed:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("사용 종료 후 저장소 정리 대기 시간 초과")
+	}
+}
+
+func TestDriveManagerShutdownDeadline(t *testing.T) {
+	manager := NewDriveManager(DriveManagerConfig{Driver: drivers.Config{
+		Type:         drivers.DriverTypeLocalStorage,
+		LocalStorage: localstorage.Config{Path: filepath.Join(t.TempDir(), "drives")},
+	}})
+	t.Cleanup(func() { _ = manager.Close() })
+	_, release, err := manager.Acquire(uuid.NewV4())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(release)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Millisecond)
+	defer cancel()
+	closed := make(chan error, 1)
+	go func() { closed <- manager.CloseWithContext(ctx) }()
+	select {
+	case err := <-closed:
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("종료 대기 제한 오류: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("제한 시간 후에도 종료가 완료되지 않았습니다")
+	}
+	if manager.OpenCount() != 0 {
+		t.Fatal("제한 시간 후 드라이브가 남았습니다")
+	}
+	release()
+	release()
 }

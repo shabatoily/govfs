@@ -9,8 +9,8 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"syscall"
-	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/joho/godotenv"
@@ -21,8 +21,6 @@ import (
 	"github.com/shabatoily/govfs/internal/server"
 	"github.com/spf13/cobra"
 )
-
-const serviceShutdownTimeout = 5 * time.Second
 
 type program struct {
 	appInfo    config.AppInfo
@@ -59,7 +57,7 @@ func (p *program) Stop(_ service.Service) error {
 	if p.app == nil {
 		return nil
 	}
-	return p.app.ShutdownWithTimeout(serviceShutdownTimeout)
+	return p.app.ShutdownWithTimeout(server.ShutdownTimeout)
 }
 
 func (p *program) runForeground() error {
@@ -70,7 +68,22 @@ func (p *program) runForeground() error {
 	if err != nil {
 		return err
 	}
-	return app.Listen(address, fiber.ListenConfig{GracefulContext: ctx})
+	return listenForeground(ctx, app, address)
+}
+
+// listenForeground은 리스너가 닫힌 뒤에도 종료 후크의 리소스 정리가 끝날 때까지 기다립니다.
+func listenForeground(ctx context.Context, app *fiber.App, address string) error {
+	shutdownDone := make(chan struct{})
+	var once sync.Once
+	app.Hooks().OnPostShutdown(func(_ error) error {
+		once.Do(func() { close(shutdownDone) })
+		return nil
+	})
+	err := app.Listen(address, fiber.ListenConfig{GracefulContext: ctx, ShutdownTimeout: server.ShutdownTimeout})
+	if ctx.Err() != nil {
+		<-shutdownDone
+	}
+	return err
 }
 
 // loadApp은 서비스 실행과 직접 실행에서 같은 설정·서버 초기화를 사용합니다.

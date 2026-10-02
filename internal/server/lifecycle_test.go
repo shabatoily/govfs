@@ -2,11 +2,14 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/shabatoily/govfs/internal/config"
@@ -107,5 +110,72 @@ func TestShutdownKeepsUserStoreOpenUntilRequestCompletes(t *testing.T) {
 	}
 	if _, err := users.List(); err == nil {
 		t.Fatal("종료 후 저장소가 닫혀야 합니다")
+	}
+}
+
+func TestShutdownKeepsResourcesOpenUntilAsyncDriveRelease(t *testing.T) {
+	root := t.TempDir()
+	users, err := services.OpenUserStore(filepath.Join(root, "users"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer users.Close()
+	logger, err := vfsLog.NewLogger(vfsLog.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := &config.Config{}
+	cfg.SetContext(t.Context())
+	drives := services.NewDriveManager(services.DriveManagerConfig{Driver: drivers.Config{
+		Type:         drivers.DriverTypeLocalStorage,
+		LocalStorage: localstorage.Config{Path: filepath.Join(root, "drives")},
+	}})
+	app := initServer(serverContext{Config: cfg, Users: users, Drives: drives, VFSLogger: logger})
+	userID := uuid.NewV4()
+	_, release, err := drives.Acquire(userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(release)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "/healthz", http.NoBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = res.Body.Close()
+	closed := make(chan error, 1)
+	go func() { closed <- app.Shutdown() }()
+	deadline := time.Now().Add(time.Second)
+	for {
+		_, done, err := drives.Acquire(userID)
+		if errors.Is(err, os.ErrClosed) {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		done()
+		if time.Now().After(deadline) {
+			t.Fatal("종료 시작 대기 시간 초과")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if _, err := users.List(); err != nil {
+		t.Fatalf("비동기 작업 완료 전 사용자 저장소가 닫혔습니다: %v", err)
+	}
+	release()
+	select {
+	case err := <-closed:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("비동기 작업 완료 후 서버 정리 대기 시간 초과")
+	}
+	if _, err := users.List(); err == nil {
+		t.Fatal("종료 후 사용자 저장소가 닫히지 않았습니다")
 	}
 }

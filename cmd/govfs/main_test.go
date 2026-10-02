@@ -3,9 +3,14 @@ package main
 import (
 	"bytes"
 	"context"
+	"net"
+	"net/http"
 	"path/filepath"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/gofiber/fiber/v3"
 	"github.com/kardianos/service"
 	"github.com/shabatoily/govfs/internal/config"
 )
@@ -82,5 +87,62 @@ func TestLoadAppReturnsConfigError(t *testing.T) {
 	app, address, err := p.loadApp(context.Background())
 	if err == nil || app != nil || address != "" {
 		t.Fatalf("loadApp = %v, %q, %v", app, address, err)
+	}
+}
+
+func TestForegroundWaitsForShutdownHooks(t *testing.T) {
+	app := fiber.New()
+	app.Get("/", func(c fiber.Ctx) error { return c.SendStatus(http.StatusOK) })
+	listening := make(chan string, 1)
+	app.Hooks().OnListen(func(data fiber.ListenData) error {
+		listening <- net.JoinHostPort(data.Host, data.Port)
+		return nil
+	})
+	cleanupStarted, finishCleanup := make(chan struct{}), make(chan struct{})
+	var cleanupOnce, releaseOnce sync.Once
+	t.Cleanup(func() { releaseOnce.Do(func() { close(finishCleanup) }) })
+	app.Hooks().OnPostShutdown(func(_ error) error {
+		cleanupOnce.Do(func() { close(cleanupStarted); <-finishCleanup })
+		return nil
+	})
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	result := make(chan error, 1)
+	go func() { result <- listenForeground(ctx, app, "127.0.0.1:0") }()
+	var address string
+	select {
+	case address = <-listening:
+	case <-time.After(time.Second):
+		t.Fatal("서버 시작 대기 시간 초과")
+	}
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+address+"/", http.NoBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := &http.Client{Timeout: time.Second}
+	res, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = res.Body.Close()
+	cancel()
+	select {
+	case <-cleanupStarted:
+	case <-time.After(time.Second):
+		t.Fatal("리소스 정리 시작 대기 시간 초과")
+	}
+	select {
+	case err := <-result:
+		t.Fatalf("리소스 정리 전 직접 실행이 반환되었습니다: %v", err)
+	case <-time.After(20 * time.Millisecond):
+	}
+	releaseOnce.Do(func() { close(finishCleanup) })
+	select {
+	case err := <-result:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("리소스 정리 후 직접 실행 종료 대기 시간 초과")
 	}
 }
