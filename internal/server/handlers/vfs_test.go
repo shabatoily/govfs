@@ -7,6 +7,8 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"os"
+	"sync"
 	"testing"
 	"time"
 	"uuid"
@@ -18,6 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/valyala/fasthttp"
 )
 
 // MockVFS is a mock implementation of vfs.VFS
@@ -289,7 +292,12 @@ func TestVfsHandler_Create(t *testing.T) {
 		Modified:  time.Now(),
 	}
 	created := make(chan struct{})
-	mockVFS.On("Create", "new.txt", mock.Anything).Run(func(mock.Arguments) {
+	var uploadPath string
+	mockVFS.On("Create", "new.txt", mock.Anything).Run(func(args mock.Arguments) {
+		file, ok := args.Get(1).(*os.File)
+		if ok {
+			uploadPath = file.Name()
+		}
 		close(created)
 	}).Return(mockMeta, nil)
 
@@ -319,6 +327,11 @@ func TestVfsHandler_Create(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("Create was not called")
 	}
+	require.NotEmpty(t, uploadPath)
+	require.Eventually(t, func() bool {
+		_, err := os.Stat(uploadPath)
+		return os.IsNotExist(err)
+	}, time.Second, time.Millisecond, "완료된 업로드의 임시 파일이 삭제되어야 합니다")
 	mockVFS.AssertExpectations(t)
 }
 
@@ -479,5 +492,42 @@ func TestVfsHandler_AsyncExecuteTargetsClient(t *testing.T) {
 	case msg := <-otherCh:
 		t.Fatalf("other client received completion event: %+v", msg)
 	case <-time.After(50 * time.Millisecond):
+	}
+}
+
+func TestVfsHandler_CreateCopiesNameBeforeRequestReuse(t *testing.T) {
+	mockVFS := new(MockVFS)
+	handler := NewVfsHandler(services.NewVfsService(mockVFS, "/vfs"), nil)
+	started, resume := make(chan struct{}), make(chan struct{})
+	var release sync.Once
+	t.Cleanup(func() { release.Do(func() { close(resume) }) })
+	name := make(chan string, 1)
+	mockVFS.On("Mkdir", "original").Run(func(args mock.Arguments) {
+		close(started)
+		<-resume
+		name <- args.String(0)
+	}).Return(vfs.Meta{Path: "/original"}, nil)
+
+	app := fiber.New()
+	requestCtx := &fasthttp.RequestCtx{}
+	requestCtx.Request.Header.SetMethod(http.MethodPost)
+	requestCtx.Request.Header.SetContentType("application/x-www-form-urlencoded")
+	requestCtx.Request.SetBodyString("name=original&isDir=true")
+	ctx := app.AcquireCtx(requestCtx)
+	defer app.ReleaseCtx(ctx)
+	require.NoError(t, handler.Create(ctx))
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("디렉터리 생성 시작 대기 시간 초과")
+	}
+	// 응답 후 요청 버퍼 재사용을 재현합니다.
+	copy(requestCtx.Request.PostArgs().Peek("name"), "replaced")
+	release.Do(func() { close(resume) })
+	select {
+	case got := <-name:
+		require.Equal(t, "original", got)
+	case <-time.After(time.Second):
+		t.Fatal("디렉터리 이름 확인 대기 시간 초과")
 	}
 }

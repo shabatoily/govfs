@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -235,7 +236,8 @@ func (h *VfsHandler) Stat(ctx fiber.Ctx) error {
 // @Router       /vfs [post]
 // Create은 새로운 파일 또는 디렉토리를 생성합니다. (비동기 처리)
 func (h *VfsHandler) Create(ctx fiber.Ctx) error {
-	name := ctx.FormValue("name")
+	// Fiber의 요청 버퍼는 응답 후 재사용되므로 비동기 작업에 넘길 이름을 복사합니다.
+	name := strings.Clone(ctx.FormValue("name"))
 	isDir, convErr := fiber.Convert(ctx.FormValue("isDir", "false"), strconv.ParseBool)
 	if convErr != nil {
 		return fiber.NewError(fiber.StatusBadRequest, convErr.Error())
@@ -268,11 +270,7 @@ func (h *VfsHandler) Create(ctx fiber.Ctx) error {
 		}
 
 		h.asyncExecute(ctx.Get(headerXClientID), func() (types.SSEMeta, error) {
-			defer func() {
-				tempPath := tempFile.Name()
-				_ = tempFile.Close()
-				_ = os.Remove(tempPath)
-			}()
+			defer removeUploadTempFile(tempFile)
 			meta, err := h.srv.Create(name, tempFile)
 			return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.create"}, err
 		})
@@ -308,10 +306,8 @@ func (h *VfsHandler) Write(ctx fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "failed to parse request body")
 	}
 
-	// Deep Copy content for async processing
-	content := req.Content
 	h.asyncExecute(ctx.Get(headerXClientID), func() (types.SSEMeta, error) {
-		meta, err := h.srv.Write(parsedID, bytes.NewBufferString(content))
+		meta, err := h.srv.Write(parsedID, bytes.NewBufferString(req.Content))
 		return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.write"}, err
 	})
 
@@ -419,11 +415,8 @@ func (h *VfsHandler) WriteComments(ctx fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid JSON body")
 	}
 
-	// Deep Copy comment for async processing
-	comment := req.Comment
-
 	h.asyncExecute(ctx.Get(headerXClientID), func() (types.SSEMeta, error) {
-		meta, err := h.srv.WriteComments(parsedID, comment)
+		meta, err := h.srv.WriteComments(parsedID, req.Comment)
 		return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.write-comments"}, err
 	})
 
@@ -449,11 +442,7 @@ func (h *VfsHandler) Backup(ctx fiber.Ctx) error {
 	r, w := io.Pipe()
 
 	go func() {
-		defer w.Close()
-		err := h.srv.Backup(w)
-		if err != nil {
-			_ = w.CloseWithError(err)
-		}
+		_ = w.CloseWithError(h.srv.Backup(w))
 	}()
 
 	return ctx.Status(fiber.StatusOK).SendStream(r)
@@ -585,23 +574,20 @@ func copyUploadToTempFile(formFile *multipart.FileHeader) (*os.File, error) {
 		_ = file.Close()
 		return nil, tempErr
 	}
-	tempPath := tempFile.Name()
 	_, copyErr := io.Copy(tempFile, file)
-	closeErr := file.Close()
-	if copyErr != nil {
-		_ = tempFile.Close()
-		_ = os.Remove(tempPath)
-		return nil, copyErr
-	}
-	if closeErr != nil {
-		_ = tempFile.Close()
-		_ = os.Remove(tempPath)
-		return nil, closeErr
+	if err := errors.Join(copyErr, file.Close()); err != nil {
+		removeUploadTempFile(tempFile)
+		return nil, err
 	}
 	if _, seekErr := tempFile.Seek(0, io.SeekStart); seekErr != nil {
-		_ = tempFile.Close()
-		_ = os.Remove(tempPath)
+		removeUploadTempFile(tempFile)
 		return nil, seekErr
 	}
 	return tempFile, nil
+}
+
+func removeUploadTempFile(file *os.File) {
+	path := file.Name()
+	_ = file.Close()
+	_ = os.Remove(path)
 }
