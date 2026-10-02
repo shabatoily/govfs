@@ -4,8 +4,6 @@ package types
 import (
 	"time"
 	"uuid"
-
-	"github.com/goccy/go-json"
 )
 
 const (
@@ -30,15 +28,4 @@ type TokenRes struct {
 	Role      Role      `json:"role"`
 	Token     string    `json:"token"`
 	ExpiresAt time.Time `json:"expiresAt"`
-}
-
-// MarshalJSON은 TokenRes 구조체를 JSON으로 직렬화할 때 시간 형식을 RFC3339로 지정하여 반환합니다.
-func (tr *TokenRes) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]any{
-		"id":        tr.ID,
-		"username":  tr.Username,
-		"role":      tr.Role,
-		"token":     tr.Token,
-		"expiresAt": tr.ExpiresAt.Format(time.RFC3339),
-	})
 }

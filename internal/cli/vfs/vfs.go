@@ -2,7 +2,6 @@
 package vfs
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -29,18 +28,9 @@ type Handler struct {
 
 // NewHandler는 로그인 세션을 사용하는 VFS 핸들러를 반환합니다.
 func NewHandler(cmd *cobra.Command) (*Handler, error) {
-	u, err := cli.GetUserConfig()
+	c, err := cli.NewAuthenticatedClient(cmd)
 	if err != nil {
-		return nil, fmt.Errorf("config not found: %w", err)
-	}
-
-	c := client.New(u.ServerURL)
-	if u.TokenInfo.IsExpired() {
-		return nil, errors.New("session expired: run govfs login")
-	}
-	c.SetToken(u.TokenInfo.Token)
-	if _, err := c.Auth().Me(cmd.Context()); err != nil {
-		return nil, errors.New("session invalid: run govfs login")
+		return nil, err
 	}
 
 	return &Handler{
