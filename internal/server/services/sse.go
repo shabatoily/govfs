@@ -33,7 +33,8 @@ type SSEBroker struct {
 	// 메시지를 모든 클라이언트에게 전달
 	message chan publication
 	// 클라이언트 목록 요청 채널
-	listClients chan listRequest
+	listClients  chan listRequest
+	countClients chan countRequest
 	// 현재 활성화된 클라이언트 목록
 	clients map[uuid.UUID]*client
 	// 브로커 컨텍스트 (서비스 종료 시 사용)
@@ -51,6 +52,11 @@ type publication struct {
 type listRequest struct {
 	user string
 	ch   chan []types.ClientInfo
+}
+
+type countRequest struct {
+	user string
+	ch   chan int
 }
 
 type client struct {
@@ -197,6 +203,31 @@ func (b *SSEBroker) Clients(user string) []types.ClientInfo {
 	}
 }
 
+// ClientCount는 목록을 생성하지 않고 사용자의 활성 연결 수를 반환합니다.
+func (b *SSEBroker) ClientCount(user string) int {
+	if !b.isRunning.Load() {
+		return 0
+	}
+	ch := make(chan int)
+	select {
+	case b.countClients <- countRequest{user: user, ch: ch}:
+		return <-ch
+	case <-b.ctx.Done():
+		return 0
+	}
+}
+
+func (b *SSEBroker) countUserClients(user string) int {
+	// ponytail: 전체 연결을 순회합니다. 조회가 병목이 되면 사용자별 카운터로 교체합니다.
+	count := 0
+	for _, c := range b.clients {
+		if c.User == user {
+			count++
+		}
+	}
+	return count
+}
+
 // NewSSEBroker는 주어진 설정을 기반으로 새로운 SSEBroker 인스턴스를 생성합니다.
 func NewSSEBroker(config SSEConfig) *SSEBroker {
 	if config.Context == nil {
@@ -210,6 +241,7 @@ func NewSSEBroker(config SSEConfig) *SSEBroker {
 		closingClients: make(chan uuid.UUID, config.MaxClientBuffer),
 		message:        make(chan publication, config.MaxMessageBuffer),
 		listClients:    make(chan listRequest),
+		countClients:   make(chan countRequest),
 		clients:        make(map[uuid.UUID]*client),
 		ctx:            ctx,
 		cancel:         cancel,
@@ -253,6 +285,8 @@ func (b *SSEBroker) listen() {
 				close(c.ch)
 				log.Infof("Client removed: %s. Total clients: %d", clientID, len(b.clients))
 			}
+		case req := <-b.countClients:
+			req.ch <- b.countUserClients(req.user)
 		case req := <-b.listClients:
 			clients := make([]types.ClientInfo, 0, len(b.clients))
 			for _, c := range b.clients {
