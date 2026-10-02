@@ -116,20 +116,28 @@ func (s *UserStore) Authenticate(username, password string) (User, error) {
 func (s *UserStore) ByID(id uuid.UUID) (User, error) {
 	var user User
 	err := s.db.View(func(txn *badgerdb.Txn) error {
-		item, getErr := txn.Get(userKey(id))
-		if errors.Is(getErr, badgerdb.ErrKeyNotFound) {
-			return ErrNotFound
-		}
-		if getErr != nil {
-			return getErr
-		}
-		return item.Value(func(data []byte) error { return json.Unmarshal(data, &user) })
+		var err error
+		user, err = readUser(txn, id)
+		return err
 	})
 	return user, err
 }
 
+func readUser(txn *badgerdb.Txn, id uuid.UUID) (User, error) {
+	var user User
+	item, err := txn.Get(userKey(id))
+	if errors.Is(err, badgerdb.ErrKeyNotFound) {
+		return user, ErrNotFound
+	}
+	if err != nil {
+		return user, err
+	}
+	err = item.Value(func(data []byte) error { return json.Unmarshal(data, &user) })
+	return user, err
+}
+
 func (s *UserStore) ByUsername(username string) (User, error) {
-	var id uuid.UUID
+	var user User
 	err := s.db.View(func(txn *badgerdb.Txn) error {
 		item, getErr := txn.Get(usernameKey(normalizeUsername(username)))
 		if errors.Is(getErr, badgerdb.ErrKeyNotFound) {
@@ -138,18 +146,21 @@ func (s *UserStore) ByUsername(username string) (User, error) {
 		if getErr != nil {
 			return getErr
 		}
-		return item.Value(func(data []byte) error {
+		var id uuid.UUID
+		if err := item.Value(func(data []byte) error {
 			if len(data) != len(id) {
 				return fmt.Errorf("invalid user id length: %d", len(data))
 			}
 			copy(id[:], data)
 			return nil
-		})
+		}); err != nil {
+			return err
+		}
+		var err error
+		user, err = readUser(txn, id)
+		return err
 	})
-	if err != nil {
-		return User{}, err
-	}
-	return s.ByID(id)
+	return user, err
 }
 
 func (s *UserStore) List() ([]User, error) {
