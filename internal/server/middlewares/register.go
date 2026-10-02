@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/log"
@@ -115,9 +116,13 @@ func Register(app *fiber.App, cfg *config.ServerConfig, users *services.UserStor
 	app.Get("/healthz", healthcheck.New()).Name("healthz")
 
 	// 정상 종료 시 요청의 액세스 로그 기록이 끝난 뒤 파일을 닫습니다.
-	app.Hooks().OnPostShutdown(func(_ error) error {
-		log.Info("Closing Access Log")
-		return accessLogCloser()
+	var closeOnce sync.Once
+	app.Hooks().OnPostShutdown(func(_ error) (err error) {
+		closeOnce.Do(func() {
+			log.Info("Closing Access Log")
+			err = accessLogCloser()
+		})
+		return err
 	})
 }
 

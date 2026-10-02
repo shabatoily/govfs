@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -38,6 +39,8 @@ type DriveManager struct {
 	wg          sync.WaitGroup
 	mu          sync.Mutex
 	closed      bool
+	active      int
+	drained     chan struct{}
 }
 
 func NewDriveManager(config DriveManagerConfig) *DriveManager {
@@ -46,7 +49,9 @@ func NewDriveManager(config DriveManagerConfig) *DriveManager {
 		drives:      make(map[uuid.UUID]driveEntry),
 		idleTimeout: config.IdleTimeout,
 		stop:        make(chan struct{}),
+		drained:     make(chan struct{}),
 	}
+	close(m.drained)
 	if config.IdleTimeout > 0 {
 		m.wg.Add(1)
 		go m.gc()
@@ -86,6 +91,10 @@ func (m *DriveManager) Acquire(userID uuid.UUID) (vfs.VFS, func(), error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	if m.active == 0 {
+		m.drained = make(chan struct{})
+	}
+	m.active++
 	entry := m.drives[userID]
 	entry.users++
 	m.drives[userID] = entry
@@ -96,6 +105,12 @@ func (m *DriveManager) Acquire(userID uuid.UUID) (vfs.VFS, func(), error) {
 func (m *DriveManager) release(userID uuid.UUID) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	defer func() {
+		m.active--
+		if m.active == 0 {
+			close(m.drained)
+		}
+	}()
 	entry, ok := m.drives[userID]
 	if !ok {
 		return
@@ -240,16 +255,33 @@ func (m *DriveManager) closeIdle(now time.Time) {
 	}
 }
 
+// Close는 모든 드라이브 사용이 끝난 뒤 저장소를 닫습니다.
 func (m *DriveManager) Close() error {
+	return m.CloseWithContext(context.Background())
+}
+
+// CloseWithContext는 사용 종료를 기다리고, 제한 시간이 지나면 기존처럼 저장소를 닫습니다.
+func (m *DriveManager) CloseWithContext(ctx context.Context) error {
 	// 정리 작업 전에 신규 드라이브 개방을 차단합니다.
 	m.mu.Lock()
 	m.closed = true
+	drained := m.drained
 	m.mu.Unlock()
 	m.stopOnce.Do(func() { close(m.stop) })
 	m.wg.Wait()
+	var err error
+	select {
+	case <-drained:
+	default:
+		select {
+		case <-drained:
+		case <-ctx.Done():
+			// ponytail: 제한 시간 후 강제 종료를 유지하며, 안전한 중단에는 드라이버의 취소 지원이 필요합니다.
+			err = ctx.Err()
+		}
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	var err error
 	for id, entry := range m.drives {
 		err = errors.Join(err, entry.drive.Close())
 		delete(m.drives, id)

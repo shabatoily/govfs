@@ -1,11 +1,14 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
+	"time"
 
 	"github.com/goccy/go-json"
 
@@ -22,6 +25,9 @@ import (
 	vfsLog "github.com/shabatoily/govfs/pkg/log"
 	"github.com/shabatoily/govfs/webui"
 )
+
+// ShutdownTimeout은 HTTP 요청과 비동기 드라이브 작업의 종료 대기 시간을 제한합니다.
+const ShutdownTimeout = 5 * time.Second
 
 const banner = `
    ____             __     
@@ -130,13 +136,25 @@ func initServer(ctx serverContext) *fiber.App {
 		return nil
 	})
 
-	// 정상 종료 시 HTTP 요청 처리가 끝난 뒤 저장소와 로그를 정리합니다.
-	app.Hooks().OnPostShutdown(func(_ error) error {
-		err := errors.Join(ctx.Drives.Close(), ctx.Users.Close(), ctx.VFSLogger.Close())
-		if fiberLogFile != nil {
-			log.SetOutput(os.Stdout)
-			err = errors.Join(err, fiberLogFile.Close())
-		}
+	var shutdownDeadline time.Time
+	app.Hooks().OnPreShutdown(func() error {
+		shutdownDeadline = time.Now().Add(ShutdownTimeout)
+		return nil
+	})
+
+	// Fiber의 직접 실행 경로는 종료 후크를 반복 호출하므로 리소스는 한 번만 정리합니다.
+	var closeOnce sync.Once
+	app.Hooks().OnPostShutdown(func(_ error) (err error) {
+		closeOnce.Do(func() {
+			// HTTP 요청과 비동기 작업은 같은 종료 대기 예산을 사용합니다.
+			shutdownCtx, cancel := context.WithDeadline(context.Background(), shutdownDeadline)
+			defer cancel()
+			err = errors.Join(ctx.Drives.CloseWithContext(shutdownCtx), ctx.Users.Close(), ctx.VFSLogger.Close())
+			if fiberLogFile != nil {
+				log.SetOutput(os.Stdout)
+				err = errors.Join(err, fiberLogFile.Close())
+			}
+		})
 		return err
 	})
 
