@@ -162,7 +162,11 @@ func findMetaItemByID(txn *badger.Txn, id uuid.UUID) (*badger.Item, error) {
 		return nil, err
 	}
 
-	return txn.Get([]byte("meta:" + path))
+	item, err := txn.Get(makeKey(prefixMeta, []byte(path)))
+	if errors.Is(err, badger.ErrKeyNotFound) {
+		return nil, vfs.ErrNotFound
+	}
+	return item, err
 }
 
 // findByPath는 경로를 기반으로 메타데이터를 검색합니다. (디렉토리 경로 매칭 포함)

@@ -21,6 +21,37 @@ import (
 
 var logger = log.Default()
 
+func TestFindMetaByIDMissingRecord(t *testing.T) {
+	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true).WithLogger(nil))
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+	id := uuid.NewV4()
+	require.NoError(t, db.View(func(txn *badger.Txn) error {
+		_, err := findMetaItemByID(txn, id)
+		require.ErrorIs(t, err, vfs.ErrNotFound)
+		return nil
+	}))
+	require.NoError(t, db.Update(func(txn *badger.Txn) error {
+		return txn.Set(makeKey(prefixIndex, id[:]), []byte("/missing.txt"))
+	}))
+	require.NoError(t, db.View(func(txn *badger.Txn) error {
+		_, err := findMetaItemByID(txn, id)
+		require.ErrorIs(t, err, vfs.ErrNotFound)
+		return nil
+	}))
+	require.NoError(t, db.Update(func(txn *badger.Txn) error {
+		return txn.Set(makeKey(prefixMeta, []byte("/missing.txt")), []byte(`{"path":"/missing.txt"}`))
+	}))
+	require.NoError(t, db.View(func(txn *badger.Txn) error {
+		item, err := findMetaItemByID(txn, id)
+		require.NoError(t, err)
+		meta, err := getMeta(item)
+		require.NoError(t, err)
+		assert.Equal(t, "/missing.txt", meta.Path)
+		return nil
+	}))
+}
+
 func TestListPreservesMetadataErrors(t *testing.T) {
 	driver, err := New(&Config{InMemory: true, Logger: logger})
 	require.NoError(t, err)
