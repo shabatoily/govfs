@@ -1005,30 +1005,20 @@ func (bvfs *BadgerVFS) Rotate(newKey []byte) error {
 
 // AllKeys는 데이터베이스에 저장된 모든 키 목록을 반환합니다.
 func (bvfs *BadgerVFS) AllKeys() ([]string, error) {
-	keys := make([]string, 0)
-	err := bvfs.db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			item := it.Item()
-			key := string(item.Key())
-			keys = append(keys, key)
-		}
-		return nil
-	})
-	return keys, err
+	return bvfs.AllKeysByPrefix("")
 }
 
 // AllKeysByPrefix는 지정된 접두사로 시작하는 모든 키 목록을 반환합니다.
 func (bvfs *BadgerVFS) AllKeysByPrefix(prefix string) ([]string, error) {
 	keys := make([]string, 0)
+	opts := badger.DefaultIteratorOptions
+	opts.PrefetchValues = false
+	opts.Prefix = []byte(prefix)
 	err := bvfs.db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		it := txn.NewIterator(opts)
 		defer it.Close()
-		for it.Seek([]byte(prefix)); it.ValidForPrefix([]byte(prefix)); it.Next() {
-			item := it.Item()
-			key := string(item.Key())
-			keys = append(keys, key)
+		for it.Seek(opts.Prefix); it.ValidForPrefix(opts.Prefix); it.Next() {
+			keys = append(keys, string(it.Item().Key()))
 		}
 		return nil
 	})
