@@ -245,8 +245,10 @@ func (s *UserStore) ListEvents(page, pageSize int, userID *uuid.UUID) ([]UserEve
 func (s *UserStore) ClearEvents(userID uuid.UUID) (int, error) {
 	deleted := 0
 	err := s.db.Update(func(txn *badgerdb.Txn) error {
-		keys := make([][]byte, 0)
-		it := txn.NewIterator(badgerdb.DefaultIteratorOptions)
+		opts := badgerdb.DefaultIteratorOptions
+		opts.Prefix = eventPrefix
+		it := txn.NewIterator(opts)
+		defer it.Close()
 		for it.Seek(eventPrefix); it.ValidForPrefix(eventPrefix); it.Next() {
 			if err := it.Item().Value(func(data []byte) error {
 				var event UserEvent
@@ -254,23 +256,21 @@ func (s *UserStore) ClearEvents(userID uuid.UUID) (int, error) {
 					return err
 				}
 				if event.UserID == userID {
-					keys = append(keys, it.Item().KeyCopy(nil))
+					if err := txn.Delete(it.Item().KeyCopy(nil)); err != nil {
+						return err
+					}
+					deleted++
 				}
 				return nil
 			}); err != nil {
-				it.Close()
 				return err
 			}
 		}
-		it.Close()
-		for _, key := range keys {
-			if err := txn.Delete(key); err != nil {
-				return err
-			}
-		}
-		deleted = len(keys)
 		return nil
 	})
+	if err != nil {
+		return 0, err
+	}
 	return deleted, err
 }
 
