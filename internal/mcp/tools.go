@@ -80,17 +80,7 @@ func (s *Server) mkdir(ctx context.Context, _ *mcpsdk.CallToolRequest, input pat
 	if err != nil {
 		return nil, nil, err
 	}
-	s.mutationMu.Lock()
-	defer s.mutationMu.Unlock()
-	if createErr := s.client.VFS().CreateDir(ctx, cleaned); createErr != nil {
-		return nil, nil, createErr
-	}
-	meta, err := s.waitForMutation(ctx, "vfs.create")
-	if err != nil {
-		return nil, nil, err
-	}
-	created, err := s.client.VFS().Stat(ctx, meta.ID)
-	return nil, created, err
+	return s.create(ctx, cleaned, nil)
 }
 
 func (s *Server) upload(ctx context.Context, _ *mcpsdk.CallToolRequest, input uploadInput) (*mcpsdk.CallToolResult, any, error) {
@@ -103,10 +93,22 @@ func (s *Server) upload(ctx context.Context, _ *mcpsdk.CallToolRequest, input up
 		return nil, nil, err
 	}
 
+	return s.create(ctx, cleaned, bytes.NewReader(content))
+}
+
+// create는 디렉터리와 파일 생성의 직렬 실행·완료 대기·메타데이터 조회를 공유합니다.
+func (s *Server) create(ctx context.Context, name string, content io.Reader) (*mcpsdk.CallToolResult, any, error) {
+	// 서버 이벤트에 요청 ID가 없으므로 변경 요청을 하나씩 처리합니다.
 	s.mutationMu.Lock()
 	defer s.mutationMu.Unlock()
-	if createErr := s.client.VFS().CreateFile(ctx, cleaned, io.NopCloser(bytes.NewReader(content))); createErr != nil {
-		return nil, nil, createErr
+	var err error
+	if content == nil {
+		err = s.client.VFS().CreateDir(ctx, name)
+	} else {
+		err = s.client.VFS().CreateFile(ctx, name, io.NopCloser(content))
+	}
+	if err != nil {
+		return nil, nil, err
 	}
 	meta, err := s.waitForMutation(ctx, "vfs.create")
 	if err != nil {
