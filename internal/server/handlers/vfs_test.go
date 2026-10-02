@@ -199,7 +199,7 @@ func TestVfsHandler_Search(t *testing.T) {
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&results))
 	require.Len(t, results, 2)
 	assert.Equal(t, "Reports", results[0].Name)
-	assert.Equal(t, "/vfs?q=/Reports", results[0].URL)
+	assert.Equal(t, "/vfs?q=%2FReports", results[0].URL)
 	assert.Equal(t, fileID, results[1].ID)
 	assert.Equal(t, "/vfs/"+fileID.String(), results[1].URL)
 	mockVFS.AssertExpectations(t)

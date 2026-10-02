@@ -2,7 +2,6 @@
 package handlers
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -26,11 +25,6 @@ type VfsHandler struct {
 	broker  *services.SSEBroker
 	user    string
 	release func()
-}
-
-// Prefix는 VfsHandler가 담당하는 라우트의 URL 접두사를 반환합니다.
-func (h *VfsHandler) Prefix() string {
-	return h.srv.Prefix()
 }
 
 // List lists files and directories
@@ -308,7 +302,7 @@ func (h *VfsHandler) Write(ctx fiber.Ctx) error {
 	}
 
 	h.asyncExecute(ctx.Get(headerXClientID), func() (types.SSEMeta, error) {
-		meta, err := h.srv.Write(parsedID, bytes.NewBufferString(req.Content))
+		meta, err := h.srv.Write(parsedID, strings.NewReader(req.Content))
 		return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.write"}, err
 	})
 
