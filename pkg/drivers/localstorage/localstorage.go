@@ -63,11 +63,11 @@ func New(cfg *Config) (*LocalStorage, error) {
 
 	// 저장된 인덱스 로드 시도
 	indexFile := filepath.Join(ls.basePath, IndexFileName)
-	if _, err := os.Stat(indexFile); err == nil {
-		data, err := os.ReadFile(indexFile)
-		if err != nil {
-			return nil, err
-		}
+	data, err := os.ReadFile(indexFile)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	if err == nil {
 		var metas []vfs.Meta
 		if err := json.Unmarshal(data, &metas); err != nil {
 			return nil, err

@@ -68,6 +68,35 @@ func Test_NewLocalStorage(t *testing.T) {
 	assert.NotNil(t, ls)
 }
 
+func TestNewRejectsUnreadableIndex(t *testing.T) {
+	dir := t.TempDir()
+	indexFile := filepath.Join(dir, IndexFileName)
+	require.NoError(t, os.Symlink(IndexFileName, indexFile))
+	_, readErr := os.ReadFile(indexFile)
+	require.Error(t, readErr)
+	ls, err := New(&Config{Path: dir})
+	require.Error(t, err)
+	assert.Nil(t, ls)
+	var pathErr *os.PathError
+	require.ErrorAs(t, readErr, &pathErr)
+	assert.ErrorIs(t, err, pathErr.Err)
+}
+
+func TestNewRestoresSavedIndex(t *testing.T) {
+	dir := t.TempDir()
+	ls, err := New(&Config{Path: dir})
+	require.NoError(t, err)
+	meta, err := ls.Create("/file.txt", bytes.NewBufferString("content"))
+	require.NoError(t, err)
+	require.NoError(t, ls.Close())
+	reopened, err := New(&Config{Path: dir})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = reopened.Close() })
+	restored, err := reopened.StatByPath("/file.txt")
+	require.NoError(t, err)
+	assert.Equal(t, meta.ID, restored.ID)
+}
+
 func Test_LocalStorage_Mkdir(t *testing.T) {
 	type args struct {
 		path string
