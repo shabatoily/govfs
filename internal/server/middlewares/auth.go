@@ -19,6 +19,13 @@ const currentUserKey = "current-user"
 func JWTAuthMiddleware(cfg config.AuthConfig) fiber.Handler {
 	return jwtware.New(jwtware.Config{
 		SigningKey: jwtware.SigningKey{Key: []byte(cfg.JWT.Secret)},
+		SuccessHandler: func(ctx fiber.Ctx) error {
+			exp, err := jwtware.FromContext(ctx).Claims.GetExpirationTime()
+			if err != nil || exp == nil {
+				return fiber.ErrUnauthorized
+			}
+			return ctx.Next()
+		},
 		Extractor: extractors.Chain(
 			extractors.FromAuthHeader("Bearer"),
 			extractors.FromCookie(types.CookieAcessToken),
