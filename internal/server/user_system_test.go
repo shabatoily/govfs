@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/shabatoily/govfs/internal/config"
 	"github.com/shabatoily/govfs/internal/types"
 	"github.com/shabatoily/govfs/pkg/drivers"
@@ -36,7 +37,71 @@ func TestInitSupportsLocalStorage(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = app.Shutdown() })
 
-	token := loginToken(t, app, "admin", "password")
+	loginRes, err := app.Test(request(t, http.MethodPost, "/auth/login", types.LoginReq{Username: "admin", Password: "password"}, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var login types.TokenRes
+	if err := json.NewDecoder(loginRes.Body).Decode(&login); err != nil {
+		_ = loginRes.Body.Close()
+		t.Fatal(err)
+	}
+	_ = loginRes.Body.Close()
+	parsed, err := jwt.Parse(login.Token, func(*jwt.Token) (any, error) { return []byte(cfg.Server.Auth.JWT.Secret), nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp, err := parsed.Claims.GetExpirationTime()
+	if err != nil || exp == nil || !login.ExpiresAt.Equal(exp.Time) {
+		t.Fatalf("JWT와 로그인 응답의 만료 시각 불일치: %v, %v", login.ExpiresAt, err)
+	}
+	foundCookie := false
+	for _, cookie := range loginRes.Cookies() {
+		if cookie.Name == types.CookieAcessToken {
+			foundCookie = true
+			if cookie.Value != login.Token || !cookie.Expires.Equal(exp.Time) {
+				t.Fatalf("JWT와 쿠키의 만료 시각 불일치: %#v", cookie)
+			}
+		}
+	}
+	if !foundCookie {
+		t.Fatal("인증 쿠키가 없습니다")
+	}
+	token := login.Token
+	meRes, err := app.Test(request(t, http.MethodGet, "/auth/me", nil, token))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var me types.TokenRes
+	if err := json.NewDecoder(meRes.Body).Decode(&me); err != nil {
+		_ = meRes.Body.Close()
+		t.Fatal(err)
+	}
+	_ = meRes.Body.Close()
+	if meRes.StatusCode != http.StatusOK || !me.ExpiresAt.Equal(login.ExpiresAt) {
+		t.Fatalf("로그인 상태 응답 = %d, %#v", meRes.StatusCode, me)
+	}
+	for _, claims := range []jwt.MapClaims{
+		{"sub": login.ID.String()},
+		{"sub": login.ID.String(), "exp": nil},
+		{"sub": login.ID.String(), "exp": "invalid"},
+		{"sub": login.ID.String(), "exp": time.Now().Add(-time.Hour).Unix()},
+	} {
+		invalidToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(cfg.Server.Auth.JWT.Secret))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, route := range []string{"/auth/me", "/vfs/?q=/"} {
+			res, err := app.Test(request(t, http.MethodGet, route, nil, invalidToken))
+			if err != nil {
+				t.Fatal(err)
+			}
+			_ = res.Body.Close()
+			if res.StatusCode != http.StatusUnauthorized {
+				t.Fatalf("만료 정보 %v, 경로 %s: 상태 = %d", claims["exp"], route, res.StatusCode)
+			}
+		}
+	}
 	res, err := app.Test(request(t, http.MethodGet, "/vfs/?q=/", nil, token))
 	if err != nil {
 		t.Fatal(err)

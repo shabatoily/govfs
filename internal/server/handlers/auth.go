@@ -50,10 +50,10 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
-	// 토큰 생성
+	exp := time.Now().Add(h.cfg.JWT.Exp).Truncate(time.Second)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": user.ID.String(),
-		"exp": float64(time.Now().Add(h.cfg.JWT.Exp).Unix()),
+		"exp": exp.Unix(),
 	})
 
 	t, err := token.SignedString([]byte(h.cfg.JWT.Secret))
@@ -61,7 +61,6 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	exp := time.Now().Add(h.cfg.JWT.Exp)
 	if err := h.users.RecordEvent(user, "auth.login", fiber.StatusOK); err != nil {
 		log.Errorf("failed to record login event: %v", err)
 	}
@@ -132,8 +131,8 @@ func (*AuthHandler) IsLoggedIn(c fiber.Ctx) error {
 	}
 
 	exp, err := token.Claims.GetExpirationTime()
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	if err != nil || exp == nil {
+		return fiber.ErrUnauthorized
 	}
 
 	return c.Status(fiber.StatusOK).JSON(types.TokenRes{
