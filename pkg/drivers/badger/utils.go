@@ -51,15 +51,7 @@ func randomSecretKey(keySize int) ([]byte, error) {
 
 // getEncryptionKey는 파일에서 암호화 키를 읽어옵니다.
 func getEncryptionKey(secretFile string) ([]byte, error) {
-	if _, err := os.Stat(secretFile); err != nil {
-		return nil, err
-	}
-
-	key, err := os.ReadFile(secretFile)
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
+	return os.ReadFile(secretFile)
 }
 
 // extractExtension은 경로에서 파일 확장자를 추출합니다.

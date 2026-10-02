@@ -229,9 +229,6 @@ func (bvfs *BadgerVFS) Open(id uuid.UUID) (*vfs.File, error) {
 		return internalErr
 	})
 	if err != nil {
-		if errors.Is(err, badger.ErrKeyNotFound) {
-			return nil, vfs.ErrNotFound
-		}
 		return nil, err
 	}
 
