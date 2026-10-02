@@ -87,6 +87,10 @@ func (m *DriveManager) driveLocked(userID uuid.UUID) (vfs.VFS, error) {
 func (m *DriveManager) Acquire(userID uuid.UUID) (vfs.VFS, func(), error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	return m.acquireLocked(userID)
+}
+
+func (m *DriveManager) acquireLocked(userID uuid.UUID) (vfs.VFS, func(), error) {
 	drive, err := m.driveLocked(userID)
 	if err != nil {
 		return nil, nil, err
@@ -174,23 +178,21 @@ func (m *DriveManager) BadgerResources() ([]types.BadgerResourceRes, error) {
 
 func (m *DriveManager) Stats(userID uuid.UUID) (types.StorageStatRes, bool, error) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.closed {
-		return types.StorageStatRes{}, false, os.ErrClosed
-	}
-	entry, wasOpen := m.drives[userID]
-	drive := entry.drive
-	if !wasOpen {
-		var err error
-		drive, err = m.open(userID)
-		if err != nil {
-			return types.StorageStatRes{}, false, err
-		}
-		defer drive.Close()
-	} else {
-		entry.lastUsed = time.Now()
+	_, wasOpen := m.drives[userID]
+	drive, release, err := m.acquireLocked(userID)
+	if err == nil && !wasOpen {
+		// 통계 조회용 드라이브는 함께 사용하는 요청까지 끝나면 닫습니다.
+		entry := m.drives[userID]
+		entry.closeRequested = true
 		m.drives[userID] = entry
 	}
+	m.mu.Unlock()
+	if err != nil {
+		return types.StorageStatRes{}, false, err
+	}
+	defer release()
+
+	// 트리 조회와 집계 중에는 다른 사용자의 드라이브 접근을 막지 않습니다.
 	tree, err := drive.Tree(vfs.Root)
 	if err != nil {
 		return types.StorageStatRes{}, wasOpen, err
