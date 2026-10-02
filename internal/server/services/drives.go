@@ -23,8 +23,10 @@ type DriveManagerConfig struct {
 }
 
 type driveEntry struct {
-	drive    vfs.VFS
-	lastUsed time.Time
+	drive          vfs.VFS
+	lastUsed       time.Time
+	users          int
+	closeRequested bool
 }
 
 type DriveManager struct {
@@ -55,6 +57,10 @@ func NewDriveManager(config DriveManagerConfig) *DriveManager {
 func (m *DriveManager) Drive(userID uuid.UUID) (vfs.VFS, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	return m.driveLocked(userID)
+}
+
+func (m *DriveManager) driveLocked(userID uuid.UUID) (vfs.VFS, error) {
 	if m.closed {
 		return nil, os.ErrClosed
 	}
@@ -69,6 +75,40 @@ func (m *DriveManager) Drive(userID uuid.UUID) (vfs.VFS, error) {
 	}
 	m.drives[userID] = driveEntry{drive: drive, lastUsed: time.Now()}
 	return drive, nil
+}
+
+// Acquire는 사용 중인 드라이브가 유휴 정리나 로그아웃으로 닫히지 않도록 유지합니다.
+// 반환된 release는 요청, 비동기 작업 또는 스트림이 끝날 때 호출해야 합니다.
+func (m *DriveManager) Acquire(userID uuid.UUID) (vfs.VFS, func(), error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	drive, err := m.driveLocked(userID)
+	if err != nil {
+		return nil, nil, err
+	}
+	entry := m.drives[userID]
+	entry.users++
+	m.drives[userID] = entry
+	var once sync.Once
+	return drive, func() { once.Do(func() { m.release(userID) }) }, nil
+}
+
+func (m *DriveManager) release(userID uuid.UUID) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	entry, ok := m.drives[userID]
+	if !ok {
+		return
+	}
+	entry.users--
+	entry.lastUsed = time.Now()
+	m.drives[userID] = entry
+	if entry.users == 0 && entry.closeRequested {
+		delete(m.drives, userID)
+		if err := entry.drive.Close(); err != nil {
+			log.Errorf("failed to close released drive: %v", err)
+		}
+	}
 }
 
 func (m *DriveManager) open(userID uuid.UUID) (vfs.VFS, error) {
@@ -151,12 +191,17 @@ func (m *DriveManager) Stats(userID uuid.UUID) (types.StorageStatRes, bool, erro
 	return total, wasOpen, nil
 }
 
-// CloseDrive는 지정한 사용자의 드라이브가 열려 있으면 닫습니다.
+// CloseDrive는 사용자 드라이브를 닫고, 사용 중이면 마지막 release까지 종료를 미룹니다.
 func (m *DriveManager) CloseDrive(userID uuid.UUID) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	entry, ok := m.drives[userID]
 	if !ok {
+		return nil
+	}
+	if entry.users > 0 {
+		entry.closeRequested = true
+		m.drives[userID] = entry
 		return nil
 	}
 	delete(m.drives, userID)
@@ -185,7 +230,7 @@ func (m *DriveManager) closeIdle(now time.Time) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for id, entry := range m.drives {
-		if now.Sub(entry.lastUsed) < m.idleTimeout {
+		if entry.users > 0 || now.Sub(entry.lastUsed) < m.idleTimeout {
 			continue
 		}
 		if err := entry.drive.Close(); err != nil {

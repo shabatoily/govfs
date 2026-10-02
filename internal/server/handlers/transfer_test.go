@@ -27,7 +27,7 @@ func TestTransferWaitConflictAndReplace(t *testing.T) {
 			require.NoError(t, err)
 			dst, err := fs.Create("/target.txt", strings.NewReader("target"))
 			require.NoError(t, err)
-			handler := NewVfsHandler(services.NewVfsService(fs, "/vfs"), nil)
+			handler := NewVfsHandler(services.NewVfsService(fs, "/vfs"), nil, nil)
 			app := fiber.New(fiber.Config{ErrorHandler: middlewares.ErrorHandler})
 			app.Post("/vfs/:id/copy", handler.Copy)
 			app.Patch("/vfs/:id", handler.Move)
@@ -69,7 +69,7 @@ func TestMoveWaitOverwritesByDefault(t *testing.T) {
 	require.NoError(t, err)
 	dst, err := fs.Create("/target.txt", strings.NewReader("target"))
 	require.NoError(t, err)
-	handler := NewVfsHandler(services.NewVfsService(fs, "/vfs"), nil)
+	handler := NewVfsHandler(services.NewVfsService(fs, "/vfs"), nil, nil)
 	app := fiber.New(fiber.Config{ErrorHandler: middlewares.ErrorHandler})
 	app.Patch("/vfs/:id", handler.Move)
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPatch,

@@ -167,3 +167,66 @@ func TestDriveManagerConcurrentCloseAndOpen(t *testing.T) {
 		t.Fatal("종료와 경합한 드라이브가 남아 있습니다")
 	}
 }
+
+func TestDriveManagerKeepsAcquiredDriveOpen(t *testing.T) {
+	for _, driverType := range []drivers.DriverType{drivers.DriverTypeBadger, drivers.DriverTypeLocalStorage} {
+		t.Run(string(driverType), func(t *testing.T) {
+			root := filepath.Join(t.TempDir(), "drives")
+			manager := NewDriveManager(DriveManagerConfig{Driver: drivers.Config{
+				Type: driverType, Badger: badger.Config{Path: root}, LocalStorage: localstorage.Config{Path: root},
+			}, IdleTimeout: time.Hour})
+			t.Cleanup(func() { _ = manager.Close() })
+			userID := uuid.NewV4()
+			drive, release, err := manager.Acquire(userID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(release)
+			_, secondRelease, err := manager.Acquire(userID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(secondRelease)
+			manager.closeIdle(time.Now().Add(2 * time.Hour))
+			if manager.OpenCount() != 1 {
+				t.Fatal("사용 중인 드라이브가 유휴 정리로 닫혔습니다")
+			}
+			if err := manager.CloseDrive(userID); err != nil {
+				t.Fatal(err)
+			}
+			release()
+			release()
+			if manager.OpenCount() != 1 {
+				t.Fatal("다른 사용이 끝나기 전에 드라이브가 닫혔습니다")
+			}
+			if _, err := drive.List("/"); err != nil {
+				t.Fatal(err)
+			}
+			secondRelease()
+			if manager.OpenCount() != 0 {
+				t.Fatal("마지막 사용 종료 후 드라이브가 닫히지 않았습니다")
+			}
+		})
+	}
+}
+
+func TestDriveManagerIdleTimeoutStartsAfterRelease(t *testing.T) {
+	manager := NewDriveManager(DriveManagerConfig{Driver: drivers.Config{
+		Type:         drivers.DriverTypeLocalStorage,
+		LocalStorage: localstorage.Config{Path: filepath.Join(t.TempDir(), "drives")},
+	}, IdleTimeout: time.Hour})
+	t.Cleanup(func() { _ = manager.Close() })
+	_, release, err := manager.Acquire(uuid.NewV4())
+	if err != nil {
+		t.Fatal(err)
+	}
+	release()
+	manager.closeIdle(time.Now())
+	if manager.OpenCount() != 1 {
+		t.Fatal("사용 종료 직후 드라이브가 닫혔습니다")
+	}
+	manager.closeIdle(time.Now().Add(2 * time.Hour))
+	if manager.OpenCount() != 0 {
+		t.Fatal("유휴 시간이 지난 드라이브가 닫히지 않았습니다")
+	}
+}
