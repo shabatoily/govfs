@@ -3,7 +3,6 @@ package config
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +11,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var defaultConfigName = "config"
+const defaultConfigName = "config"
 
 // LoadWithViper는 지정된 파일 경로에서 Viper 라이브러리를 사용하여 설정을 로드하고
 // 환경 변수 및 기본값과 병합하여 검증된 최종 설정 객체를 반환합니다.
@@ -23,22 +22,23 @@ func LoadWithViper(in string, appInfo AppInfo) (*Config, error) {
 
 	in = resolveConfigPath(in)
 
-	// 환경 변수 치환
-	viper.SetConfigType(filepath.Ext(in)[1:]) // yml, yaml, json, toml 등
-	viper.SetConfigFile(in)
-	viper.AutomaticEnv()
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	viper.SetDefault("vfs.idleTimeout", DefaultConfig.VFS.IdleTimeout)
-	err := viper.ReadInConfig()
+	// 로딩별 인스턴스를 사용해 설정과 기본값이 다른 서버로 전파되지 않도록 합니다.
+	v := viper.New()
+	v.SetConfigFile(in)
+	v.AutomaticEnv()
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.SetDefault("vfs.idleTimeout", DefaultConfig.VFS.IdleTimeout)
+	err := v.ReadInConfig()
 	if err != nil {
 		return nil, err
 	}
 
 	cfg := Config{}
-	err = setConfigFromViper(&cfg, appInfo)
+	err = v.Unmarshal(&cfg)
 	if err != nil {
 		return nil, err
 	}
+	cfg.App = appInfo
 	err = resolveConfig(&cfg)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func LoadWithViper(in string, appInfo AppInfo) (*Config, error) {
 }
 
 func resolveConfigPath(in string) string {
-	if strings.Contains(in, ".") {
+	if filepath.Ext(in) != "" {
 		return in
 	}
 
@@ -126,21 +126,5 @@ func expandHomePath(path string) (string, error) {
 }
 
 func mkdirAll(path string) error {
-	if _, err := os.Stat(filepath.Dir(path)); errors.Is(err, os.ErrNotExist) {
-		err = os.MkdirAll(filepath.Dir(path), vfs.DefaultDirMode)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func setConfigFromViper(cfg *Config, appInfo AppInfo) error {
-	if err := viper.Unmarshal(cfg); err != nil {
-		return err
-	}
-
-	cfg.App = appInfo
-
-	return nil
+	return os.MkdirAll(filepath.Dir(path), vfs.DefaultDirMode)
 }

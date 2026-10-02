@@ -24,8 +24,6 @@ import (
 
 const serviceShutdownTimeout = 5 * time.Second
 
-var configPath = "config.toml"
-
 type program struct {
 	appInfo    config.AppInfo
 	configPath string
@@ -37,14 +35,7 @@ type program struct {
 // Start는 서비스 관리자를 차단하지 않고 HTTP 서버를 시작합니다.
 func (p *program) Start(_ service.Service) error {
 	ctx, cancel := context.WithCancel(context.Background())
-	cfg, err := config.LoadWithViper(p.configPath, p.appInfo)
-	if err != nil {
-		cancel()
-		return err
-	}
-	cfg.SetContext(ctx)
-
-	app, err := server.Init(cfg)
+	app, address, err := p.loadApp(ctx)
 	if err != nil {
 		cancel()
 		return err
@@ -53,7 +44,7 @@ func (p *program) Start(_ service.Service) error {
 	p.app = app
 	p.cancel = cancel
 	go func() {
-		if err := app.Listen(":" + strconv.Itoa(cfg.Server.Port)); err != nil && !errors.Is(err, context.Canceled) {
+		if err := app.Listen(address); err != nil && !errors.Is(err, context.Canceled) {
 			_ = p.logger.Error(err)
 		}
 	}()
@@ -75,17 +66,25 @@ func (p *program) runForeground() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	app, address, err := p.loadApp(ctx)
+	if err != nil {
+		return err
+	}
+	return app.Listen(address, fiber.ListenConfig{GracefulContext: ctx})
+}
+
+// loadApp은 서비스 실행과 직접 실행에서 같은 설정·서버 초기화를 사용합니다.
+func (p *program) loadApp(ctx context.Context) (*fiber.App, string, error) {
 	cfg, err := config.LoadWithViper(p.configPath, p.appInfo)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 	cfg.SetContext(ctx)
-
 	app, err := server.Init(cfg)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
-	return app.Listen(":"+strconv.Itoa(cfg.Server.Port), fiber.ListenConfig{GracefulContext: ctx})
+	return app, ":" + strconv.Itoa(cfg.Server.Port), nil
 }
 
 // @title govfs
@@ -111,6 +110,7 @@ func run() error {
 }
 
 func newRootCommand(appInfo config.AppInfo) *cobra.Command {
+	var configPath string
 	var prg *program
 	var svc service.Service
 	var root *cobra.Command
