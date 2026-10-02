@@ -94,6 +94,12 @@ func TestStoreUserLifecycle(t *testing.T) {
 	if deleted, err := store.ClearEvents(admin.ID); err != nil || deleted != 2 {
 		t.Fatalf("이벤트 삭제 = %d, %v", deleted, err)
 	}
+	if deleted, err := store.ClearEvents(admin.ID); err != nil || deleted != 0 {
+		t.Fatalf("이벤트 재삭제 = %d, %v", deleted, err)
+	}
+	if remaining, count, err := store.ListEvents(1, 10, &member.ID); err != nil || count != 1 || len(remaining) != 1 {
+		t.Fatalf("다른 사용자 이벤트 = %#v, %d, %v", remaining, count, err)
+	}
 	events, total, err = store.ListEvents(1, 10, &admin.ID)
 	if err != nil || total != 0 || len(events) != 0 {
 		t.Fatalf("삭제 후 이벤트 = %#v, %d, %v", events, total, err)
@@ -110,6 +116,32 @@ func TestStoreUserLifecycle(t *testing.T) {
 		if value, ok := entry.Value.(types.UserRes); ok && value.Username == "" {
 			t.Fatal("사용자 상세 변환 실패")
 		}
+	}
+}
+
+func TestStoreClearEventsRollsBack(t *testing.T) {
+	store, err := OpenUserStore(filepath.Join(t.TempDir(), "users"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	user := User{ID: uuid.NewV4(), Username: "member"}
+	if err := store.RecordEvent(user, "auth.login", 200); err != nil {
+		t.Fatal(err)
+	}
+	key := []byte("event:zzzz")
+	if err := store.db.Update(func(txn *badgerdb.Txn) error { return txn.Set(key, []byte("invalid JSON")) }); err != nil {
+		t.Fatal(err)
+	}
+	if deleted, err := store.ClearEvents(user.ID); err == nil || deleted != 0 {
+		t.Fatalf("실패 시 삭제 개수 = %d, %v", deleted, err)
+	}
+	if err := store.db.Update(func(txn *badgerdb.Txn) error { return txn.Delete(key) }); err != nil {
+		t.Fatal(err)
+	}
+	events, total, err := store.ListEvents(1, 10, &user.ID)
+	if err != nil || total != 1 || len(events) != 1 {
+		t.Fatalf("삭제 취소 후 이벤트 = %#v, %d, %v", events, total, err)
 	}
 }
 
