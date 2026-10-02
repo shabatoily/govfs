@@ -2,7 +2,10 @@ package services
 
 import (
 	"bytes"
+	"errors"
+	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 	"uuid"
@@ -102,5 +105,65 @@ func TestDriveManagerBadgerResources(t *testing.T) {
 	}
 	if len(resources) != 1 || resources[0].UserID != userID || resources[0].BlockCacheMaxCost <= 0 {
 		t.Fatalf("Badger 리소스 현황 = %#v", resources)
+	}
+}
+
+func TestDriveManagerDoesNotReopenAfterClose(t *testing.T) {
+	for _, driverType := range []drivers.DriverType{drivers.DriverTypeBadger, drivers.DriverTypeLocalStorage} {
+		t.Run(string(driverType), func(t *testing.T) {
+			root := filepath.Join(t.TempDir(), "drives")
+			manager := NewDriveManager(DriveManagerConfig{Driver: drivers.Config{
+				Type:         driverType,
+				Badger:       badger.Config{Path: root},
+				LocalStorage: localstorage.Config{Path: root},
+			}})
+			t.Cleanup(func() { _ = manager.Close() })
+			userID := uuid.NewV4()
+			if _, err := manager.Drive(userID); err != nil {
+				t.Fatal(err)
+			}
+			if err := manager.Close(); err != nil {
+				t.Fatal(err)
+			}
+			for _, id := range []uuid.UUID{userID, uuid.NewV4()} {
+				if drive, err := manager.Drive(id); drive != nil || !errors.Is(err, os.ErrClosed) {
+					t.Fatalf("종료 후 드라이브 개방: drive=%v, err=%v", drive, err)
+				}
+				if _, open, err := manager.Stats(id); open || !errors.Is(err, os.ErrClosed) {
+					t.Fatalf("종료 후 드라이브 통계: open=%v, err=%v", open, err)
+				}
+			}
+			if manager.OpenCount() != 0 {
+				t.Fatal("종료 후 드라이브가 다시 열렸습니다")
+			}
+		})
+	}
+}
+
+func TestDriveManagerConcurrentCloseAndOpen(t *testing.T) {
+	manager := NewDriveManager(DriveManagerConfig{Driver: drivers.Config{
+		Type:         drivers.DriverTypeLocalStorage,
+		LocalStorage: localstorage.Config{Path: filepath.Join(t.TempDir(), "drives")},
+	}, IdleTimeout: time.Millisecond})
+	t.Cleanup(func() { _ = manager.Close() })
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for range 16 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			if _, err := manager.Drive(uuid.NewV4()); err != nil && !errors.Is(err, os.ErrClosed) {
+				t.Errorf("종료와 동시 개방: %v", err)
+			}
+		}()
+	}
+	close(start)
+	if err := manager.Close(); err != nil {
+		t.Fatal(err)
+	}
+	wg.Wait()
+	if manager.OpenCount() != 0 {
+		t.Fatal("종료와 경합한 드라이브가 남아 있습니다")
 	}
 }

@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -34,6 +35,7 @@ type DriveManager struct {
 	stopOnce    sync.Once
 	wg          sync.WaitGroup
 	mu          sync.Mutex
+	closed      bool
 }
 
 func NewDriveManager(config DriveManagerConfig) *DriveManager {
@@ -53,6 +55,9 @@ func NewDriveManager(config DriveManagerConfig) *DriveManager {
 func (m *DriveManager) Drive(userID uuid.UUID) (vfs.VFS, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.closed {
+		return nil, os.ErrClosed
+	}
 	if entry, ok := m.drives[userID]; ok {
 		entry.lastUsed = time.Now()
 		m.drives[userID] = entry
@@ -115,6 +120,9 @@ func (m *DriveManager) BadgerResources() ([]types.BadgerResourceRes, error) {
 func (m *DriveManager) Stats(userID uuid.UUID) (types.StorageStatRes, bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.closed {
+		return types.StorageStatRes{}, false, os.ErrClosed
+	}
 	entry, wasOpen := m.drives[userID]
 	drive := entry.drive
 	if !wasOpen {
@@ -188,6 +196,10 @@ func (m *DriveManager) closeIdle(now time.Time) {
 }
 
 func (m *DriveManager) Close() error {
+	// 정리 작업 전에 신규 드라이브 개방을 차단합니다.
+	m.mu.Lock()
+	m.closed = true
+	m.mu.Unlock()
 	m.stopOnce.Do(func() { close(m.stop) })
 	m.wg.Wait()
 	m.mu.Lock()
