@@ -13,7 +13,6 @@ import (
 	"uuid"
 
 	"github.com/dgraph-io/badger/v4"
-	"github.com/goccy/go-json"
 	vfs "github.com/shabatoily/govfs"
 	"github.com/shabatoily/govfs/pkg/log"
 )
@@ -198,23 +197,15 @@ func (bvfs *BadgerVFS) List(path string) ([]vfs.Meta, error) {
 				continue
 			}
 
-			err := item.Value(func(v []byte) error {
-				var im internalMeta
-				if err := json.Unmarshal(v, &im); err == nil {
-					list = append(list, im.Meta)
-				} else {
-					bvfs.logger.Error().Err(err).Msg("Failed to decode meta")
-				}
-				return nil
-			})
+			im, err := getMeta(item)
 			if err != nil {
 				return err
 			}
+			list = append(list, im.Meta)
 		}
 		return nil
 	})
-
-	if errors.Is(err, vfs.ErrNotFound) {
+	if err != nil {
 		return nil, err
 	}
 

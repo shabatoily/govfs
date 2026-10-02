@@ -21,6 +21,30 @@ import (
 
 var logger = log.Default()
 
+func TestListPreservesMetadataErrors(t *testing.T) {
+	driver, err := New(&Config{InMemory: true, Logger: logger})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = driver.Close() })
+	_, err = driver.Mkdir("/dir")
+	require.NoError(t, err)
+	_, err = driver.Create("/dir/a.txt", bytes.NewBufferString("content"))
+	require.NoError(t, err)
+	require.NoError(t, driver.db.Update(func(txn *badger.Txn) error {
+		return txn.Set([]byte("meta:/dir/z.txt"), []byte("invalid JSON"))
+	}))
+	items, err := driver.List("/dir")
+	require.Error(t, err)
+	require.NotErrorIs(t, err, vfs.ErrNotFound)
+	assert.Nil(t, items)
+	items, err = driver.List("/")
+	require.NoError(t, err)
+	assert.Len(t, items, 1)
+	require.NoError(t, driver.Close())
+	items, err = driver.List("/dir")
+	require.ErrorIs(t, err, badger.ErrDBClosed)
+	assert.Nil(t, items)
+}
+
 func TestTreePreservesErrorsAndNormalizesPath(t *testing.T) {
 	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true).WithLogger(nil))
 	require.NoError(t, err)
