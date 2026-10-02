@@ -114,8 +114,8 @@ func Register(app *fiber.App, cfg *config.ServerConfig, users *services.UserStor
 	// 헬스체크 엔드포인트
 	app.Get("/healthz", healthcheck.New()).Name("healthz")
 
-	// 서버 종료 전 처리 (Access Log 닫기)
-	app.Hooks().OnPreShutdown(func() error {
+	// 정상 종료 시 요청의 액세스 로그 기록이 끝난 뒤 파일을 닫습니다.
+	app.Hooks().OnPostShutdown(func(_ error) error {
 		log.Info("Closing Access Log")
 		return accessLogCloser()
 	})
