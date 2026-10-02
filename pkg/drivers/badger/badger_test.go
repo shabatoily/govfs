@@ -21,6 +21,38 @@ import (
 
 var logger = log.Default()
 
+func TestFindByPathUsesExactKeys(t *testing.T) {
+	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true).WithLogger(nil))
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+	require.NoError(t, db.Update(func(txn *badger.Txn) error {
+		for key, value := range map[string]string{
+			"meta:/file":          `{"path":"/file"}`,
+			"meta:/dir/":          `{"path":"/dir/","isDir":true}`,
+			"meta:/missing-child": "invalid JSON",
+			"meta:/broken":        "invalid JSON",
+		} {
+			if err := txn.Set([]byte(key), []byte(value)); err != nil {
+				return err
+			}
+		}
+		return nil
+	}))
+	require.NoError(t, db.View(func(txn *badger.Txn) error {
+		for input, want := range map[string]string{"/file": "/file", "/dir": "/dir/", "/dir/": "/dir/"} {
+			meta, err := findByPath(txn, input)
+			require.NoError(t, err)
+			assert.Equal(t, want, meta.Path)
+		}
+		_, err := findByPath(txn, "/missing")
+		assert.ErrorIs(t, err, vfs.ErrNotFound)
+		_, err = findByPath(txn, "/broken")
+		assert.Error(t, err)
+		assert.NotErrorIs(t, err, vfs.ErrNotFound)
+		return nil
+	}))
+}
+
 func TestAllKeysByPrefix(t *testing.T) {
 	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true).WithLogger(nil))
 	require.NoError(t, err)

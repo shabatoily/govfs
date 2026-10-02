@@ -1,7 +1,6 @@
 package badger
 
 import (
-	"bytes"
 	"crypto/rand"
 	"encoding/binary"
 	"errors"
@@ -172,34 +171,15 @@ func findByPath(txn *badger.Txn, path string) (internalMeta, error) {
 		return internalMeta{}, vfs.ErrNotFound
 	}
 
-	metaKey := makeKey(prefixMeta, []byte(path))
-	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	defer it.Close()
-	for it.Seek(metaKey); it.ValidForPrefix(metaKey); it.Next() {
-		var im internalMeta
-		item := it.Item()
-		key := item.Key()
-
-		err := item.Value(func(val []byte) error {
-			if err := json.Unmarshal(val, &im); err != nil {
-				return err
-			}
-			return nil
-		})
+	for _, candidate := range []string{path, path + "/"} {
+		item, err := txn.Get(makeKey(prefixMeta, []byte(candidate)))
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			continue
+		}
 		if err != nil {
 			return internalMeta{}, err
 		}
-
-		if bytes.Equal(key, metaKey) {
-			return im, nil
-		}
-
-		// Check directory match (path/ vs path)
-		// We want to match if key is exactly metaKey + "/"
-		// metaKey is "meta:path". key is "meta:path/"
-		if len(key) == len(metaKey)+1 && key[len(key)-1] == '/' && bytes.Equal(key[:len(metaKey)], metaKey) {
-			return im, nil
-		}
+		return getMeta(item)
 	}
 
 	return internalMeta{}, vfs.ErrNotFound
