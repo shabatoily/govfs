@@ -21,6 +21,38 @@ import (
 
 var logger = log.Default()
 
+func TestAllKeysByPrefix(t *testing.T) {
+	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true).WithLogger(nil))
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+	driver := &BadgerVFS{db: db}
+	keys, err := driver.AllKeys()
+	require.NoError(t, err)
+	require.NotNil(t, keys)
+	require.Empty(t, keys)
+	require.NoError(t, db.Update(func(txn *badger.Txn) error {
+		for _, key := range []string{"meta:b", "blob:a", "meta:a"} {
+			if err := txn.Set([]byte(key), bytes.Repeat([]byte("v"), 64*1024)); err != nil {
+				return err
+			}
+		}
+		return nil
+	}))
+	for prefix, want := range map[string][]string{
+		"":        {"blob:a", "meta:a", "meta:b"},
+		"meta:":   {"meta:a", "meta:b"},
+		"meta:a":  {"meta:a"},
+		"missing": {},
+	} {
+		got, err := driver.AllKeysByPrefix(prefix)
+		require.NoError(t, err)
+		assert.Equal(t, want, got)
+	}
+	keys, err = driver.AllKeys()
+	require.NoError(t, err)
+	assert.Equal(t, []string{"blob:a", "meta:a", "meta:b"}, keys)
+}
+
 func TestConfigOptionsConvertsIndexCacheMiBToBytes(t *testing.T) {
 	cfg := Config{InMemory: true, CacheSize: 32}
 	require.Equal(t, 32*MiB, cfg.Options().IndexCacheSize)

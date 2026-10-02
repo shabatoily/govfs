@@ -28,20 +28,10 @@ func NewBadgerHandler(bvfs *badger.BadgerVFS) *BadgerHandler {
 // @Security     BearerAuth
 // @Router       /badger/keys [get]
 func (h *BadgerHandler) AllKeys(ctx fiber.Ctx) error {
-	var keys []string
-	var err error
-
 	prefix := ctx.Query("prefix", "")
-	if prefix != "" {
-		keys, err = h.bvfs.AllKeysByPrefix(prefix)
-		if err != nil {
-			return err
-		}
-	} else {
-		keys, err = h.bvfs.AllKeys()
-		if err != nil {
-			return err
-		}
+	keys, err := h.bvfs.AllKeysByPrefix(prefix)
+	if err != nil {
+		return err
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(types.BadgerKeyRes{
