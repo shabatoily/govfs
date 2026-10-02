@@ -56,25 +56,27 @@ func Init(cfg *config.Config) (*fiber.App, error) {
 	if err != nil {
 		return nil, err
 	}
+	initialized := false
+	defer func() {
+		if !initialized {
+			_ = userStore.Close()
+		}
+	}()
 	list, err := userStore.List()
 	if err != nil {
-		_ = userStore.Close()
 		return nil, err
 	}
 	if len(list) == 0 {
 		if cfg.Server.Auth.Admin.Username == "" || cfg.Server.Auth.Admin.Password == "" {
-			_ = userStore.Close()
 			return nil, fmt.Errorf("initial admin credentials are required")
 		}
 		if _, err = userStore.Create(cfg.Server.Auth.Admin.Username, cfg.Server.Auth.Admin.Password, types.RoleAdmin); err != nil {
-			_ = userStore.Close()
 			return nil, err
 		}
 	}
 
 	vfsLogger, err := vfsLog.NewLogger(cfg.VFS.Logger)
 	if err != nil {
-		_ = userStore.Close()
 		return nil, err
 	}
 	cfg.VFS.Driver.Badger.Logger = vfsLogger
@@ -91,6 +93,7 @@ func Init(cfg *config.Config) (*fiber.App, error) {
 		VFSLogger: vfsLogger,
 	})
 
+	initialized = true
 	return server, nil
 }
 
@@ -127,17 +130,17 @@ func initServer(ctx serverContext) *fiber.App {
 		return nil
 	})
 
-	// 서버 종료 전 리소스 정리 정의
-	app.Hooks().OnPreShutdown(func() error {
-		var err error
-		err = errors.Join(ctx.Drives.Close(), ctx.Users.Close(), ctx.VFSLogger.Close())
+	// 정상 종료 시 HTTP 요청 처리가 끝난 뒤 저장소와 로그를 정리합니다.
+	app.Hooks().OnPostShutdown(func(_ error) error {
+		err := errors.Join(ctx.Drives.Close(), ctx.Users.Close(), ctx.VFSLogger.Close())
 		if fiberLogFile != nil {
+			log.SetOutput(os.Stdout)
 			err = errors.Join(err, fiberLogFile.Close())
 		}
 		return err
 	})
 
-	// set host to config and set swagger info on listen
+	// 리슨 주소를 설정과 Swagger 정보에 반영합니다.
 	app.Hooks().OnListen(func(listenData fiber.ListenData) error {
 		srvCfg.Host = listenData.Host
 		config.SetSwaggerInfo(ctx.Config)
