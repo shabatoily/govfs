@@ -478,9 +478,6 @@ func (bvfs *BadgerVFS) WriteComments(id uuid.UUID, comments string) (vfs.Meta, e
 	err := bvfs.db.Update(func(txn *badger.Txn) error {
 		metaItem, internalErr := findMetaItemByID(txn, id)
 		if internalErr != nil {
-			if errors.Is(internalErr, badger.ErrKeyNotFound) {
-				return vfs.ErrNotFound
-			}
 			return internalErr
 		}
 
@@ -508,9 +505,6 @@ func (bvfs *BadgerVFS) Delete(id uuid.UUID) error {
 	return bvfs.db.Update(func(txn *badger.Txn) error {
 		metaItem, internalErr := findMetaItemByID(txn, id)
 		if internalErr != nil {
-			if errors.Is(internalErr, badger.ErrKeyNotFound) {
-				return vfs.ErrNotFound
-			}
 			return internalErr
 		}
 
@@ -706,9 +700,6 @@ func (bvfs *BadgerVFS) Move(id uuid.UUID, dst string, replaceID ...uuid.UUID) (v
 	err := bvfs.db.Update(func(txn *badger.Txn) error {
 		item, internalErr := findMetaItemByID(txn, id)
 		if internalErr != nil {
-			if errors.Is(internalErr, badger.ErrKeyNotFound) {
-				return vfs.ErrNotFound
-			}
 			return internalErr
 		}
 
@@ -759,9 +750,6 @@ func (bvfs *BadgerVFS) Copy(id uuid.UUID, dst string, replaceID ...uuid.UUID) (v
 	var chunks []uuid.UUID
 	err := bvfs.db.Update(func(txn *badger.Txn) error {
 		item, err := findMetaItemByID(txn, id)
-		if errors.Is(err, badger.ErrKeyNotFound) {
-			return vfs.ErrNotFound
-		}
 		if err != nil {
 			return err
 		}
