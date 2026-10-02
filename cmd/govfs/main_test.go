@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/kardianos/service"
@@ -54,5 +56,31 @@ func TestVersionWithoutConfig(t *testing.T) {
 				t.Fatalf("version output = %q, want %q", got, want)
 			}
 		})
+	}
+}
+
+func TestRootConfigFlagsAreIndependent(t *testing.T) {
+	first := newRootCommand(config.AppInfo{Name: "first"})
+	if err := first.PersistentFlags().Set("config", "first.toml"); err != nil {
+		t.Fatal(err)
+	}
+	second := newRootCommand(config.AppInfo{Name: "second"})
+	if err := second.PersistentFlags().Set("config", "second.toml"); err != nil {
+		t.Fatal(err)
+	}
+	got, err := first.PersistentFlags().GetString("config")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "first.toml" {
+		t.Fatalf("first config = %q", got)
+	}
+}
+
+func TestLoadAppReturnsConfigError(t *testing.T) {
+	p := &program{configPath: filepath.Join(t.TempDir(), "missing.toml")}
+	app, address, err := p.loadApp(context.Background())
+	if err == nil || app != nil || address != "" {
+		t.Fatalf("loadApp = %v, %q, %v", app, address, err)
 	}
 }
