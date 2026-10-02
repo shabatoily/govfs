@@ -1,7 +1,10 @@
 package localstorage
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -562,6 +565,68 @@ func Test_LocalStorage_Tree(t *testing.T) {
 	}
 }
 
+type failAfterHeaderWriter struct{ bytes.Buffer }
+
+func (w *failAfterHeaderWriter) Write(p []byte) (int, error) {
+	if w.Len() != 0 {
+		return 0, io.ErrClosedPipe
+	}
+	return w.Buffer.Write(p)
+}
+
+func TestBackupIncludesFinalWrites(t *testing.T) {
+	ls, cleanup := setupVFS(t)
+	defer cleanup()
+	var buf bytes.Buffer
+	size, err := ls.Backup(&buf, 0)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(buf.Len()), size)
+	w := &failAfterHeaderWriter{}
+	size, err = ls.Backup(w, 0)
+	require.ErrorIs(t, err, io.ErrClosedPipe)
+	assert.Equal(t, uint64(w.Len()), size)
+}
+
+func TestLoadPreservesDataOnInvalidArchive(t *testing.T) {
+	parent := t.TempDir()
+	ls, err := New(&Config{Path: filepath.Join(parent, "storage")})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = ls.Close() })
+	meta, err := ls.Create("/original.txt", bytes.NewBufferString("keep"))
+	require.NoError(t, err)
+	require.NoError(t, ls.Close())
+	indexPath := filepath.Join(ls.basePath, IndexFileName)
+	index, err := os.ReadFile(indexPath)
+	require.NoError(t, err)
+	var valid bytes.Buffer
+	_, err = ls.Backup(&valid, 0)
+	require.NoError(t, err)
+	corrupt := bytes.Clone(valid.Bytes())
+	corrupt[len(corrupt)-8] ^= 1
+	var invalidIndex bytes.Buffer
+	gw := gzip.NewWriter(&invalidIndex)
+	tw := tar.NewWriter(gw)
+	require.NoError(t, tw.WriteHeader(&tar.Header{Name: IndexFileName, Mode: 0o644, Size: 1}))
+	_, err = tw.Write([]byte("{"))
+	require.NoError(t, err)
+	require.NoError(t, tw.Close())
+	require.NoError(t, gw.Close())
+	for _, archive := range [][]byte{[]byte("invalid"), valid.Bytes()[:valid.Len()-4], corrupt, invalidIndex.Bytes()} {
+		require.Error(t, ls.Load(bytes.NewReader(archive), 0))
+		opened, err := ls.Open(meta.ID)
+		require.NoError(t, err)
+		content, err := io.ReadAll(opened)
+		require.NoError(t, errors.Join(err, opened.Close()))
+		assert.Equal(t, "keep", string(content))
+		data, err := os.ReadFile(indexPath)
+		require.NoError(t, err)
+		assert.Equal(t, index, data)
+	}
+	staged, err := filepath.Glob(filepath.Join(parent, ".vfs-restore-*"))
+	require.NoError(t, err)
+	assert.Empty(t, staged)
+}
+
 func Test_LocalStorage_Backup_And_Load(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -594,8 +659,19 @@ func Test_LocalStorage_Backup_And_Load(t *testing.T) {
 			// Create NEW LocalStorage instance (clean)
 			ls2, cleanup2 := setupVFS(t)
 			defer cleanup2()
+			old, err := ls2.Create("/old.txt", bytes.NewBufferString("old"))
+			require.NoError(t, err)
+			require.NoError(t, ls2.Close())
 
 			err = ls2.Load(&buf, 0)
+			require.NoError(t, err)
+			_, err = ls2.Open(old.ID)
+			require.ErrorIs(t, err, vfs.ErrNotFound)
+			_, err = os.Stat(filepath.Join(ls2.basePath, "old.txt"))
+			require.ErrorIs(t, err, os.ErrNotExist)
+			reopened, err := New(&Config{Path: ls2.basePath})
+			require.NoError(t, err)
+			_, err = reopened.StatByPath("/test/file.txt")
 			require.NoError(t, err)
 
 			// Verify

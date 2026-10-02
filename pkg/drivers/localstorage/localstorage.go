@@ -514,7 +514,7 @@ func (ls *LocalStorage) Close() error {
 }
 
 // Backup은 현재 VFS의 모든 파일과 인덱스를 tar.gz 형태로 묶어 출력 스트림으로 백업합니다.
-func (ls *LocalStorage) Backup(w io.Writer, _ uint64) (uint64, error) {
+func (ls *LocalStorage) Backup(w io.Writer, _ uint64) (size uint64, err error) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
 
@@ -522,9 +522,13 @@ func (ls *LocalStorage) Backup(w io.Writer, _ uint64) (uint64, error) {
 	cw := &countWriter{w: w}
 
 	gw := gzip.NewWriter(cw)
-	defer gw.Close()
 	tw := tar.NewWriter(gw)
-	defer tw.Close()
+	defer func() {
+		tarErr := tw.Close()
+		gzipErr := gw.Close()
+		err = errors.Join(err, tarErr, gzipErr)
+		size = cw.n
+	}()
 
 	// 1. Snapshot Metadata
 	metas := make([]vfs.Meta, 0, len(ls.idMap))
@@ -610,20 +614,37 @@ func (ls *LocalStorage) Load(r io.Reader, _ int) error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 
-	// 1. Clear existing data
-	if err := ls.clearData(); err != nil {
+	base := filepath.Clean(ls.basePath)
+	parent := filepath.Dir(base)
+	staging, err := os.MkdirTemp(parent, ".vfs-restore-*")
+	if err != nil {
 		return err
 	}
-
-	// 2. Extract
-	return ls.extractArchive(r)
-}
-
-func (ls *LocalStorage) clearData() error {
-	if err := os.RemoveAll(ls.basePath); err != nil {
+	defer os.RemoveAll(staging)
+	restored := &LocalStorage{basePath: staging}
+	if err := restored.extractArchive(r); err != nil {
 		return err
 	}
-	return os.MkdirAll(ls.basePath, vfs.DefaultDirMode)
+	if _, err := os.Stat(filepath.Join(staging, IndexFileName)); err != nil {
+		return err
+	}
+	backup, err := os.MkdirTemp(parent, ".vfs-previous-*")
+	if err != nil {
+		return err
+	}
+	previous := filepath.Join(backup, "data")
+	if err := os.Rename(base, previous); err != nil {
+		return errors.Join(err, os.RemoveAll(backup))
+	}
+	if err := os.Rename(staging, base); err != nil {
+		if rollbackErr := os.Rename(previous, base); rollbackErr != nil {
+			// 롤백도 실패하면 기존 데이터를 삭제하지 않고 보관 위치를 알립니다.
+			return errors.Join(err, fmt.Errorf("restore rollback failed; previous data at %s: %w", previous, rollbackErr))
+		}
+		return errors.Join(err, os.RemoveAll(backup))
+	}
+	ls.idMap, ls.pathMap = restored.idMap, restored.pathMap
+	return os.RemoveAll(backup)
 }
 
 func (ls *LocalStorage) extractArchive(r io.Reader) error {
@@ -652,7 +673,15 @@ func (ls *LocalStorage) extractArchive(r io.Reader) error {
 		}
 	}
 
-	return nil
+	// 체크섬을 검증하되 tar 종료 뒤의 추가 데이터는 1 MiB까지만 허용합니다.
+	_, err = io.CopyN(io.Discard, gr, 1<<20)
+	if errors.Is(err, io.EOF) {
+		return nil
+	}
+	if err == nil {
+		return fmt.Errorf("archive has excessive trailing data")
+	}
+	return err
 }
 
 func (ls *LocalStorage) extractTarEntry(header *tar.Header, tr *tar.Reader) error {
@@ -685,16 +714,12 @@ func (ls *LocalStorage) extractTarEntry(header *tar.Header, tr *tar.Reader) erro
 		return fmt.Errorf("security: illegal file mode in tar file: %s", header.Name)
 	}
 
-	f, err := os.OpenFile(targetPath, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+	f, err := os.OpenFile(targetPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(header.Mode))
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-
-	if _, err := io.Copy(f, tr); err != nil {
-		return err
-	}
-	return nil
+	_, copyErr := io.Copy(f, tr)
+	return errors.Join(copyErr, f.Close())
 }
 
 // Tree는 지정된 경로 이하의 파일 시스템 구조를 트리 형태로 반환합니다.
