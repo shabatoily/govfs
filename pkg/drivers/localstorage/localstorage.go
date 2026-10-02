@@ -92,7 +92,20 @@ func (ls *LocalStorage) saveIndex() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(idxFile, data, vfs.DefaultFileMode)
+	// 완전히 저장한 파일만 교체하여 쓰기 실패 시 기존 인덱스를 보존합니다.
+	tmp, err := os.CreateTemp(ls.basePath, ".vfs_index-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if err := tmp.Chmod(vfs.DefaultFileMode); err != nil {
+		return errors.Join(err, tmp.Close())
+	}
+	_, writeErr := tmp.Write(data)
+	if err := errors.Join(writeErr, tmp.Close()); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), idxFile)
 }
 
 func (ls *LocalStorage) toLocalPath(vfsPath string) string {
