@@ -629,6 +629,9 @@ func (ls *LocalStorage) Load(r io.Reader, _ int) error {
 	if _, err := os.Stat(filepath.Join(staging, IndexFileName)); err != nil {
 		return err
 	}
+	if err := restored.validateRestoredFiles(); err != nil {
+		return err
+	}
 	backup, err := os.MkdirTemp(parent, ".vfs-previous-*")
 	if err != nil {
 		return err
@@ -646,6 +649,28 @@ func (ls *LocalStorage) Load(r io.Reader, _ int) error {
 	}
 	ls.idMap, ls.pathMap = restored.idMap, restored.pathMap
 	return os.RemoveAll(backup)
+}
+
+// validateRestoredFiles는 인덱스의 파일이 실제로 복원됐는지 확인합니다.
+func (ls *LocalStorage) validateRestoredFiles() error {
+	for _, meta := range ls.idMap {
+		if meta.IsDir {
+			continue
+		}
+		localPath := ls.toLocalPath(meta.Path)
+		rel, err := filepath.Rel(ls.basePath, localPath)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+			return fmt.Errorf("invalid restored file path: %s", meta.Path)
+		}
+		info, err := os.Stat(localPath)
+		if err != nil {
+			return err
+		}
+		if !info.Mode().IsRegular() || info.Size() != meta.Size {
+			return fmt.Errorf("restored file does not match index: %s", meta.Path)
+		}
+	}
+	return nil
 }
 
 func (ls *LocalStorage) extractArchive(r io.Reader) error {
