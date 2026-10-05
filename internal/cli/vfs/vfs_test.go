@@ -40,6 +40,43 @@ func TestBackupFailurePreservesExistingFile(t *testing.T) {
 	require.Equal(t, "previous backup", string(data))
 }
 
+func TestBackupPublishesOnlyAfterFileReplacement(t *testing.T) {
+	for _, fail := range []bool{false, true} {
+		t.Run(map[bool]string{false: "success", true: "replacement failure"}[fail], func(t *testing.T) {
+			h, output := testHandler(t, func(w http.ResponseWriter, _ *http.Request) {
+				_, err := w.Write([]byte("new backup"))
+				assert.NoError(t, err)
+			})
+			dir := t.TempDir()
+			dest := filepath.Join(dir, "backup")
+			previous := dest
+			if fail {
+				require.NoError(t, os.Mkdir(dest, 0o700))
+				previous = filepath.Join(dest, "previous")
+			}
+			require.NoError(t, os.WriteFile(previous, []byte("previous backup"), 0o600))
+			err := h.Backup(dest)
+			if fail {
+				require.Error(t, err)
+				assert.Empty(t, output.String())
+			} else {
+				require.NoError(t, err)
+				assert.Contains(t, output.String(), "Backup saved to "+dest)
+			}
+			data, err := os.ReadFile(previous)
+			require.NoError(t, err)
+			if fail {
+				assert.Equal(t, "previous backup", string(data))
+			} else {
+				assert.Equal(t, "new backup", string(data))
+			}
+			temporary, err := filepath.Glob(filepath.Join(dir, ".govfs-backup-*"))
+			require.NoError(t, err)
+			assert.Empty(t, temporary)
+		})
+	}
+}
+
 func TestRecursiveDownload(t *testing.T) {
 	for _, fail := range []bool{false, true} {
 		t.Run(map[bool]string{false: "success", true: "failure"}[fail], func(t *testing.T) {

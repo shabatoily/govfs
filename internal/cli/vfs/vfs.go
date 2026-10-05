@@ -2,6 +2,7 @@
 package vfs
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -46,14 +47,17 @@ func (h *Handler) Backup(backupFile string) error {
 	if err != nil {
 		return err
 	}
-	f, err := os.Create(backupFileName)
+	f, err := os.CreateTemp(filepath.Dir(backupFileName), ".govfs-backup-*")
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer os.Remove(f.Name())
 
-	_, err = io.Copy(f, r)
-	if err != nil {
+	_, copyErr := io.Copy(f, r)
+	if err := errors.Join(copyErr, f.Close()); err != nil {
+		return err
+	}
+	if err := os.Rename(f.Name(), backupFileName); err != nil {
 		return err
 	}
 
