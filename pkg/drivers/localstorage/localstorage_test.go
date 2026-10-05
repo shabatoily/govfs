@@ -627,7 +627,24 @@ func TestLoadPreservesDataOnInvalidArchive(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, tw.Close())
 	require.NoError(t, gw.Close())
-	for _, archive := range [][]byte{[]byte("invalid"), valid.Bytes()[:valid.Len()-4], corrupt, invalidIndex.Bytes()} {
+	archives := [][]byte{[]byte("invalid"), valid.Bytes()[:valid.Len()-4], corrupt, invalidIndex.Bytes()}
+	for _, includeFile := range []bool{false, true} {
+		var incomplete bytes.Buffer
+		gw = gzip.NewWriter(&incomplete)
+		tw = tar.NewWriter(gw)
+		require.NoError(t, tw.WriteHeader(&tar.Header{Name: IndexFileName, Mode: 0o644, Size: int64(len(index))}))
+		_, err = tw.Write(index)
+		require.NoError(t, err)
+		if includeFile {
+			require.NoError(t, tw.WriteHeader(&tar.Header{Name: "original.txt", Mode: 0o644, Size: 1}))
+			_, err = tw.Write([]byte("k"))
+			require.NoError(t, err)
+		}
+		require.NoError(t, tw.Close())
+		require.NoError(t, gw.Close())
+		archives = append(archives, incomplete.Bytes())
+	}
+	for _, archive := range archives {
 		require.Error(t, ls.Load(bytes.NewReader(archive), 0))
 		opened, err := ls.Open(meta.ID)
 		require.NoError(t, err)
