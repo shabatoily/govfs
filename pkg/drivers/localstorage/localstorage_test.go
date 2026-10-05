@@ -587,6 +587,22 @@ func TestBackupIncludesFinalWrites(t *testing.T) {
 	assert.Equal(t, uint64(w.Len()), size)
 }
 
+func TestBackupRejectsMissingIndexedFile(t *testing.T) {
+	ls, cleanup := setupVFS(t)
+	defer cleanup()
+	meta, err := ls.Create("/missing.txt", bytes.NewBufferString("content"))
+	require.NoError(t, err)
+	require.NoError(t, os.Remove(ls.toLocalPath(meta.Path)))
+	var buf bytes.Buffer
+	_, err = ls.Backup(&buf, 0)
+	require.ErrorIs(t, err, os.ErrNotExist)
+	var pathErr *os.PathError
+	require.ErrorAs(t, err, &pathErr)
+	assert.Equal(t, ls.toLocalPath(meta.Path), pathErr.Path)
+	_, err = ls.StatByPath(meta.Path)
+	require.NoError(t, err)
+}
+
 func TestLoadPreservesDataOnInvalidArchive(t *testing.T) {
 	parent := t.TempDir()
 	ls, err := New(&Config{Path: filepath.Join(parent, "storage")})

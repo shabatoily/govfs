@@ -562,8 +562,7 @@ func (ls *LocalStorage) Backup(w io.Writer, _ uint64) (size uint64, err error) {
 		localPath := ls.toLocalPath(m.Path)
 		info, err := os.Stat(localPath)
 		if err != nil {
-			// Skip missing files for robustness
-			continue
+			return 0, err
 		}
 
 		f, err := os.Open(localPath)
@@ -590,7 +589,9 @@ func (ls *LocalStorage) Backup(w io.Writer, _ uint64) (size uint64, err error) {
 			f.Close()
 			return 0, err
 		}
-		f.Close()
+		if err := f.Close(); err != nil {
+			return 0, err
+		}
 	}
 
 	return cw.n, nil
