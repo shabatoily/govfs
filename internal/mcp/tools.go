@@ -30,6 +30,7 @@ type uploadInput struct {
 }
 
 func (s *Server) registerTools() {
+	s.registerAdminTools()
 	readOnly := mcpsdk.ToolAnnotations{ReadOnlyHint: true}
 	mcpsdk.AddTool(s.sdk, &mcpsdk.Tool{
 		Name:        "vfs_tree",

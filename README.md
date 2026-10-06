@@ -242,6 +242,13 @@ govfs-cli admin users clear-events <user-id>
 CLI의 `--config`, `-c`는 세션 저장 기준 디렉터리를 지정합니다. 예를 들어
 `--config /tmp/govfs-test`는 `/tmp/govfs-test/.govfs/config`을 사용합니다.
 
+MCP의 `admin_status`, `admin_users`, `admin_user_status`, `admin_events`,
+`admin_system_entries` 도구로 같은 관리자 조회 기능을 사용할 수 있습니다.
+관리자 로그인 세션이 필요하며 관리자 생성·수정·삭제 도구는 제공하지 않습니다.
+`admin_user_status`는 `id`(사용자 UUID)를 받습니다. 이벤트·시스템 DB 조회의
+`page`, `page_size` 기본값은 각각 1, 20이며 페이지 크기는 1–100입니다.
+`admin_events`는 선택적으로 `user_id`(사용자 UUID) 필터를 받습니다.
+
 ## API Groups
 
 - `/auth`: 로그인, 로그아웃, 현재 사용자, 비밀번호 변경
