@@ -220,6 +220,25 @@ mcp                           현재 CLI 세션으로 MCP 서버 실행
 secret                        로컬 secret 도구
 ```
 
+관리자 계정으로 로그인한 뒤 `/admin` API 기능을 CLI에서도 사용할 수 있습니다.
+응답은 VFS 명령과 같은 표 형식으로 출력되며 이벤트 삭제 성공 시 출력 없이 종료합니다.
+서버 상태는 시스템 요약과 Badger 드라이브 표로 표시하고, 이벤트와 시스템 DB 조회는 페이지 정보도 표시합니다.
+시스템 DB의 구조화된 value는 표 안에서 JSON으로 표시합니다.
+
+```bash
+govfs-cli admin status
+govfs-cli admin system entries --page 1 --page-size 20
+govfs-cli admin users list
+govfs-cli admin users status <user-id>
+govfs-cli admin users create <username> --password <password> --role user
+govfs-cli admin users update <user-id> --role admin --disabled=false
+govfs-cli admin users update <user-id> --password <new-password>
+govfs-cli admin events --user-id <user-id> --page 1 --page-size 20
+govfs-cli admin users clear-events <user-id>
+```
+
+`clear-events`는 해당 사용자의 감사 이벤트를 모두 삭제합니다.
+
 CLI의 `--config`, `-c`는 세션 저장 기준 디렉터리를 지정합니다. 예를 들어
 `--config /tmp/govfs-test`는 `/tmp/govfs-test/.govfs/config`을 사용합니다.
 

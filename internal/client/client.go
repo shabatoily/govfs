@@ -59,9 +59,10 @@ func (c *baseClient) Config(ctx context.Context) (types.ConfigRes, error) {
 // Client는 모든 분산된 클라이언트 기능을 하나로 통합하는 메인 클라이언트 구조체입니다.
 type Client struct {
 	*baseClient
-	auth *AuthClient
-	sse  *SSEClient
-	vfs  *VFSClient
+	auth  *AuthClient
+	sse   *SSEClient
+	vfs   *VFSClient
+	admin *AdminClient
 }
 
 // Auth는 인증 관련 통신을 담당하는 AuthClient를 반환합니다.
@@ -79,6 +80,9 @@ func (c *Client) VFS() *VFSClient {
 	return c.vfs
 }
 
+// Admin은 관리자 API 클라이언트를 반환합니다.
+func (c *Client) Admin() *AdminClient { return c.admin }
+
 // New는 주어진 URL을 기반으로 새로운 통합 API 클라이언트를 생성합니다.
 func New(url string) *Client {
 	c := client.New()
@@ -89,6 +93,7 @@ func New(url string) *Client {
 		auth:       &AuthClient{baseClient: base},
 		sse:        &SSEClient{baseClient: base},
 		vfs:        &VFSClient{baseClient: base},
+		admin:      &AdminClient{baseClient: base},
 	}
 }
 

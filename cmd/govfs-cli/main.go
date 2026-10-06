@@ -9,6 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/shabatoily/govfs/cmd"
 	"github.com/shabatoily/govfs/internal/cli"
+	adminCLI "github.com/shabatoily/govfs/internal/cli/admin"
 	vfsCLI "github.com/shabatoily/govfs/internal/cli/vfs"
 )
 
@@ -21,6 +22,9 @@ func main() {
 
 	// vfs commands
 	vfsCLI.RegisterCommands(root)
+
+	// 관리자 명령
+	adminCLI.RegisterCommands(root)
 
 	// mcp command
 	root.AddCommand(cli.NewMCPCommand(appInfo.Version))
