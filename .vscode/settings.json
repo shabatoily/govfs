@@ -7,6 +7,9 @@
         "editor.formatOnSave": true
     },
     "go.lintTool": "golangci-lint-v2",
+    "go.alternateTools": {
+        "golangci-lint-v2": "/opt/homebrew/bin/golangci-lint"
+    },
     "gopls": {
         "formatting.gofumpt": true
     }

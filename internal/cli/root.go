@@ -137,6 +137,7 @@ func NewRootCommand(appInfo config.AppInfo) *cobra.Command {
 	root.AddCommand(newInfoCommand(appInfo))
 
 	root.AddCommand(newLoginCommand())
+	root.AddCommand(newUpdateCommand(appInfo.Version))
 
 	return root
 }
