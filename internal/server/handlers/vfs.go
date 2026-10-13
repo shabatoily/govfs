@@ -134,15 +134,7 @@ func (h *VfsHandler) Read(ctx fiber.Ctx) error {
 		return err
 	}
 
-	maxAge := "no-cache"
-	cacheableMimeTypes := []string{"image", "video", "audio", "application/pdf"}
-	for _, mime := range cacheableMimeTypes {
-		if strings.HasPrefix(file.Meta.MIME(), mime) {
-			maxAge = "max-age=31536000"
-		}
-	}
-
-	ctx.Set(fiber.HeaderCacheControl, maxAge)
+	ctx.Set(fiber.HeaderCacheControl, "private, no-store")
 	ctx.Set(fiber.HeaderContentType, file.Meta.MIME())
 	ctx.Set(fiber.HeaderContentDisposition, fmt.Sprintf(`inline; filename=%q`, file.Meta.Name))
 
@@ -243,34 +235,50 @@ func (h *VfsHandler) Create(ctx fiber.Ctx) error {
 			return fiber.NewError(fiber.StatusBadRequest, "missing name field for directory creation")
 		}
 
-		h.asyncExecute(ctx.Get(headerXClientID), func() (types.SSEMeta, error) {
+		return h.createResult(ctx, func() (types.SSEMeta, error) {
 			meta, err := h.srv.Mkdir(name)
 			return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.create"}, err
 		})
-	} else {
-		// 파일 생성 로직
-		formFile, formErr := ctx.FormFile("file")
-		if formErr != nil {
-			return fiber.NewError(fiber.StatusBadRequest, formErr.Error())
-		}
-
-		// name이 제공되지 않으면 파일 이름 사용
-		if name == "" {
-			name = formFile.Filename
-		}
-
-		tempFile, err := copyUploadToTempFile(formFile)
-		if err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-		}
-
-		h.asyncExecute(ctx.Get(headerXClientID), func() (types.SSEMeta, error) {
-			defer removeUploadTempFile(tempFile)
-			meta, err := h.srv.Create(name, tempFile)
-			return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.create"}, err
-		})
+	}
+	// 파일 생성 로직
+	formFile, formErr := ctx.FormFile("file")
+	if formErr != nil {
+		return fiber.NewError(fiber.StatusBadRequest, formErr.Error())
 	}
 
+	// name이 제공되지 않으면 파일 이름 사용
+	if name == "" {
+		name = formFile.Filename
+	}
+
+	tempFile, err := copyUploadToTempFile(formFile)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	return h.createResult(ctx, func() (types.SSEMeta, error) {
+		defer removeUploadTempFile(tempFile)
+		meta, err := h.srv.Create(name, tempFile)
+		return types.SSEMeta{ID: meta.ID, Path: meta.Path, Action: "vfs.create"}, err
+	})
+}
+
+func (h *VfsHandler) createResult(ctx fiber.Ctx, do func() (types.SSEMeta, error)) error {
+	if ctx.Query("wait") == "true" {
+		result, err := do()
+		if err != nil {
+			return err
+		}
+		meta, err := h.srv.Stat(result.ID)
+		if err != nil {
+			return err
+		}
+		if cid, err := uuid.Parse(ctx.Get(headerXClientID)); err == nil {
+			h.broker.Publish(h.user, cid, &types.SSEData{Timestamp: time.Now(), Status: true, Meta: result}, 0)
+		}
+		return ctx.JSON(meta)
+	}
+	h.asyncExecute(ctx.Get(headerXClientID), do)
 	return ctx.SendStatus(fiber.StatusAccepted)
 }
 

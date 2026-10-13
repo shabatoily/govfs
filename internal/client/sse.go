@@ -44,7 +44,7 @@ func (c *SSEClient) SubscribeEvents(ctx context.Context) (*SSESubscription, erro
 	if err != nil {
 		return nil, err
 	}
-	if token != "" && token != "disabled" {
+	if token != "" && token != disabledToken {
 		req.Header.Set(fiber.HeaderAuthorization, "Bearer "+token)
 	}
 

@@ -31,7 +31,7 @@ COPY . .
 
 COPY --from=node /webui/dist ./webui/dist
 
-RUN go build -trimpath -ldflags="-X 'main.version=${VERSION}' -X 'main.buildTime=${BUILD_TIME}'" -o govfs ./cmd/govfs/main.go
+RUN go build -trimpath -ldflags="-X 'github.com/shabatoily/govfs/pkg/version.version=${VERSION}' -X 'github.com/shabatoily/govfs/pkg/version.buildTime=${BUILD_TIME}'" -o govfs ./cmd/govfs/main.go
 
 FROM base AS govfs
 

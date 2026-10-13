@@ -23,7 +23,8 @@
             return;
         }
         currentPassword = newPassword = confirmPassword = "";
-        appState.addToast("Password changed", "success");
+        await appState.logout();
+ appState.addToast("Password changed. Sign in again.", "success");
         appState.adminPage = null;
     }
 </script>

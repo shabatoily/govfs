@@ -2,12 +2,14 @@
 package middlewares
 
 import (
+	"strconv"
 	"uuid"
 
 	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/extractors"
 	"github.com/gofiber/fiber/v3/log"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/shabatoily/govfs/internal/config"
 	"github.com/shabatoily/govfs/internal/server/services"
 	"github.com/shabatoily/govfs/internal/types"
@@ -18,7 +20,8 @@ const currentUserKey = "current-user"
 // JWTAuthMiddleware는 JWT 서명과 만료 시간을 검증합니다.
 func JWTAuthMiddleware(cfg config.AuthConfig) fiber.Handler {
 	return jwtware.New(jwtware.Config{
-		SigningKey: jwtware.SigningKey{Key: []byte(cfg.JWT.Secret)},
+		SigningKey:   jwtware.SigningKey{Key: []byte(cfg.JWT.Secret)},
+		ErrorHandler: func(_ fiber.Ctx, _ error) error { return fiber.ErrUnauthorized },
 		SuccessHandler: func(ctx fiber.Ctx) error {
 			exp, err := jwtware.FromContext(ctx).Claims.GetExpirationTime()
 			if err != nil || exp == nil {
@@ -49,6 +52,14 @@ func UserMiddleware(store *services.UserStore) fiber.Handler {
 		}
 		user, err := store.ByID(id)
 		if err != nil || user.Disabled {
+			return fiber.ErrUnauthorized
+		}
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			return fiber.ErrUnauthorized
+		}
+		version, ok := claims["sessionVersion"].(string)
+		if !ok || version != strconv.FormatUint(user.SessionVersion, 10) {
 			return fiber.ErrUnauthorized
 		}
 		ctx.Locals(currentUserKey, user)

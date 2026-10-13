@@ -9,7 +9,6 @@ import (
 	"time"
 	"uuid"
 
-	badgerdb "github.com/dgraph-io/badger/v4"
 	"github.com/gofiber/fiber/v3/log"
 	vfs "github.com/shabatoily/govfs"
 	"github.com/shabatoily/govfs/internal/types"
@@ -158,13 +157,7 @@ func (m *DriveManager) BadgerResources() ([]types.BadgerResourceRes, error) {
 		if !ok {
 			continue
 		}
-		db := drive.DB()
-		lsm, vlog := db.Size()
-		blockCache, err := db.CacheMaxCost(badgerdb.BlockCache, -1)
-		if err != nil {
-			return nil, err
-		}
-		indexCache, err := db.CacheMaxCost(badgerdb.IndexCache, -1)
+		lsm, vlog, blockCache, indexCache, err := drive.Resources()
 		if err != nil {
 			return nil, err
 		}

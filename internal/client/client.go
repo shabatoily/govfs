@@ -13,6 +13,8 @@ import (
 	"github.com/shabatoily/govfs/internal/types"
 )
 
+const disabledToken = "disabled"
+
 // baseClient는 모든 세부 클라이언트에서 공통으로 사용하는 기본 클라이언트 구조체입니다.
 type baseClient struct {
 	mu    sync.RWMutex // 읽기/쓰기 잠금 제어
@@ -27,7 +29,7 @@ func (c *baseClient) SetToken(token string) {
 	defer c.mu.Unlock()
 	c.token = token
 	authorization := ""
-	if token != "" && token != "disabled" {
+	if token != "" && token != disabledToken {
 		authorization = "Bearer " + token
 	}
 	c.c.SetHeader(fiber.HeaderAuthorization, authorization)

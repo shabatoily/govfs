@@ -32,13 +32,14 @@ var (
 )
 
 type User struct {
-	ID           uuid.UUID  `json:"id"`
-	Username     string     `json:"username"`
-	PasswordHash []byte     `json:"passwordHash"`
-	Role         types.Role `json:"role"`
-	Disabled     bool       `json:"disabled"`
-	CreatedAt    time.Time  `json:"createdAt"`
-	UpdatedAt    time.Time  `json:"updatedAt"`
+	ID             uuid.UUID  `json:"id"`
+	Username       string     `json:"username"`
+	SessionVersion uint64     `json:"sessionVersion"`
+	PasswordHash   []byte     `json:"passwordHash"`
+	Role           types.Role `json:"role"`
+	Disabled       bool       `json:"disabled"`
+	CreatedAt      time.Time  `json:"createdAt"`
+	UpdatedAt      time.Time  `json:"updatedAt"`
 }
 
 type UserUpdate struct {
@@ -403,6 +404,7 @@ func (s *UserStore) Update(id uuid.UUID, update UserUpdate) (User, error) {
 		user.Role, user.Disabled = role, disabled
 		if hash != nil {
 			user.PasswordHash = hash
+			user.SessionVersion++
 		}
 		user.UpdatedAt = time.Now().UTC()
 		data, marshalErr := json.Marshal(user)

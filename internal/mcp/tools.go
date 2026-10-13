@@ -102,6 +102,9 @@ func (s *Server) create(ctx context.Context, name string, content io.Reader) (*m
 	// 서버 이벤트에 요청 ID가 없으므로 변경 요청을 하나씩 처리합니다.
 	s.mutationMu.Lock()
 	defer s.mutationMu.Unlock()
+	if s.uncertain.Load() {
+		return nil, nil, errors.New("completion state is uncertain; reconnect MCP before another mutation")
+	}
 	var err error
 	if content == nil {
 		err = s.client.VFS().CreateDir(ctx, name)
@@ -109,6 +112,7 @@ func (s *Server) create(ctx context.Context, name string, content io.Reader) (*m
 		err = s.client.VFS().CreateFile(ctx, name, io.NopCloser(content))
 	}
 	if err != nil {
+		s.invalidateCompletion()
 		return nil, nil, err
 	}
 	meta, err := s.waitForMutation(ctx, "vfs.create")
@@ -126,7 +130,11 @@ func (s *Server) delete(ctx context.Context, _ *mcpsdk.CallToolRequest, input id
 	}
 	s.mutationMu.Lock()
 	defer s.mutationMu.Unlock()
+	if s.uncertain.Load() {
+		return nil, nil, errors.New("completion state is uncertain; reconnect MCP before another mutation")
+	}
 	if deleteErr := s.client.VFS().Delete(ctx, id); deleteErr != nil {
+		s.invalidateCompletion()
 		return nil, nil, deleteErr
 	}
 	meta, err := s.waitForMutation(ctx, "vfs.delete")

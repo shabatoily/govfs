@@ -34,12 +34,15 @@ func GenerateEncryptionKey(secretFile string, keySize int) ([]byte, error) {
 		return nil, err
 	}
 
-	err = os.WriteFile(secretFile, key, secretFileMode)
+	file, err := os.OpenFile(secretFile, os.O_CREATE|os.O_EXCL|os.O_WRONLY, secretFileMode)
 	if err != nil {
 		return nil, err
 	}
-
-	return key, nil
+	_, writeErr := file.Write(key)
+	if err := errors.Join(writeErr, file.Sync(), file.Close()); err != nil {
+		return nil, err
+	}
+	return key, syncDir(filepath.Dir(secretFile))
 }
 
 // randomSecretKey는 지정된 길이의 무작위 바이트 슬라이스를 생성합니다.

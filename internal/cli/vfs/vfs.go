@@ -47,6 +47,7 @@ func (h *Handler) Backup(backupFile string) error {
 	if err != nil {
 		return err
 	}
+	defer r.Close()
 	f, err := os.CreateTemp(filepath.Dir(backupFileName), ".govfs-backup-*")
 	if err != nil {
 		return err
@@ -149,7 +150,7 @@ func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 		targetPath := vfsPath.Join(dstVfs, filepath.ToSlash(relPath))
 
 		if info.IsDir() {
-			err = h.client.VFS().CreateDir(h.cmd.Context(), targetPath)
+			err = h.client.VFS().CreateDir(h.cmd.Context(), targetPath, true)
 			if err != nil {
 				meta, lookupErr := h.findMetaByPath(targetPath)
 				if lookupErr != nil || !meta.IsDir {
@@ -165,17 +166,17 @@ func (h *Handler) handleRecursiveUpload(srcLocal, dstVfs string) error {
 		}
 		defer f.Close()
 
-		err = h.client.VFS().CreateFile(h.cmd.Context(), targetPath, f)
+		err = h.client.VFS().CreateFile(h.cmd.Context(), targetPath, f, true)
 		if err != nil {
 			return err
 		}
-		h.cmd.Printf("Upload accepted: %s -> %s\n", path, targetPath)
+		h.cmd.Printf("Upload completed: %s -> %s\n", path, targetPath)
 		count++
 		totalBytes += info.Size()
 		return nil
 	})
 	if err == nil {
-		h.cmd.Printf("\nSummary: Accepted %d file uploads (%s) in %v\n",
+		h.cmd.Printf("\nSummary: Uploaded %d files (%s) in %v\n",
 			count, formatBytes(totalBytes), time.Since(startTime).Round(time.Millisecond))
 	}
 	return err
@@ -199,6 +200,9 @@ func (h *Handler) handleDownload(srcVfs, dstLocal string) error {
 	destPath := dstLocal
 	info, err := os.Stat(dstLocal)
 	if err == nil && info.IsDir() {
+		if !safeDownloadName(meta.Name) {
+			return fmt.Errorf("invalid remote file name: %s", meta.Name)
+		}
 		destPath = filepath.Join(dstLocal, meta.Name)
 	}
 
@@ -210,24 +214,32 @@ func (h *Handler) handleDownload(srcVfs, dstLocal string) error {
 
 // downloadFile은 단일·재귀 다운로드에서 파일 쓰기와 종료 오류를 함께 처리합니다.
 func (h *Handler) downloadFile(meta types.MetaRes, destPath string) error {
-	reader, _, err := h.client.VFS().Read(h.cmd.Context(), meta.ID)
+	reader, downloadMeta, err := h.client.VFS().Read(h.cmd.Context(), meta.ID)
 	if err != nil {
 		return err
 	}
-	f, err := os.Create(destPath)
+	defer reader.Close()
+	file, err := os.CreateTemp(filepath.Dir(destPath), ".govfs-download-*")
 	if err != nil {
 		return err
 	}
-	_, copyErr := io.Copy(f, reader)
-	closeErr := f.Close()
-	if copyErr != nil {
-		return copyErr
+	defer os.Remove(file.Name())
+	size, copyErr := io.Copy(file, reader)
+	if err := errors.Join(copyErr, file.Sync(), file.Close()); err != nil {
+		return err
 	}
-	if closeErr != nil {
-		return closeErr
+	if size != downloadMeta.Size {
+		return fmt.Errorf("download size mismatch: expected %d, received %d", downloadMeta.Size, size)
 	}
-	h.cmd.Printf("Download: %s -> %s (%d bytes)\n", meta.Path, destPath, meta.Size)
+	if err := os.Rename(file.Name(), destPath); err != nil {
+		return err
+	}
+	h.cmd.Printf("Download: %s -> %s (%d bytes)\n", meta.Path, destPath, size)
 	return nil
+}
+
+func safeDownloadName(name string) bool {
+	return filepath.IsLocal(name) && filepath.Base(name) == name && name != "." && !strings.ContainsAny(name, "\\\x00")
 }
 
 func writeMeta(localPath string, meta types.MetaRes) error {
@@ -254,7 +266,14 @@ func (h *Handler) handleRecursiveDownload(srcVfs, dstLocal string) error {
 	info, err := os.Stat(dstLocal)
 	if err == nil && info.IsDir() {
 		// dstLocal이 이미 존재하고 디렉토리인 경우, 원본 이름을 사용하여 해당 폴더 내부로 다운로드
-		targetRoot = filepath.Join(dstLocal, tree.Meta.Name)
+		if tree.Meta.Path == vfs.Root && tree.Meta.Name == vfs.Root {
+			targetRoot = dstLocal
+		} else {
+			if !safeDownloadName(tree.Meta.Name) {
+				return fmt.Errorf("invalid remote directory name: %s", tree.Meta.Name)
+			}
+			targetRoot = filepath.Join(dstLocal, tree.Meta.Name)
+		}
 	}
 
 	var walker func(node *types.TreeNodeRes, currentLocalPath string) error
@@ -264,6 +283,9 @@ func (h *Handler) handleRecursiveDownload(srcVfs, dstLocal string) error {
 				return mkdirErr
 			}
 			for _, child := range node.Children {
+				if !safeDownloadName(child.Meta.Name) {
+					return fmt.Errorf("invalid remote file name: %s", child.Meta.Name)
+				}
 				childPath := filepath.Join(currentLocalPath, child.Meta.Name)
 				if walkErr := walker(child, childPath); walkErr != nil {
 					return fmt.Errorf("download %s: %w", child.Meta.Path, walkErr)
@@ -357,20 +379,20 @@ func (h *Handler) Mkdir(path string, parents bool) error {
 				continue
 			}
 			parent = vfsPath.Join(parent, part)
-			if err := h.client.VFS().CreateDir(h.cmd.Context(), parent); err != nil {
+			if err := h.client.VFS().CreateDir(h.cmd.Context(), parent, true); err != nil {
 				meta, lookupErr := h.findMetaByPath(parent)
 				if lookupErr != nil || !meta.IsDir {
 					return err
 				}
 				continue
 			}
-			h.cmd.Printf("Directory creation accepted: %s\n", parent)
+			h.cmd.Printf("Directory created: %s\n", parent)
 		}
 		return nil
 	}
-	err := h.client.VFS().CreateDir(h.cmd.Context(), path)
+	err := h.client.VFS().CreateDir(h.cmd.Context(), path, true)
 	if err == nil {
-		h.cmd.Printf("Directory creation accepted: %s\n", path)
+		h.cmd.Printf("Directory created: %s\n", path)
 	}
 	return err
 }
@@ -421,7 +443,7 @@ func (h *Handler) Copy(src, dst string, recursive bool) error {
 			if err == nil && meta.IsDir {
 				dstRaw = strings.TrimSuffix(dstRaw, "/") + "/" + filepath.Base(srcRaw)
 			}
-			if err := h.client.VFS().CreateDir(h.cmd.Context(), dstRaw); err != nil {
+			if err := h.client.VFS().CreateDir(h.cmd.Context(), dstRaw, true); err != nil {
 				meta, lookupErr := h.findMetaByPath(dstRaw)
 				if lookupErr != nil || !meta.IsDir {
 					return err

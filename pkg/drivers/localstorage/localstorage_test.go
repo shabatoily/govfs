@@ -108,6 +108,7 @@ func TestCloseReplacesIndexWithoutFollowingSymlink(t *testing.T) {
 	require.NoError(t, err)
 	previous := filepath.Join(dir, "previous.json")
 	require.NoError(t, os.WriteFile(previous, []byte("[]"), vfs.DefaultFileMode))
+	require.NoError(t, os.Remove(filepath.Join(dir, IndexFileName)))
 	require.NoError(t, os.Symlink(previous, filepath.Join(dir, IndexFileName)))
 	require.NoError(t, ls.Close())
 	data, err := os.ReadFile(previous)
@@ -155,10 +156,10 @@ func Test_LocalStorage_Mkdir(t *testing.T) {
 			wantErr: assert.NoError,
 		},
 		{
-			name:    "Create Nested Directory",
+			name:    "Reject Missing Parent",
 			setup:   nil,
 			args:    args{path: "/test/a/b"},
-			wantErr: assert.NoError,
+			wantErr: assert.Error,
 		},
 		{
 			name: "Create Existing Directory",
@@ -214,8 +215,8 @@ func Test_LocalStorage_Create(t *testing.T) {
 			wantErr: assert.NoError,
 		},
 		{
-			name:  "Create File (Auto-parent)",
-			setup: nil, // Parent dir doesn't exist, but LocalStorage uses MkdirAll
+			name:  "Reject Missing Parent",
+			setup: nil, // 부모가 없으면 Badger와 동일하게 거부합니다.
 			args: args{
 				path:    "/test/file.txt",
 				content: bytes.NewBufferString("content"),
@@ -224,7 +225,7 @@ func Test_LocalStorage_Create(t *testing.T) {
 				Path: "/test/file.txt",
 				Size: 7,
 			},
-			wantErr: assert.NoError,
+			wantErr: assert.Error,
 		},
 	}
 	for _, tt := range tests {
@@ -598,7 +599,7 @@ func TestBackupRejectsMissingIndexedFile(t *testing.T) {
 	require.ErrorIs(t, err, os.ErrNotExist)
 	var pathErr *os.PathError
 	require.ErrorAs(t, err, &pathErr)
-	assert.Equal(t, ls.toLocalPath(meta.Path), pathErr.Path)
+	assert.Equal(t, relative(meta.Path), pathErr.Path)
 	_, err = ls.StatByPath(meta.Path)
 	require.NoError(t, err)
 }
