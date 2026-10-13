@@ -136,6 +136,7 @@ func TestInitSupportsLocalStorage(t *testing.T) {
 func TestUserSystemAdminBoundary(t *testing.T) {
 	cfg := &config.Config{
 		Server: config.ServerConfig{
+			Middlewares: config.MiddlewareConfig{Pprof: true},
 			Auth: config.AuthConfig{
 				Admin: config.AdminConfig{Username: "admin", Password: "password"},
 				JWT:   config.JWTConfig{Secret: "test-secret", Exp: time.Hour},
@@ -193,7 +194,46 @@ func TestUserSystemAdminBoundary(t *testing.T) {
 	if passwordRes.StatusCode != http.StatusNoContent {
 		t.Fatalf("비밀번호 변경 상태 = %d", passwordRes.StatusCode)
 	}
+	oldTokenRes, err := app.Test(request(t, http.MethodGet, "/auth/me", nil, memberToken))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = oldTokenRes.Body.Close()
+	if oldTokenRes.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("old token after password change = %d", oldTokenRes.StatusCode)
+	}
 	memberToken = loginToken(t, app, "member", "changed-password")
+	for _, tc := range []struct {
+		token  string
+		status int
+	}{{"", 401}, {memberToken, 403}, {adminToken, 200}} {
+		res, err := app.Test(request(t, http.MethodGet, "/debug/pprof/", nil, tc.token))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = res.Body.Close()
+		if res.StatusCode != tc.status {
+			t.Fatalf("pprof status = %d, want %d", res.StatusCode, tc.status)
+		}
+	}
+	resetRes, err := app.Test(request(t, http.MethodPatch, "/admin/users/"+member.ID.String(), map[string]string{"password": "reset-password"}, adminToken))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resetRes.Body.Close()
+	if resetRes.StatusCode != http.StatusOK {
+		t.Fatalf("password reset = %d", resetRes.StatusCode)
+	}
+	resetMe, err := app.Test(request(t, http.MethodGet, "/auth/me", nil, memberToken))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resetMe.Body.Close()
+	if resetMe.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("old token after reset = %d", resetMe.StatusCode)
+	}
+	memberToken = loginToken(t, app, "member", "reset-password")
+
 	listRes, err := app.Test(request(t, http.MethodGet, "/admin/users", nil, memberToken))
 	if err != nil {
 		t.Fatal(err)

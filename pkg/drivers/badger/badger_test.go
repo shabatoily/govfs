@@ -502,6 +502,7 @@ func Test_BadgerVFS_Read(t *testing.T) {
 				return
 			}
 			if err == nil {
+				defer got.Close()
 				actual := make([]byte, got.Meta.Size)
 				_, err := got.Read(actual)
 				require.NoError(t, err)
@@ -558,6 +559,7 @@ func Test_BadgerVFS_Write(t *testing.T) {
 			}
 			if err == nil {
 				f, _ := v.Open(id)
+				defer f.Close()
 				actual := make([]byte, f.Meta.Size)
 				_, err := f.Read(actual)
 				require.NoError(t, err)
@@ -654,6 +656,7 @@ func Test_BadgerVFS_Copy(t *testing.T) {
 			if err == nil {
 				f, err := v.Open(copied.ID)
 				require.NoError(t, err)
+				defer f.Close()
 				actual := make([]byte, f.Meta.Size)
 				_, err = f.Read(actual)
 				require.NoError(t, err)
@@ -703,6 +706,7 @@ func Test_BadgerVFS_Move(t *testing.T) {
 			if err == nil {
 				f, err := v.Open(moved.ID)
 				require.NoError(t, err)
+				defer f.Close()
 				assert.Equal(t, "/test/file.mv.txt", f.Meta.Path)
 			}
 		})
@@ -789,6 +793,7 @@ func Test_BadgerVFS_WriteComments(t *testing.T) {
 			}
 			if err == nil {
 				f, _ := v.Open(id)
+				defer f.Close()
 				assert.Equal(t, tt.comment, f.Meta.Comments)
 			}
 		})
@@ -1000,6 +1005,7 @@ func Test_BadgerVFS_WriteLargeFile(t *testing.T) {
 			// Read File back
 			f, err := v.Open(meta.ID)
 			require.NoError(t, err)
+			defer f.Close()
 
 			readContent, err := io.ReadAll(f)
 			require.NoError(t, err)
@@ -1187,6 +1193,7 @@ func Test_BadgerVFS_AtomicWrite_Rotation(t *testing.T) {
 			// Check Content
 			f, err := v.Open(meta.ID)
 			require.NoError(t, err)
+			defer f.Close()
 			readContent, _ := io.ReadAll(f)
 			assert.Equal(t, content2, readContent)
 		})

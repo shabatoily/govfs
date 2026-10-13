@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"math"
 	"os"
 	"path/filepath"
@@ -38,6 +39,7 @@ type LocalStorage struct {
 	idMap    map[uuid.UUID]vfs.Meta // ID -> Meta 매핑
 	pathMap  map[string]vfs.Meta    // Path -> Meta 매핑 (빠른 조회를 위함)
 	logger   *log.Logger
+	failed   error
 }
 
 // New는 주어진 설정을 기반으로 새로운 LocalStorage 드라이버 인스턴스를 생성합니다.
@@ -61,21 +63,24 @@ func New(cfg *Config) (*LocalStorage, error) {
 		logger:   cfg.Logger,
 	}
 
-	// 저장된 인덱스 로드 시도
-	indexFile := filepath.Join(ls.basePath, IndexFileName)
-	data, err := os.ReadFile(indexFile)
+	root, err := os.OpenRoot(ls.basePath)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+	if err := recoverTransaction(root); err != nil {
+		return nil, err
+	}
+	data, err := root.ReadFile(IndexFileName)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
 	if err == nil {
-		var metas []vfs.Meta
-		if err := json.Unmarshal(data, &metas); err != nil {
+		if err := ls.readIndex(data); err != nil {
 			return nil, err
 		}
-		for i := range metas {
-			m := metas[i]
-			ls.idMap[m.ID] = m
-			ls.pathMap[m.Path] = m
+		if err := ls.checkIndexedFiles(root); err != nil {
+			return nil, err
 		}
 	}
 
@@ -102,10 +107,18 @@ func (ls *LocalStorage) saveIndex() error {
 		return errors.Join(err, tmp.Close())
 	}
 	_, writeErr := tmp.Write(data)
-	if err := errors.Join(writeErr, tmp.Close()); err != nil {
+	if err := errors.Join(writeErr, tmp.Sync(), tmp.Close()); err != nil {
 		return err
 	}
-	return os.Rename(tmp.Name(), idxFile)
+	if err := os.Rename(tmp.Name(), idxFile); err != nil {
+		return err
+	}
+	root, err := os.OpenRoot(ls.basePath)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	return syncDirectory(root, ".")
 }
 
 func (ls *LocalStorage) toLocalPath(vfsPath string) string {
@@ -118,13 +131,14 @@ func (ls *LocalStorage) toLocalPath(vfsPath string) string {
 func (ls *LocalStorage) List(path string) ([]vfs.Meta, error) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
-
-	path = strings.TrimSpace(path)
-	if path == "" {
-		path = "/"
+	if ls.failed != nil {
+		return nil, ls.failed
 	}
-	if !strings.HasSuffix(path, "/") {
-		path += "/"
+
+	var err error
+	path, err = storagePath(path, true)
+	if err != nil {
+		return nil, err
 	}
 
 	// ponytail: 전체 메타데이터를 순회합니다. 조회가 병목이 되면 부모 경로별 인덱스를 추가합니다.
@@ -156,8 +170,11 @@ func getParentPath(path string) string {
 // Open은 지정된 ID의 파일을 열고 vfs.File 인스턴스를 반환합니다.
 func (ls *LocalStorage) Open(id uuid.UUID) (*vfs.File, error) {
 	ls.mu.RLock()
+	defer ls.mu.RUnlock()
+	if ls.failed != nil {
+		return nil, ls.failed
+	}
 	meta, ok := ls.idMap[id]
-	ls.mu.RUnlock()
 	if !ok {
 		return nil, vfs.ErrNotFound
 	}
@@ -166,7 +183,12 @@ func (ls *LocalStorage) Open(id uuid.UUID) (*vfs.File, error) {
 		return vfs.NewFile(&meta, nil), nil
 	}
 
-	f, err := os.Open(ls.toLocalPath(meta.Path))
+	root, err := os.OpenRoot(ls.basePath)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+	f, err := root.Open(relative(meta.Path))
 	if err != nil {
 		return nil, err
 	}
@@ -175,63 +197,46 @@ func (ls *LocalStorage) Open(id uuid.UUID) (*vfs.File, error) {
 }
 
 // Create은 로컬 시스템에 파일을 생성하고 데이터를 저장합니다.
-func (ls *LocalStorage) Create(path string, r io.Reader) (vfs.Meta, error) {
+func (ls *LocalStorage) Create(value string, r io.Reader) (vfs.Meta, error) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
-
-	path = strings.TrimSpace(path)
-	if path == vfs.Root || path == "" {
+	if ls.failed != nil {
+		return vfs.Meta{}, ls.failed
+	}
+	p, err := storagePath(value, false)
+	if err != nil || p == "/" {
 		return vfs.Meta{}, vfs.ErrInvalidPath
 	}
-	if !strings.HasPrefix(path, vfs.Root) {
-		path = vfs.Root + path
-	}
-
-	if _, ok := ls.pathMap[path]; ok {
+	if _, err := ls.statPath(p); err == nil {
 		return vfs.Meta{}, vfs.ErrAlreadyExists
 	}
-
-	// 1. Write to disk
-	localPath := ls.toLocalPath(path)
-	if err := os.MkdirAll(filepath.Dir(localPath), vfs.DefaultDirMode); err != nil {
+	if err := ls.checkParent(p); err != nil {
 		return vfs.Meta{}, err
 	}
-
-	f, err := os.Create(localPath)
-	if err != nil {
-		return vfs.Meta{}, err
-	}
-
-	size, err := io.Copy(f, r)
-	f.Close() // Close immediately after copy
-	if err != nil {
-		return vfs.Meta{}, err
-	}
-
-	// 2. Update Metadata
-	id := uuid.NewV4()
-
 	meta := vfs.Meta{
-		ID:        id,
-		Path:      path,
-		Name:      filepath.Base(strings.TrimSuffix(path, "/")),
-		Extension: strings.TrimPrefix(filepath.Ext(path), "."),
-		Size:      size,
-		IsDir:     false,
-		Modified:  time.Now(),
+		ID: uuid.NewV4(), Path: p, Name: filepath.Base(p),
+		Extension: strings.TrimPrefix(filepath.Ext(p), "."), Modified: time.Now(),
 	}
-
-	ls.idMap[id] = meta
-	ls.pathMap[path] = meta
-
-	return meta, nil
+	err = ls.transaction(func(root *os.Root) ([]diskMove, error) {
+		if _, err := root.Lstat(relative(p)); err == nil {
+			return nil, vfs.ErrAlreadyExists
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		size, err := stageContent(root, r)
+		meta.Size = size
+		return []diskMove{{transactionDir + "/new", relative(p)}}, err
+	}, func() { ls.idMap[meta.ID] = meta; ls.pathMap[p] = meta })
+	return meta, err
 }
 
 // Write는 기존 파일의 내용을 덮어씁니다.
 func (ls *LocalStorage) Write(id uuid.UUID, r io.Reader) (vfs.Meta, error) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
-
+	if ls.failed != nil {
+		return vfs.Meta{}, ls.failed
+	}
 	meta, ok := ls.idMap[id]
 	if !ok {
 		return vfs.Meta{}, vfs.ErrNotFound
@@ -239,112 +244,91 @@ func (ls *LocalStorage) Write(id uuid.UUID, r io.Reader) (vfs.Meta, error) {
 	if meta.IsDir {
 		return vfs.Meta{}, vfs.ErrNotDir
 	}
-
-	localPath := ls.toLocalPath(meta.Path)
-	f, err := os.Create(localPath) // Truncate and write
-	if err != nil {
-		return vfs.Meta{}, err
-	}
-
-	size, err := io.Copy(f, r)
-	f.Close()
-	if err != nil {
-		return vfs.Meta{}, err
-	}
-
-	meta.Size = size
-	meta.Modified = time.Now()
-	ls.idMap[id] = meta
-	ls.pathMap[meta.Path] = meta
-	return meta, nil
+	err := ls.transaction(func(root *os.Root) ([]diskMove, error) {
+		size, err := stageContent(root, r)
+		meta.Size = size
+		meta.Modified = time.Now()
+		return []diskMove{{relative(meta.Path), transactionDir + "/old"}, {transactionDir + "/new", relative(meta.Path)}}, err
+	}, func() { ls.idMap[id] = meta; ls.pathMap[meta.Path] = meta })
+	return meta, err
 }
 
 // WriteComments는 지정된 ID의 파일 또는 디렉토리에 설명을 추가합니다.
 func (ls *LocalStorage) WriteComments(id uuid.UUID, comment string) (vfs.Meta, error) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
+	if ls.failed != nil {
+		return vfs.Meta{}, ls.failed
+	}
 	meta, ok := ls.idMap[id]
 	if !ok {
 		return vfs.Meta{}, vfs.ErrNotFound
 	}
 	meta.Comments = comment
-	ls.idMap[id] = meta
-	ls.pathMap[meta.Path] = meta
-	return meta, nil
+	err := ls.transaction(emptyStage, func() { ls.idMap[id] = meta; ls.pathMap[meta.Path] = meta })
+	return meta, err
 }
 
 // Delete는 지정된 ID의 파일 또는 디렉토리(및 그 하위 항목)를 영구적으로 삭제합니다.
 func (ls *LocalStorage) Delete(id uuid.UUID) error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
-
+	if ls.failed != nil {
+		return ls.failed
+	}
 	meta, ok := ls.idMap[id]
 	if !ok {
 		return vfs.ErrNotFound
 	}
-
-	localPath := ls.toLocalPath(meta.Path)
-	if err := os.RemoveAll(localPath); err != nil {
-		return err
-	}
-
-	delete(ls.idMap, id)
-	delete(ls.pathMap, meta.Path)
-
-	if meta.IsDir {
-		prefix := meta.Path
-		if !strings.HasSuffix(prefix, "/") {
-			prefix += "/"
-		}
+	return ls.transaction(func(_ *os.Root) ([]diskMove, error) {
+		return []diskMove{{relative(meta.Path), transactionDir + "/old"}}, nil
+	}, func() {
 		for uid, m := range ls.idMap {
-			if strings.HasPrefix(m.Path, prefix) {
+			if uid == id || (meta.IsDir && strings.HasPrefix(m.Path, meta.Path)) {
 				delete(ls.idMap, uid)
 				delete(ls.pathMap, m.Path)
 			}
 		}
-	}
-
-	return nil
+	})
 }
 
 // Mkdir은 새로운 디렉토리를 생성합니다.
-func (ls *LocalStorage) Mkdir(path string) (vfs.Meta, error) {
+func (ls *LocalStorage) Mkdir(value string) (vfs.Meta, error) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
-
-	if !strings.HasPrefix(path, "/") {
-		path = "/" + path
+	if ls.failed != nil {
+		return vfs.Meta{}, ls.failed
 	}
-	if !strings.HasSuffix(path, "/") {
-		path += "/"
+	p, err := storagePath(value, true)
+	if err != nil || p == "/" {
+		return vfs.Meta{}, vfs.ErrInvalidPath
 	}
-
-	if _, ok := ls.pathMap[path]; ok {
+	if _, err := ls.statPath(p); err == nil {
 		return vfs.Meta{}, vfs.ErrAlreadyExists
 	}
-
-	localPath := ls.toLocalPath(path)
-	if err := os.MkdirAll(localPath, vfs.DefaultDirMode); err != nil {
+	if err := ls.checkParent(p); err != nil {
 		return vfs.Meta{}, err
 	}
-
-	id := uuid.NewV4()
-	meta := vfs.Meta{
-		ID:       id,
-		Path:     path,
-		Name:     filepath.Base(strings.TrimSuffix(path, "/")),
-		IsDir:    true,
-		Modified: time.Now(),
-	}
-	ls.idMap[id] = meta
-	ls.pathMap[path] = meta
-	return meta, nil
+	meta := vfs.Meta{ID: uuid.NewV4(), Path: p, Name: filepath.Base(strings.TrimSuffix(p, "/")), IsDir: true, Modified: time.Now()}
+	err = ls.transaction(func(root *os.Root) ([]diskMove, error) {
+		if _, err := root.Lstat(relative(p)); err == nil {
+			return nil, vfs.ErrAlreadyExists
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		err := root.Mkdir(transactionDir+"/new", vfs.DefaultDirMode)
+		return []diskMove{{transactionDir + "/new", relative(p)}}, err
+	}, func() { ls.idMap[meta.ID] = meta; ls.pathMap[p] = meta })
+	return meta, err
 }
 
 // Stat은 ID를 통해 파일 또는 디렉토리의 메타데이터를 조회합니다.
 func (ls *LocalStorage) Stat(id uuid.UUID) (vfs.Meta, error) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
+	if ls.failed != nil {
+		return vfs.Meta{}, ls.failed
+	}
 	m, ok := ls.idMap[id]
 	if !ok {
 		return vfs.Meta{}, vfs.ErrNotFound
@@ -356,7 +340,21 @@ func (ls *LocalStorage) Stat(id uuid.UUID) (vfs.Meta, error) {
 func (ls *LocalStorage) StatByPath(p string) (vfs.Meta, error) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
+	if ls.failed != nil {
+		return vfs.Meta{}, ls.failed
+	}
+	return ls.statPath(p)
+}
+
+func (ls *LocalStorage) statPath(value string) (vfs.Meta, error) {
+	p, err := storagePath(value, false)
+	if err != nil {
+		return vfs.Meta{}, err
+	}
 	m, ok := ls.pathMap[p]
+	if !ok {
+		m, ok = ls.pathMap[p+"/"]
+	}
 	if !ok {
 		return vfs.Meta{}, vfs.ErrNotFound
 	}
@@ -379,12 +377,22 @@ func (ls *LocalStorage) Copy(id uuid.UUID, dst string, replaceID ...uuid.UUID) (
 func (ls *LocalStorage) transfer(id uuid.UUID, dst string, replaceID []uuid.UUID, copyItem bool) (vfs.Meta, error) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
+	if ls.failed != nil {
+		return vfs.Meta{}, ls.failed
+	}
 	src, ok := ls.idMap[id]
 	if !ok {
 		return vfs.Meta{}, vfs.ErrNotFound
 	}
-	dst, err := vfs.TransferPath(src, dst)
+	dst, err := storagePath(dst, false)
 	if err != nil {
+		return vfs.Meta{}, err
+	}
+	dst, err = vfs.TransferPath(src, dst)
+	if err != nil {
+		return vfs.Meta{}, err
+	}
+	if err := ls.checkParent(dst); err != nil {
 		return vfs.Meta{}, err
 	}
 	target, exists := ls.pathMap[strings.TrimSuffix(dst, "/")]
@@ -399,58 +407,41 @@ func (ls *LocalStorage) transfer(id uuid.UUID, dst string, replaceID []uuid.UUID
 		return vfs.Meta{}, err
 	}
 
-	if err := ls.transferFiles(src, dst, copyItem, targetMeta); err != nil {
-		return vfs.Meta{}, err
-	}
-	return ls.transferMetadata(src, dst, copyItem, targetMeta), nil
-}
-
-// transferFiles는 디스크 전송 실패 시 교체 대상을 복구하고, 복구에 실패하면 임시 백업을 보존합니다.
-func (ls *LocalStorage) transferFiles(src vfs.Meta, dst string, copyItem bool, target *vfs.Meta) error {
-	tmp, err := os.MkdirTemp(ls.basePath, ".vfs-transfer-")
-	if err != nil {
-		return err
-	}
-	keepTemp := false
-	defer func() {
-		if !keepTemp {
-			_ = os.RemoveAll(tmp)
-		}
-	}()
-	sourcePath := ls.toLocalPath(src.Path)
-	if copyItem {
-		staged := filepath.Join(tmp, "item")
-		if src.IsDir {
-			err = os.CopyFS(staged, os.DirFS(sourcePath))
-		} else {
-			err = copyFile(sourcePath, staged)
-		}
-		if err != nil {
-			return err
-		}
-		sourcePath = staged
-	}
-	destination := ls.toLocalPath(dst)
-	if err := os.MkdirAll(filepath.Dir(strings.TrimSuffix(destination, "/")), vfs.DefaultDirMode); err != nil {
-		return err
-	}
-	backup := filepath.Join(tmp, "previous")
-	if target != nil {
-		if err := os.Rename(ls.toLocalPath(target.Path), backup); err != nil {
-			return err
-		}
-	}
-	if err := os.Rename(strings.TrimSuffix(sourcePath, "/"), strings.TrimSuffix(destination, "/")); err != nil {
-		if target != nil {
-			if rollbackErr := os.Rename(backup, ls.toLocalPath(target.Path)); rollbackErr != nil {
-				keepTemp = true
-				return fmt.Errorf("transfer failed: %w; restore failed: %w; original retained at %s", err, rollbackErr, backup)
+	var result vfs.Meta
+	err = ls.transaction(func(root *os.Root) ([]diskMove, error) {
+		source := relative(src.Path)
+		if copyItem {
+			staged := transactionDir + "/new"
+			sourceRoot, err := root.OpenRoot(".")
+			if err != nil {
+				return nil, err
 			}
+			defer sourceRoot.Close()
+			if src.IsDir {
+				subtree, err := sourceRoot.OpenRoot(source)
+				if err != nil {
+					return nil, err
+				}
+				defer subtree.Close()
+				if err := copyTree(root, subtree, staged); err != nil {
+					return nil, err
+				}
+			} else if err := copyRootFile(root, sourceRoot, source, staged); err != nil {
+				return nil, err
+			}
+			source = staged
 		}
-		return err
-	}
-
-	return nil
+		moves := []diskMove{}
+		if targetMeta != nil {
+			moves = append(moves, diskMove{relative(targetMeta.Path), transactionDir + "/old"})
+		} else if _, err := root.Lstat(relative(dst)); err == nil {
+			return nil, vfs.ErrAlreadyExists
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		return append(moves, diskMove{source, relative(dst)}), nil
+	}, func() { result = ls.transferMetadata(src, dst, copyItem, targetMeta) })
+	return result, err
 }
 
 // transferMetadata는 transfer가 잠금을 보유한 상태에서 전송 결과를 인덱스에 반영합니다.
@@ -491,25 +482,46 @@ func (ls *LocalStorage) transferMetadata(src vfs.Meta, dst string, copyItem bool
 	return result
 }
 
-// copyFile은 복사가 완료된 임시 파일만 전송에 사용하도록 닫기 오류도 확인합니다.
-func copyFile(src, dst string) error {
-	input, err := os.Open(src)
+func copyRootFile(dst, src *os.Root, from, to string) error {
+	input, err := src.Open(from)
 	if err != nil {
 		return err
 	}
 	defer input.Close()
-	output, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, vfs.DefaultFileMode)
+	output, err := dst.OpenFile(to, os.O_CREATE|os.O_EXCL|os.O_WRONLY, vfs.DefaultFileMode)
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(output, input)
-	return errors.Join(err, output.Close())
+	_, copyErr := io.Copy(output, input)
+	return errors.Join(copyErr, output.Sync(), output.Close())
+}
+
+func copyTree(dst, src *os.Root, target string) error {
+	return fs.WalkDir(src.FS(), ".", func(name string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			return vfs.ErrInvalidPath
+		}
+		to := filepath.Join(target, name)
+		if entry.IsDir() {
+			return dst.Mkdir(to, vfs.DefaultDirMode)
+		}
+		if !entry.Type().IsRegular() {
+			return vfs.ErrInvalidPath
+		}
+		return copyRootFile(dst, src, name, to)
+	})
 }
 
 // Close는 드라이버를 안전하게 종료하고 현재 인덱스를 저장합니다.
 func (ls *LocalStorage) Close() error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
+	if ls.failed != nil {
+		return ls.failed
+	}
 	return ls.saveIndex()
 }
 
@@ -517,7 +529,15 @@ func (ls *LocalStorage) Close() error {
 func (ls *LocalStorage) Backup(w io.Writer, _ uint64) (size uint64, err error) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
+	if ls.failed != nil {
+		return 0, ls.failed
+	}
 
+	root, err := os.OpenRoot(ls.basePath)
+	if err != nil {
+		return 0, err
+	}
+	defer root.Close()
 	// Use generic Writer wrapper to count bytes
 	cw := &countWriter{w: w}
 
@@ -553,21 +573,29 @@ func (ls *LocalStorage) Backup(w io.Writer, _ uint64) (size uint64, err error) {
 		return 0, err
 	}
 
+	if err := ls.backupFiles(root, tw); err != nil {
+		return 0, err
+	}
+
+	return cw.n, nil
+}
+
+func (ls *LocalStorage) backupFiles(root *os.Root, tw *tar.Writer) error {
 	// 2. Write Files
 	for _, m := range ls.idMap {
 		if m.IsDir {
 			continue
 		}
 
-		localPath := ls.toLocalPath(m.Path)
-		info, err := os.Stat(localPath)
+		localPath := relative(m.Path)
+		info, err := root.Stat(localPath)
 		if err != nil {
-			return 0, err
+			return err
 		}
 
-		f, err := os.Open(localPath)
+		f, err := root.Open(localPath)
 		if err != nil {
-			return 0, err
+			return err
 		}
 
 		// Use relative path for tar header to allow portable restore
@@ -576,25 +604,25 @@ func (ls *LocalStorage) Backup(w io.Writer, _ uint64) (size uint64, err error) {
 		header, err := tar.FileInfoHeader(info, "")
 		if err != nil {
 			f.Close()
-			return 0, err
+			return err
 		}
 		header.Name = relPath
 
 		if err := tw.WriteHeader(header); err != nil {
 			f.Close()
-			return 0, err
+			return err
 		}
 
 		if _, err := io.Copy(tw, f); err != nil {
 			f.Close()
-			return 0, err
+			return err
 		}
 		if err := f.Close(); err != nil {
-			return 0, err
+			return err
 		}
 	}
 
-	return cw.n, nil
+	return nil
 }
 
 type countWriter struct {
@@ -614,63 +642,91 @@ func (cw *countWriter) Write(p []byte) (int, error) {
 func (ls *LocalStorage) Load(r io.Reader, _ int) error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
+	if ls.failed != nil {
+		return ls.failed
+	}
 
-	base := filepath.Clean(ls.basePath)
-	parent := filepath.Dir(base)
-	staging, err := os.MkdirTemp(parent, ".vfs-restore-*")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(staging)
-	restored := &LocalStorage{basePath: staging}
-	if err := restored.extractArchive(r); err != nil {
-		return err
-	}
-	if _, err := os.Stat(filepath.Join(staging, IndexFileName)); err != nil {
-		return err
-	}
-	if err := restored.validateRestoredFiles(); err != nil {
-		return err
-	}
-	backup, err := os.MkdirTemp(parent, ".vfs-previous-*")
-	if err != nil {
-		return err
-	}
-	previous := filepath.Join(backup, "data")
-	if err := os.Rename(base, previous); err != nil {
-		return errors.Join(err, os.RemoveAll(backup))
-	}
-	if err := os.Rename(staging, base); err != nil {
-		if rollbackErr := os.Rename(previous, base); rollbackErr != nil {
-			// 롤백도 실패하면 기존 데이터를 삭제하지 않고 보관 위치를 알립니다.
-			return errors.Join(err, fmt.Errorf("restore rollback failed; previous data at %s: %w", previous, rollbackErr))
+	var restored *LocalStorage
+	return ls.transaction(func(root *os.Root) ([]diskMove, error) {
+		staging := transactionDir + "/new"
+		if err := root.Mkdir(staging, vfs.DefaultDirMode); err != nil {
+			return nil, err
 		}
-		return errors.Join(err, os.RemoveAll(backup))
-	}
-	ls.idMap, ls.pathMap = restored.idMap, restored.pathMap
-	return os.RemoveAll(backup)
+		restored = &LocalStorage{basePath: filepath.Join(ls.basePath, staging)}
+		if err := restored.extractArchive(r); err != nil {
+			return nil, err
+		}
+		if _, err := root.Stat(staging + "/" + IndexFileName); err != nil {
+			return nil, err
+		}
+		if err := restored.validateRestoredFiles(); err != nil {
+			return nil, err
+		}
+		entries, err := fs.ReadDir(root.FS(), ".")
+		if err != nil {
+			return nil, err
+		}
+		moves := []diskMove{}
+		for i, entry := range entries {
+			if entry.Name() == transactionDir || entry.Name() == IndexFileName {
+				continue
+			}
+			moves = append(moves, diskMove{entry.Name(), fmt.Sprintf("%s/old-%d", transactionDir, i)})
+		}
+		next, err := fs.ReadDir(root.FS(), staging)
+		if err != nil {
+			return nil, err
+		}
+		for _, entry := range next {
+			if entry.Name() != IndexFileName {
+				moves = append(moves, diskMove{staging + "/" + entry.Name(), entry.Name()})
+			}
+		}
+		return moves, nil
+	}, func() { ls.idMap, ls.pathMap = restored.idMap, restored.pathMap })
 }
 
 // validateRestoredFiles는 인덱스의 파일이 실제로 복원됐는지 확인합니다.
 func (ls *LocalStorage) validateRestoredFiles() error {
+	root, err := os.OpenRoot(ls.basePath)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
 	for _, meta := range ls.idMap {
 		if meta.IsDir {
-			continue
+			if err := root.MkdirAll(relative(meta.Path), vfs.DefaultDirMode); err != nil {
+				return err
+			}
 		}
-		localPath := ls.toLocalPath(meta.Path)
-		rel, err := filepath.Rel(ls.basePath, localPath)
-		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-			return fmt.Errorf("invalid restored file path: %s", meta.Path)
+		if _, err := root.Stat(relative(meta.Path)); err != nil {
+			return err
 		}
-		info, err := os.Stat(localPath)
+	}
+	return fs.WalkDir(root.FS(), ".", func(name string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.Mode().IsRegular() || info.Size() != meta.Size {
-			return fmt.Errorf("restored file does not match index: %s", meta.Path)
+		if name == "." || name == IndexFileName {
+			return nil
 		}
-	}
-	return nil
+		p := "/" + name
+		if entry.IsDir() {
+			p += "/"
+		}
+		meta, ok := ls.pathMap[p]
+		if !ok || entry.Type()&os.ModeSymlink != 0 {
+			return fmt.Errorf("unindexed restored entry: %s", p)
+		}
+		info, err := root.Stat(name)
+		if err != nil {
+			return err
+		}
+		if meta.IsDir != info.IsDir() || (!meta.IsDir && (!info.Mode().IsRegular() || info.Size() != meta.Size)) {
+			return fmt.Errorf("restored file does not match index: %s", p)
+		}
+		return nil
+	})
 }
 
 func (ls *LocalStorage) extractArchive(r io.Reader) error {
@@ -716,6 +772,14 @@ func (ls *LocalStorage) extractTarEntry(header *tar.Header, tr *tar.Reader) erro
 		return ls.writeIndexFile(tr)
 	}
 
+	if header.Typeflag != tar.TypeReg && header.Typeflag != tar.TypeDir {
+		return vfs.ErrInvalidPath
+	}
+	clean, err := storagePath(header.Name, header.Typeflag == tar.TypeDir)
+	if err != nil || clean == "/" {
+		return vfs.ErrInvalidPath
+	}
+	header.Name = relative(clean)
 	// Security: prevent path traversal
 	// #nosec G305
 	targetPath := filepath.Join(ls.basePath, header.Name)
@@ -752,9 +816,14 @@ func (ls *LocalStorage) extractTarEntry(header *tar.Header, tr *tar.Reader) erro
 func (ls *LocalStorage) Tree(path string) (*vfs.TreeNode, error) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
+	if ls.failed != nil {
+		return nil, ls.failed
+	}
 
-	if path == "" {
-		path = "/"
+	var err error
+	path, err = storagePath(path, false)
+	if err != nil {
+		return nil, err
 	}
 
 	rootMeta, ok := ls.pathMap[path]
@@ -798,14 +867,8 @@ func (ls *LocalStorage) writeIndexFile(r io.Reader) error {
 	if readErr != nil {
 		return readErr
 	}
-	var metas []vfs.Meta
-	if unmarshalErr := json.Unmarshal(data, &metas); unmarshalErr != nil {
-		return unmarshalErr
-	}
-	for i := range metas {
-		m := metas[i]
-		ls.idMap[m.ID] = m
-		ls.pathMap[m.Path] = m
+	if err := ls.readIndex(data); err != nil {
+		return err
 	}
 	// Write index back to disk too
 	return os.WriteFile(filepath.Join(ls.basePath, IndexFileName), data, vfs.DefaultFileMode)

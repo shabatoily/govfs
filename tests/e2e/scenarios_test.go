@@ -47,7 +47,7 @@ func (e *environment) testFixtures(t *testing.T, root string, ids map[string]str
 			names = append(names, tool.Name)
 		}
 		slices.Sort(names)
-		want := []string{"vfs_delete", "vfs_mkdir", "vfs_stat", "vfs_tree", "vfs_upload"}
+		want := []string{"admin_events", "admin_status", "admin_system_entries", "admin_user_status", "admin_users", "vfs_delete", "vfs_mkdir", "vfs_stat", "vfs_tree", "vfs_upload"}
 		if !slices.Equal(names, want) {
 			t.Fatalf("tools = %v", names)
 		}
@@ -154,7 +154,7 @@ func (e *environment) testHTTP(t *testing.T, root string, ids map[string]string)
 			return string(content) == "edited 한글\n"
 		})
 		_, headers, _ := e.request(t, "GET", "/vfs/"+id, nil, nil)
-		if headers.Get("Cache-Control") != "no-cache" {
+		if headers.Get("Cache-Control") != "private, no-store" {
 			t.Error("editor content is cached")
 		}
 		e.requestJSON(t, "PATCH", "/vfs/"+id+"/comments", map[string]string{"comment": "e2e comment"}, 202, nil)

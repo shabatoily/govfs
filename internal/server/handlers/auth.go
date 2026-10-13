@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"errors"
+	"strconv"
 	"time"
 
 	jwtware "github.com/gofiber/contrib/v3/jwt"
@@ -52,8 +53,9 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 
 	exp := time.Now().Add(h.cfg.JWT.Exp).Truncate(time.Second)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID.String(),
-		"exp": exp.Unix(),
+		"sub":            user.ID.String(),
+		"exp":            exp.Unix(),
+		"sessionVersion": strconv.FormatUint(user.SessionVersion, 10),
 	})
 
 	t, err := token.SignedString([]byte(h.cfg.JWT.Secret))

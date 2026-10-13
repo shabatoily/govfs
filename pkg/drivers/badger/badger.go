@@ -2,10 +2,13 @@
 package badger
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"math"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -86,7 +89,7 @@ func (cfg *Config) Options() badger.Options {
 		} else {
 			secretFile := filepath.Join(cfg.Path, DefaultSecretFilename)
 			encryptKey, err = getEncryptionKey(secretFile)
-			if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
 				encryptKey, err = GenerateEncryptionKey(secretFile, DefaultSecretKeySize)
 			}
 		}
@@ -110,6 +113,9 @@ func (cfg *Config) Options() badger.Options {
 
 // BadgerVFS는 BadgerDB를 백엔드로 사용하는 VFS 구현체입니다.
 type BadgerVFS struct {
+	mu                  sync.RWMutex
+	options             badger.Options
+	failed              error
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	once                sync.Once
@@ -122,7 +128,15 @@ type BadgerVFS struct {
 
 // New는 주어진 설정을 바탕으로 새로운 BadgerVFS 인스턴스를 생성합니다.
 func New(cfg *Config) (*BadgerVFS, error) {
+	if cfg.Path != "" {
+		if err := recoverRotation(cfg.Path); err != nil {
+			return nil, err
+		}
+	}
 	opts := cfg.Options()
+	if cfg.EncryptKey == nil {
+		return nil, fmt.Errorf("could not initialize encryption key for %s", cfg.Path)
+	}
 	db, err := badger.Open(opts)
 	if err != nil {
 		return nil, err
@@ -142,6 +156,7 @@ func New(cfg *Config) (*BadgerVFS, error) {
 		ctx:                 ctx,
 		cancel:              cancel,
 		db:                  db,
+		options:             opts,
 		logger:              cfg.Logger,
 		path:                cfg.Path,
 		key:                 cfg.EncryptKey,
@@ -165,6 +180,12 @@ func (bvfs *BadgerVFS) DB() *badger.DB {
 
 // List는 지정된 경로의 하위 파일 및 디렉토리 목록을 반환합니다.
 func (bvfs *BadgerVFS) List(path string) ([]vfs.Meta, error) {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return nil, bvfs.failed
+	}
+
 	path = strings.TrimSpace(path)
 	if path == "" {
 		path = vfs.Root
@@ -216,6 +237,12 @@ func (bvfs *BadgerVFS) List(path string) ([]vfs.Meta, error) {
 
 // Open은 지정된 ID의 파일을 열고 vfs.File 인스턴스를 반환합니다.
 func (bvfs *BadgerVFS) Open(id uuid.UUID) (*vfs.File, error) {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return nil, bvfs.failed
+	}
+
 	var im internalMeta
 	var reader io.ReadCloser
 
@@ -253,6 +280,12 @@ func (bvfs *BadgerVFS) Open(id uuid.UUID) (*vfs.File, error) {
 
 // Create은 지정된 경로에 새로운 파일을 생성하고 데이터를 저장합니다.
 func (bvfs *BadgerVFS) Create(path string, r io.Reader) (vfs.Meta, error) {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return vfs.Meta{}, bvfs.failed
+	}
+
 	if path == vfs.Root {
 		return vfs.Meta{}, vfs.ErrInvalidPath
 	}
@@ -323,7 +356,7 @@ func (bvfs *BadgerVFS) Create(path string, r io.Reader) (vfs.Meta, error) {
 		return nil
 	})
 	if err != nil {
-		return vfs.Meta{}, err
+		return vfs.Meta{}, errors.Join(err, bvfs.deleteChunks(internalIDBytes))
 	}
 
 	bvfs.logger.Debug().Str("ID", meta.ID.String()).Str("Path", meta.Path).Msg("Create")
@@ -333,6 +366,12 @@ func (bvfs *BadgerVFS) Create(path string, r io.Reader) (vfs.Meta, error) {
 
 // Write는 기존 파일의 내용을 덮어씁니다. (Atomic Swap 방식)
 func (bvfs *BadgerVFS) Write(id uuid.UUID, r io.Reader) (vfs.Meta, error) {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return vfs.Meta{}, bvfs.failed
+	}
+
 	var im internalMeta
 	var oldInternalID uuid.UUID
 
@@ -470,6 +509,12 @@ func (bvfs *BadgerVFS) deleteChunks(id []byte) error {
 
 // WriteComments는 지정된 ID의 파일 또는 디렉토리에 설명을 추가합니다.
 func (bvfs *BadgerVFS) WriteComments(id uuid.UUID, comments string) (vfs.Meta, error) {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return vfs.Meta{}, bvfs.failed
+	}
+
 	var im internalMeta
 
 	err := bvfs.db.Update(func(txn *badger.Txn) error {
@@ -499,6 +544,12 @@ func (bvfs *BadgerVFS) WriteComments(id uuid.UUID, comments string) (vfs.Meta, e
 
 // Delete는 지정된 ID의 파일 또는 디렉토리(및 그 하위 항목)를 삭제합니다.
 func (bvfs *BadgerVFS) Delete(id uuid.UUID) error {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return bvfs.failed
+	}
+
 	return bvfs.db.Update(func(txn *badger.Txn) error {
 		metaItem, internalErr := findMetaItemByID(txn, id)
 		if internalErr != nil {
@@ -551,6 +602,12 @@ func (bvfs *BadgerVFS) Delete(id uuid.UUID) error {
 
 // Mkdir은 새로운 디렉토리를 생성합니다.
 func (bvfs *BadgerVFS) Mkdir(path string) (vfs.Meta, error) {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return vfs.Meta{}, bvfs.failed
+	}
+
 	path = strings.TrimSpace(path)
 	if path == "" || path == "/" {
 		return vfs.Meta{}, vfs.ErrInvalidPath
@@ -622,6 +679,12 @@ func (bvfs *BadgerVFS) Mkdir(path string) (vfs.Meta, error) {
 
 // StatByPath는 경로를 통해 파일 또는 디렉토리의 메타데이터를 조회합니다.
 func (bvfs *BadgerVFS) StatByPath(p string) (vfs.Meta, error) {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return vfs.Meta{}, bvfs.failed
+	}
+
 	if p == vfs.Root {
 		return vfs.Meta{}, vfs.ErrInvalidPath
 	}
@@ -645,6 +708,12 @@ func (bvfs *BadgerVFS) StatByPath(p string) (vfs.Meta, error) {
 
 // Stat은 ID를 통해 파일 또는 디렉토리의 메타데이터를 조회합니다.
 func (bvfs *BadgerVFS) Stat(id uuid.UUID) (vfs.Meta, error) {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return vfs.Meta{}, bvfs.failed
+	}
+
 	var path string
 	var im internalMeta
 	err := bvfs.db.View(func(txn *badger.Txn) error {
@@ -688,6 +757,12 @@ func (bvfs *BadgerVFS) Stat(id uuid.UUID) (vfs.Meta, error) {
 
 // Move는 파일 또는 디렉토리를 새로운 경로로 이동시킵니다.
 func (bvfs *BadgerVFS) Move(id uuid.UUID, dst string, replaceID ...uuid.UUID) (vfs.Meta, error) {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return vfs.Meta{}, bvfs.failed
+	}
+
 	dst = strings.TrimSpace(dst)
 	if !strings.HasPrefix(dst, "/") {
 		dst = "/" + dst
@@ -740,6 +815,12 @@ func (bvfs *BadgerVFS) Move(id uuid.UUID, dst string, replaceID ...uuid.UUID) (v
 
 // Copy는 파일 또는 디렉토리를 새로운 경로로 복사합니다.
 func (bvfs *BadgerVFS) Copy(id uuid.UUID, dst string, replaceID ...uuid.UUID) (vfs.Meta, error) {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return vfs.Meta{}, bvfs.failed
+	}
+
 	if len(replaceID) == 0 {
 		replaceID = []uuid.UUID{uuid.Nil()}
 	}
@@ -850,16 +931,34 @@ func (bvfs *BadgerVFS) Close() error {
 
 // Backup은 지정된 시점 이후의 데이터를 기록 스트림으로 백업합니다.
 func (bvfs *BadgerVFS) Backup(w io.Writer, since uint64) (uint64, error) {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return 0, bvfs.failed
+	}
+
 	return bvfs.db.Backup(w, since)
 }
 
 // Load는 백업 스트림으로부터 데이터를 복구합니다.
 func (bvfs *BadgerVFS) Load(r io.Reader, maxPendingWrites int) error {
+	bvfs.mu.Lock()
+	defer bvfs.mu.Unlock()
+	if bvfs.failed != nil {
+		return bvfs.failed
+	}
+
 	return bvfs.db.Load(r, maxPendingWrites)
 }
 
 // Tree는 지정된 경로 이하의 파일 시스템 구조를 트리 형태로 반환합니다.
 func (bvfs *BadgerVFS) Tree(targetPath string) (*vfs.TreeNode, error) {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return nil, bvfs.failed
+	}
+
 	targetPath = strings.TrimSpace(targetPath)
 	if targetPath == "" {
 		targetPath = vfs.Root
@@ -937,30 +1036,23 @@ func (bvfs *BadgerVFS) Tree(targetPath string) (*vfs.TreeNode, error) {
 
 // Rotate는 데이터 암호화 키를 새 키로 교체합니다.
 func (bvfs *BadgerVFS) Rotate(newKey []byte) error {
-	opt := badger.KeyRegistryOptions{
-		Dir:                           bvfs.path,
-		ReadOnly:                      true, // Open for reading first
-		EncryptionKey:                 bvfs.key,
-		EncryptionKeyRotationDuration: bvfs.keyRotationDuration,
+	bvfs.mu.Lock()
+	defer bvfs.mu.Unlock()
+	if bvfs.failed != nil {
+		return bvfs.failed
 	}
-
-	kr, err := badger.OpenKeyRegistry(opt)
-	if err != nil {
-		return err
+	if bvfs.options.InMemory {
+		return vfs.ErrNotSupported
 	}
-	defer kr.Close()
-
-	// Update key in options for writing
-	opt.EncryptionKey = newKey
-	err = badger.WriteKeyRegistry(kr, opt)
-	if err != nil {
-		return err
+	switch len(newKey) {
+	case 16, 24, 32: //nolint:mnd // AES에서 지원하는 키 길이입니다.
+	default:
+		return badger.ErrInvalidEncryptionKey
 	}
-
-	// Update current key in struct
-	bvfs.key = newKey
-
-	return nil
+	if bytes.Equal(newKey, bvfs.key) {
+		return nil
+	}
+	return bvfs.rotate(newKey)
 }
 
 // Badger manage
@@ -972,6 +1064,12 @@ func (bvfs *BadgerVFS) AllKeys() ([]string, error) {
 
 // AllKeysByPrefix는 지정된 접두사로 시작하는 모든 키 목록을 반환합니다.
 func (bvfs *BadgerVFS) AllKeysByPrefix(prefix string) ([]string, error) {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return nil, bvfs.failed
+	}
+
 	keys := make([]string, 0)
 	opts := badger.DefaultIteratorOptions
 	opts.PrefetchValues = false
@@ -994,6 +1092,12 @@ type Stats struct {
 
 // Stats는 접두사(prefix)별 아이템 개수 및 용량 통계를 반환합니다.
 func (bvfs *BadgerVFS) Stats() (map[string]Stats, error) {
+	bvfs.mu.RLock()
+	defer bvfs.mu.RUnlock()
+	if bvfs.failed != nil {
+		return nil, bvfs.failed
+	}
+
 	stats := make(map[string]Stats)
 
 	err := bvfs.db.View(func(txn *badger.Txn) error {
@@ -1028,12 +1132,16 @@ func (bvfs *BadgerVFS) Stats() (map[string]Stats, error) {
 }
 
 func (bvfs *BadgerVFS) close() error {
+	bvfs.mu.Lock()
+	defer bvfs.mu.Unlock()
+
 	var err error
 
 	bvfs.once.Do(func() {
 		bvfs.logger.Info().Msg("Closing Badger VFS")
 
 		badgerErr := bvfs.db.Close()
+		bvfs.failed = badger.ErrDBClosed
 		if badgerErr != nil {
 			bvfs.logger.Error().Err(badgerErr).Msg("Close Badger VFS error")
 			err = errors.Join(err, badgerErr)
@@ -1059,7 +1167,12 @@ func (bvfs *BadgerVFS) runGC(gcInterval time.Duration, gcRatio float64) {
 			bvfs.close()
 			return
 		case <-ticker.C:
-			err := bvfs.db.RunValueLogGC(gcRatio)
+			bvfs.mu.RLock()
+			var err error
+			if bvfs.failed == nil {
+				err = bvfs.db.RunValueLogGC(gcRatio)
+			}
+			bvfs.mu.RUnlock()
 			if errors.Is(err, badger.ErrNoRewrite) {
 				bvfs.logger.Debug().Msg("skip run GC")
 			} else if err != nil {
@@ -1088,6 +1201,12 @@ type blobReader struct {
 }
 
 func (br *blobReader) Read(p []byte) (n int, err error) {
+	br.vfs.mu.RLock()
+	defer br.vfs.mu.RUnlock()
+	if br.vfs.failed != nil {
+		return 0, br.vfs.failed
+	}
+
 	if br.offset >= br.size {
 		return 0, io.EOF
 	}

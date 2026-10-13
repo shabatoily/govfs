@@ -72,3 +72,16 @@ func TestWaitForMutationFailures(t *testing.T) {
 		require.ErrorContains(t, err, "file exists")
 	})
 }
+
+func TestCanceledMutationDoesNotReuseLateEvent(t *testing.T) {
+	events := make(chan types.SSEMessage, 1)
+	server := &Server{events: events}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := server.waitForMutation(ctx, "vfs.create")
+	require.ErrorIs(t, err, context.Canceled)
+	events <- types.SSEMessage{Event: types.SSEEventPublish, Data: types.SSEData{Status: true, Meta: types.SSEMeta{ID: uuid.NewV4(), Action: "vfs.create"}}}
+	_, _, err = server.create(context.Background(), "/next", nil)
+	require.ErrorContains(t, err, "reconnect MCP")
+	require.Len(t, events, 1)
+}

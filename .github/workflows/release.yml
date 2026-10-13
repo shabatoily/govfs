@@ -116,6 +116,10 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
+      - name: Set build time
+        id: build-time
+        run: echo "value=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -128,6 +132,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             VERSION=${{ github.ref_name }}
+            BUILD_TIME=${{ steps.build-time.outputs.value }}
 
   # [4] 릴리즈 단계: 실제 버전 태그(v1.0.0 등)가 푸시될 때만 수행
   publish:

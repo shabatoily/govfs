@@ -70,7 +70,8 @@ func Register(app *fiber.App, cfg *config.ServerConfig, users *services.UserStor
 
 	// debug/pprof 라우트 활성화 여부 확인
 	if cfg.Middlewares.Pprof {
-		app.Get("/debug/pprof/*", pprof.New()).Name("debug.pprof")
+		app.Use("/debug/pprof", jwtAuth, userAuth, AdminOnly)
+		app.Use(pprof.New())
 	}
 
 	// debug/vars 라우트 활성화 여부 확인

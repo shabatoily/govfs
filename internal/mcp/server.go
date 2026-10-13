@@ -3,8 +3,10 @@ package mcp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -22,6 +24,7 @@ type Server struct {
 	mutationMu sync.Mutex
 	sdk        *mcpsdk.Server
 	cancel     context.CancelFunc
+	uncertain  atomic.Bool
 }
 
 // New는 SSE 구독과 MCP 서버를 구성합니다. Run하지 않는 경우 호출자가 Close해야 합니다.
@@ -60,23 +63,30 @@ func (s *Server) Close() {
 }
 
 func (s *Server) waitForMutation(ctx context.Context, action string) (types.SSEMeta, error) {
+	if s.uncertain.Load() {
+		return types.SSEMeta{}, errors.New("completion state is uncertain; reconnect MCP before another mutation")
+	}
 	timer := time.NewTimer(mutationTimeout)
 	defer timer.Stop()
-	errors := s.errors
+	streamErrors := s.errors
 	for {
 		select {
 		case <-ctx.Done():
+			s.invalidateCompletion()
 			return types.SSEMeta{}, ctx.Err()
 		case <-timer.C:
+			s.invalidateCompletion()
 			return types.SSEMeta{}, fmt.Errorf("%s completion timed out", action)
-		case err, ok := <-errors:
+		case err, ok := <-streamErrors:
 			if !ok {
-				errors = nil
+				streamErrors = nil
 				continue
 			}
+			s.invalidateCompletion()
 			return types.SSEMeta{}, fmt.Errorf("completion stream: %w", err)
 		case event, ok := <-s.events:
 			if !ok {
+				s.invalidateCompletion()
 				return types.SSEMeta{}, fmt.Errorf("completion stream closed")
 			}
 			if event.Event != types.SSEEventPublish || event.Data.Meta.Action != action {
@@ -87,5 +97,12 @@ func (s *Server) waitForMutation(ctx context.Context, action string) (types.SSEM
 			}
 			return event.Data.Meta, nil
 		}
+	}
+}
+
+func (s *Server) invalidateCompletion() {
+	s.uncertain.Store(true)
+	if s.cancel != nil {
+		s.cancel()
 	}
 }

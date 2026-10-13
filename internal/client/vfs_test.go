@@ -3,11 +3,13 @@ package client_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -108,6 +110,7 @@ func TestVFSClient_Read(t *testing.T) {
 	c := client.New(server.URL)
 	rc, meta, err := c.VFS().Read(context.Background(), id)
 	require.NoError(t, err)
+	defer rc.Close()
 	assert.Equal(t, expectedMeta.Name, meta.Name) // Check a field
 
 	buf := new(bytes.Buffer)
@@ -325,6 +328,7 @@ func TestVFSClient_Admin_Backup(t *testing.T) {
 	c := client.New(server.URL)
 	reader, err := c.VFS().Backup(context.Background())
 	require.NoError(t, err)
+	defer reader.Close()
 
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, reader)
@@ -470,8 +474,10 @@ func TestReturnedReadersSurviveLaterRequests(t *testing.T) {
 	c := client.New(server.URL)
 	file, _, err := c.VFS().Read(context.Background(), id)
 	require.NoError(t, err)
+	defer file.Close()
 	backup, err := c.VFS().Backup(context.Background())
 	require.NoError(t, err)
+	defer backup.Close()
 	for range 10 {
 		_, err := c.Config(context.Background())
 		require.NoError(t, err)
@@ -482,4 +488,33 @@ func TestReturnedReadersSurviveLaterRequests(t *testing.T) {
 	data, err = io.ReadAll(backup)
 	require.NoError(t, err)
 	require.Equal(t, "backup", string(data))
+}
+
+type zeroStream struct{}
+
+func (zeroStream) Read(p []byte) (int, error) { clear(p); return len(p), nil }
+
+func TestLargeBackupStreamsWithBoundedAllocations(t *testing.T) {
+	const size = int64(1 << 30)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "Bearer stream-token", r.Header.Get("Authorization"))
+		w.Header().Set("Content-Length", fmt.Sprint(size))
+		_, err := io.CopyN(w, zeroStream{}, size)
+		assert.NoError(t, err)
+	}))
+	defer server.Close()
+	c := client.New(server.URL)
+	c.SetToken("stream-token")
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	body, err := c.VFS().Backup(context.Background())
+	require.NoError(t, err)
+	defer body.Close()
+	n, err := io.Copy(io.Discard, body)
+	require.NoError(t, err)
+	require.Equal(t, size, n)
+	runtime.ReadMemStats(&after)
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("1 GiB backup allocated %d bytes", allocated)
+	require.Less(t, allocated, uint64(64<<20))
 }

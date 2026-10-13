@@ -593,6 +593,7 @@ func TestVfsHandlerReadKeepsDriveUntilStreamCloses(t *testing.T) {
 			req.Header.Set("Range", byteRange)
 			res, err := app.Test(req)
 			require.NoError(t, err)
+			require.Equal(t, "private, no-store", res.Header.Get("Cache-Control"))
 			defer res.Body.Close()
 			body, err := io.ReadAll(res.Body)
 			require.NoError(t, err)

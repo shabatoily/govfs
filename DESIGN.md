@@ -33,15 +33,14 @@ flowchart TB
 ```text
 /
 ├── cmd/
-│   ├── server/              # 서버 진입점과 설정 파일 선택
-│   └── cli/                 # CLI 진입점
+│   ├── govfs/              # 서버 진입점과 설정 파일 선택
+│   └── govfs-cli/                 # CLI 진입점
 ├── internal/
-│   ├── cli/                 # login, MCP, secret, VFS 명령
+│   ├── cli/                 # login, MCP, update, VFS 명령
 │   ├── client/              # 서버 HTTP API 클라이언트
-│   ├── cloud/               # 현재 서버에 연결되지 않은 클라우드 코드
 │   ├── config/              # Viper 설정 로딩·경로 확장·설정 타입
 │   ├── mcp/                 # CLI 세션을 사용하는 MCP 서버
-│   ├── server/
+│   ├── govfs/
 │   │   ├── handlers/        # auth, admin, VFS, SSE, Badger HTTP 처리
 │   │   ├── middlewares/     # JWT, 현재 사용자, 감사, Fiber 미들웨어
 │   │   └── services/        # 사용자 저장소, DriveManager, VFS, SSE
@@ -87,7 +86,9 @@ flowchart TB
 `server.auth.admin`으로 최초 관리자를 생성하며, 자격 증명이 없으면 서버 시작을
 거부한다.
 
-로그인은 bcrypt로 비밀번호를 확인하고 사용자 UUID를 JWT subject에 기록한다.
+로그인은 bcrypt로 비밀번호를 확인하고 사용자 UUID와 세션 버전을 JWT에 기록한다.
+비밀번호 변경·관리자 초기화는 세션 버전을 증가시켜 기존 토큰을 무효화한다.
+세션 버전이 없는 이전 토큰도 거부하므로 업그레이드 후 재로그인이 필요하다.
 인증 요청마다 JWT 검증 뒤 시스템 DB에서 현재 사용자를 다시 조회하므로 계정
 비활성화와 역할 변경이 기존 token에도 즉시 적용된다
 (`internal/server/middlewares/auth.go`).
@@ -98,14 +99,27 @@ VFS와 Badger 라우트는 URL에서 사용자 ID를 받지 않는다. `withVFS`
 
 ### Storage Lifecycle
 
-`DriveManager`는 최초 요청 시 선택한 드라이버의 `path/{user UUID}`를 열고 서버
-종료까지 재사용한다. 동시 최초 접근과 드라이브 map은 mutex로 보호한다. 서버
+`DriveManager`는 최초 요청 시 선택한 드라이버의 `path/{user UUID}`를 열고
+진행 중인 요청·스트림이 끝날 때까지 유지한다. 유휴 시간 초과와 로그아웃 시 닫는다. 동시 최초 접근과 드라이브 map은 mutex로 보호한다. 서버
 종료 훅은 열린 사용자 드라이브, 시스템 DB, 서버 로그를 닫는다
 (`internal/server/services/drives.go`, `internal/server/init.go`).
 
 서버는 `vfs.driver.type`에 따라 `drivers.New`로 BadgerDB 또는 LocalStorage를
 생성한다. 시스템 사용자 DB는 파일 드라이버 선택과 관계없이 BadgerDB를 사용한다.
 관리자 드라이브 사용량은 공통 `VFS.Tree` 결과의 item 수와 논리 크기로 계산한다.
+
+LocalStorage는 경로를 정규화하고 `os.Root`로 파일 접근을 드라이브 안에 제한한다.
+부모 디렉터리는 먼저 등록해야 하며 `.vfs*` 이름은 내부 저장용으로 예약한다.
+변경은 임시 파일·인덱스와 복구 기록을 동기화한 뒤 커밋한다. 재시작 시 완료된
+변경을 유지하고 미완료 파일 이동은 되돌린다. 인덱스·파일이 불일치하면 데이터를
+자동 삭제하거나 인덱스를 재작성하지 않고 개방을 거부한다
+(`pkg/drivers/localstorage/transaction.go`).
+
+Badger 키 회전은 진행 중인 DB 작업과 현재 읽기 호출의 종료를 기다린 뒤 DB를 닫고
+키·registry 쌍을 교체한다. 새 키로 재개방을 확인하고 커밋하며, 중단된 회전은
+다음 개방에서 이전 쌍으로 복구한다. 파일 스트림은 다음 읽기 호출에서 재개방한
+DB를 사용하므로 유휴 스트림 때문에 종료를 무기한 막지 않는다
+(`pkg/drivers/badger/rotation.go`).
 
 ### HTTP and SSE
 
@@ -132,9 +146,8 @@ CLI는 `govfs login`에서 서버 URL, 사용자 이름, 비밀번호를 입력�
 ## Implementation vs Design
 
 - `/badger/*`와 CLI `rotate`는 Badger 전용이며 LocalStorage에서는 지원하지 않는다.
-- `internal/cloud`는 보존돼 있지만 서버 API, CLI, 설정과 연결되지 않는다.
-- 사용자 드라이브는 유휴 상태에서도 자동으로 닫히지 않는다. 열린 드라이브 수가
-  리소스 문제가 될 때 eviction 정책이 필요하다.
+- 서버에 연결되지 않았던 `internal/cloud` 구현은 제거했다. 클라우드 연동은 현재 제공하지 않는다.
+- `vfs.idleTimeout`은 사용 중이 아닌 드라이브를 자동으로 닫는다. 0이면 비활성화한다.
 - Read/Seek 벤치마크는 동일 파일을 반복하므로 warm-cache 성능을 주로 측정한다.
   상세 조건은 `BENCHMARK.md`를 따른다.
 - `server.auth.jwt.secret`이 비어 있으면 실행 시 임의 값이 생성돼 재시작 후 기존
@@ -144,7 +157,9 @@ CLI는 `govfs login`에서 서버 URL, 사용자 이름, 비밀번호를 입력�
 
 ## Updated Date
 
-- 분석일: 2026-08-27
-- 기준 커밋: `64256d2`
+- 최초 분석일: 2026-08-27
+- 감사 수정 반영일: 2026-10-13
+- 최초 분석 기준 커밋: `64256d2`
+- 감사 수정 기준: `0e8c948` 이후 `fix/audit-remediation` 작업 트리
 - Source of truth: `cmd/govfs/main.go`, `internal/config/`,
   `internal/server/`, `internal/cli/root.go`, `pkg/drivers/`

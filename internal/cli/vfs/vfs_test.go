@@ -2,11 +2,13 @@ package vfs
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"uuid"
 
@@ -23,6 +25,7 @@ func testHandler(t *testing.T, handler http.HandlerFunc) (*Handler, *bytes.Buffe
 	server := httptest.NewServer(handler)
 	t.Cleanup(server.Close)
 	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
 	output := new(bytes.Buffer)
 	cmd.SetOut(output)
 	return &Handler{cmd: cmd, client: client.New(server.URL)}, output
@@ -183,4 +186,39 @@ func TestRecursiveUploadStopsWhenRootCreationFails(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(src, "file"), []byte("content"), 0o600))
 	require.Error(t, h.Copy(src, "vfs:/target", true))
 	require.Equal(t, 1, posts)
+}
+
+func TestIncompleteDownloadPreservesExistingFile(t *testing.T) {
+	id := uuid.NewV4()
+	h, _ := testHandler(t, func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/stat") {
+			assert.NoError(t, json.NewEncoder(w).Encode(types.MetaRes{Meta: vfs.Meta{ID: id, Size: 100}}))
+			return
+		}
+		w.Header().Set("Content-Length", "100")
+		_, err := w.Write([]byte("short"))
+		assert.NoError(t, err)
+	})
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "file")
+	require.NoError(t, os.WriteFile(dest, []byte("keep"), 0o600))
+	require.Error(t, h.downloadFile(types.MetaRes{Meta: vfs.Meta{ID: id}}, dest))
+	data, err := os.ReadFile(dest)
+	require.NoError(t, err)
+	require.Equal(t, "keep", string(data))
+	files, err := filepath.Glob(filepath.Join(dir, ".govfs-download-*"))
+	require.NoError(t, err)
+	require.Empty(t, files)
+}
+
+func TestRecursiveDownloadRejectsRemotePathTraversal(t *testing.T) {
+	meta := types.MetaRes{Meta: vfs.Meta{ID: uuid.NewV4(), Name: "../outside", Path: "/docs/file", Size: 1}}
+	tree := types.TreeNodeRes{Meta: types.MetaRes{Meta: vfs.Meta{Name: "docs", IsDir: true}}, Children: []*types.TreeNodeRes{{Meta: meta}}}
+	h, _ := testHandler(t, func(w http.ResponseWriter, _ *http.Request) {
+		assert.NoError(t, json.NewEncoder(w).Encode(types.VfsRes[*types.TreeNodeRes]{Payload: &tree}))
+	})
+	dir := t.TempDir()
+	require.ErrorContains(t, h.handleRecursiveDownload("/docs", dir), "invalid remote file name")
+	_, err := os.Stat(filepath.Join(dir, "outside"))
+	require.ErrorIs(t, err, os.ErrNotExist)
 }

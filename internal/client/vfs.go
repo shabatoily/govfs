@@ -2,10 +2,11 @@
 package client
 
 import (
-	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"path"
 	"uuid"
@@ -51,26 +52,14 @@ func (c *VFSClient) Search(ctx context.Context, query string) ([]types.MetaRes, 
 }
 
 // Read는 파일의 데이터와 메타데이터를 함께 조회합니다.
-func (c *VFSClient) Read(ctx context.Context, id uuid.UUID) (io.Reader, types.MetaRes, error) {
-	u := fmt.Sprintf("/vfs/%s", id.String())
-	resp, err := c.c.Get(u, client.Config{Ctx: ctx})
-	if err != nil {
-		return nil, types.MetaRes{}, err
-	}
-
-	defer resp.Close()
-
-	if resp.StatusCode() != fiber.StatusOK {
-		return nil, types.MetaRes{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-	}
-
+// Read의 반환 스트림은 호출자가 닫아야 합니다.
+func (c *VFSClient) Read(ctx context.Context, id uuid.UUID) (io.ReadCloser, types.MetaRes, error) {
 	meta, err := c.Stat(ctx, id)
 	if err != nil {
 		return nil, types.MetaRes{}, err
 	}
-
-	// 풀 반환 후에도 읽을 수 있도록 응답 버퍼의 소유권을 분리합니다.
-	return bytes.NewReader(bytes.Clone(resp.Body())), meta, nil
+	reader, err := c.stream(ctx, http.MethodGet, "/vfs/"+id.String())
+	return reader, meta, err
 }
 
 // Stat은 파일 또는 디렉토리의 상세 정보를 조회합니다.
@@ -106,20 +95,24 @@ func (c *VFSClient) Tree(ctx context.Context, vfsPath string) (*types.TreeNodeRe
 }
 
 // CreateDir은 새로운 디렉토리를 생성합니다.
-func (c *VFSClient) CreateDir(ctx context.Context, name string) error {
+func (c *VFSClient) CreateDir(ctx context.Context, name string, wait ...bool) error {
+	endpoint, status := creationResponse(wait)
+
 	// 파일 없이도 기존 API와 동일한 멀티파트 형식을 사용합니다.
 	resp, err := c.c.R().SetContext(ctx).
 		SetFormDataWithMap(map[string]string{"isDir": "true", "name": name}).
-		AddFiles().Post("/vfs")
+		AddFiles().Post(endpoint)
 	if err != nil {
 		return err
 	}
 
-	return checkResponse[*any](resp, fiber.StatusAccepted, nil)
+	return checkResponse[*any](resp, status, nil)
 }
 
 // CreateFile은 새로운 파일을 업로드하여 생성합니다.
-func (c *VFSClient) CreateFile(ctx context.Context, name string, r io.ReadCloser) error {
+func (c *VFSClient) CreateFile(ctx context.Context, name string, r io.ReadCloser, wait ...bool) error {
+	endpoint, status := creationResponse(wait)
+
 	file := &client.File{}
 	file.SetFieldName("file")
 	file.SetName(path.Base(name))
@@ -127,12 +120,19 @@ func (c *VFSClient) CreateFile(ctx context.Context, name string, r io.ReadCloser
 	file.SetReader(io.NopCloser(r))
 	resp, err := c.c.R().SetContext(ctx).
 		SetFormDataWithMap(map[string]string{"isDir": "false", "name": name}).
-		AddFiles(file).Post("/vfs")
+		AddFiles(file).Post(endpoint)
 	if err != nil {
 		return err
 	}
 
-	return checkResponse[*any](resp, fiber.StatusAccepted, nil)
+	return checkResponse[*any](resp, status, nil)
+}
+
+func creationResponse(wait []bool) (string, int) {
+	if len(wait) > 0 && wait[0] {
+		return "/vfs?wait=true", fiber.StatusOK
+	}
+	return "/vfs", fiber.StatusAccepted
 }
 
 // Write는 기존 파일의 내용을 덮어씁니다. (비동기 처리)
@@ -207,24 +207,33 @@ func (c *VFSClient) WriteComments(ctx context.Context, id uuid.UUID, comment str
 }
 
 // Backup은 전체 VFS 데이터를 백업 파일로 받아옵니다.
-func (c *VFSClient) Backup(ctx context.Context) (io.Reader, error) {
-	resp, err := c.c.Post("/vfs/backup", client.Config{
-		Ctx: ctx,
-		Header: map[string]string{
-			fiber.HeaderContentType: fiber.MIMEApplicationJSON,
-		},
-	})
+// Backup의 반환 스트림은 호출자가 닫아야 합니다.
+func (c *VFSClient) Backup(ctx context.Context) (io.ReadCloser, error) {
+	return c.stream(ctx, http.MethodPost, "/vfs/backup")
+}
+
+func (c *VFSClient) stream(ctx context.Context, method, endpoint string) (io.ReadCloser, error) {
+	c.mu.RLock()
+	serverURL, token := c.url, c.token
+	c.mu.RUnlock()
+	req, err := http.NewRequestWithContext(ctx, method, serverURL+endpoint, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
-
-	defer resp.Close()
-
-	if resp.StatusCode() != fiber.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+	if method == http.MethodPost {
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 	}
-
-	return bytes.NewReader(bytes.Clone(resp.Body())), nil
+	if token != "" && token != disabledToken {
+		req.Header.Set(fiber.HeaderAuthorization, "Bearer "+token)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.Join(fmt.Errorf("unexpected status code: %d", resp.StatusCode), resp.Body.Close())
+	}
+	return resp.Body, nil
 }
 
 // Restore는 백업 파일로부터 VFS 데이터를 복구합니다.
