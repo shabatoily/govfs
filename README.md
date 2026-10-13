@@ -257,6 +257,38 @@ MCP의 `admin_status`, `admin_users`, `admin_user_status`, `admin_events`,
 - `/badger`: Badger 사용자의 드라이브 통계와 키 rotation
 - `/sse`: `GET /sse/subscribe`, `POST /sse/publish/:id?`, client 목록
 
+## 바이너리 업데이트
+
+최초 설치 이후에는 쉘 스크립트 없이 공식 GitHub 릴리즈로 업데이트할 수 있습니다.
+
+```bash
+govfs-cli update --check   # 현재 CLI 버전과 최신 릴리즈 확인
+govfs-cli update           # 실행 중인 CLI의 설치 파일 업데이트
+govfs-cli update --server  # CLI와 같은 디렉터리의 로컬 govfs도 함께 업데이트
+```
+
+`--server`는 접속 대상인 원격 서버를 업데이트하지 않습니다. 심볼릭 링크로
+실행했다면 실제 바이너리 경로를 갱신합니다. 설치 디렉터리에 쓰기 권한이
+필요하며 `/usr/local/bin` 설치는 필요에 따라 `sudo govfs-cli update --server`로
+실행합니다. 설정 파일, 로그인 세션 및 저장 데이터는 변경하지 않습니다.
+
+업데이트는 하나의 릴리즈 버전을 고정하고 `checksums.txt`의 SHA-256을 검증한
+후 바이너리를 교체합니다. 체크섬이 없는 이전 릴리즈는 업데이트 대상으로
+사용할 수 없습니다. 서버와 CLI의 교체 중 오류가 발생하면 이전 바이너리로
+복구를 시도하며, 복구 실패 시 원본 백업 경로를 오류에 표시합니다. 실행 중인
+서버에는 재시작 이후 새 버전이 적용됩니다.
+
+```bash
+govfs service restart
+```
+
+Docker 배포는 컨테이너 이미지를 갱신해 재생성합니다. 업데이트 중 프로세스가
+강제 종료되면 설치 디렉터리에 `.govfs-update.lock`이 남을 수 있습니다.
+강제 종료나 전원 장애 시 두 바이너리의 교체가 모두 완료되지는 않을 수 있습니다.
+다른 업데이트가 실행 중이지 않은지 확인한 뒤 잠금 디렉터리를 제거하고
+업데이트를 다시 실행하세요.
+체크섬은 다운로드 무결성을 검증하며 릴리즈 서명을 대신하지 않습니다.
+
 ## Docker
 
 ```bash

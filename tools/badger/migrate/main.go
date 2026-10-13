@@ -30,7 +30,7 @@ func main() {
 		fmt.Println("Failed to get absolute path of secret file: ", err)
 		return
 	}
-	secretKey, err := os.ReadFile(secretFile)
+	secretKey, err := os.ReadFile(secretFile) //nolint:gosec // 로컬 CLI 사용자가 지정한 DB 경로의 키 파일을 읽어야 합니다.
 	if err != nil {
 		fmt.Println("Failed to read secret file: ", err)
 		return

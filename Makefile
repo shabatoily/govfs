@@ -185,7 +185,7 @@ fmt:
 .PHONY: lint
 lint:
 	@echo "[lint] starting lint"
-	@GOTOOLCHAIN=$(GOVERSION) go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1 run ./...
+	@GOTOOLCHAIN=$(GOVERSION) go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 run ./...
 	@echo "[lint] complete lint"
 
 ##release tag={tag [v1.0.0]}: release application
@@ -205,6 +205,7 @@ release:
 		) \
 	)
 	@cp config.toml release/config.toml
+	@cd release && shasum -a 256 govfs-* > checksums.txt
 
 ##release-docker tag={tag [v1.0.0]}: release application
 .PHONY: release-docker
