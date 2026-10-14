@@ -1,15 +1,58 @@
 package badger
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/stretchr/testify/require"
 )
+
+func TestCopyCompletesDuringRotation(t *testing.T) {
+	b, err := New(&Config{Path: t.TempDir()})
+	require.NoError(t, err)
+	content := strings.Repeat("keep", 8<<20)
+	meta, err := b.Create("/source", strings.NewReader(content))
+	require.NoError(t, err)
+	done := make(chan error, 2)
+	go func() {
+		_, err := b.Copy(meta.ID, "/copy")
+		done <- err
+	}()
+	go func() {
+		for i := range 8 {
+			if err := b.Rotate([]byte(strings.Repeat(fmt.Sprint(i), 32))); err != nil {
+				done <- err
+				return
+			}
+		}
+		done <- nil
+	}()
+	timer := time.NewTimer(10 * time.Second)
+	defer timer.Stop()
+	for range 2 {
+		select {
+		case err := <-done:
+			require.NoError(t, err)
+		case <-timer.C:
+			t.Fatal("copy and rotation did not complete")
+		}
+	}
+	defer b.Close()
+	copied, err := b.StatByPath("/copy")
+	require.NoError(t, err)
+	file, err := b.Open(copied.ID)
+	require.NoError(t, err)
+	defer file.Close()
+	data, err := io.ReadAll(file)
+	require.NoError(t, err)
+	require.Equal(t, content, string(data))
+}
 
 func TestRotationPersistsAcrossReopen(t *testing.T) {
 	dir := t.TempDir()

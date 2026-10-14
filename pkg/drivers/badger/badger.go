@@ -857,7 +857,7 @@ func (bvfs *BadgerVFS) Copy(id uuid.UUID, dst string, replaceID ...uuid.UUID) (v
 			if !copied.IsDir {
 				chunks = append(chunks, copied.InternalID)
 				reader := &blobReader{vfs: bvfs, id: original.InternalID[:], size: original.Size}
-				if _, err := bvfs.writeChunks(copied.InternalID[:], reader); err != nil {
+				if _, err := bvfs.writeChunks(copied.InternalID[:], lockedBlobReader{reader}); err != nil {
 					return err
 				}
 			}
@@ -1203,6 +1203,15 @@ type blobReader struct {
 func (br *blobReader) Read(p []byte) (n int, err error) {
 	br.vfs.mu.RLock()
 	defer br.vfs.mu.RUnlock()
+	return br.readLocked(p)
+}
+
+// lockedBlobReader는 Copy가 이미 보유한 읽기 잠금을 중복 획득하지 않습니다.
+type lockedBlobReader struct{ *blobReader }
+
+func (br lockedBlobReader) Read(p []byte) (int, error) { return br.readLocked(p) }
+
+func (br *blobReader) readLocked(p []byte) (n int, err error) {
 	if br.vfs.failed != nil {
 		return 0, br.vfs.failed
 	}
