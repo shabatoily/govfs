@@ -16,7 +16,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/kardianos/service"
 	"github.com/shabatoily/govfs/cmd"
-	_ "github.com/shabatoily/govfs/docs"
 	"github.com/shabatoily/govfs/internal/config"
 	"github.com/shabatoily/govfs/internal/server"
 	"github.com/spf13/cobra"

@@ -3,13 +3,11 @@ package config
 
 import (
 	"context"
-	"fmt"
 	"runtime/debug"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
 	fiberLog "github.com/gofiber/fiber/v3/log"
-	"github.com/shabatoily/govfs/docs"
 	"github.com/shabatoily/govfs/pkg/drivers"
 	"github.com/shabatoily/govfs/pkg/drivers/badger"
 	vfsLog "github.com/shabatoily/govfs/pkg/log"
@@ -63,12 +61,11 @@ type AdminConfig struct {
 
 // MiddlewareConfig는 서버에서 제공하는 부가 기능(디버그, 환경 변수 등) 미들웨어 활성화 상태를 제어합니다.
 type MiddlewareConfig struct {
-	Config  bool `json:"config"`
-	Envvar  bool `json:"envvar"`
-	Expvar  bool `json:"expvar"`
-	Pprof   bool `json:"pprof"`
-	Route   bool `json:"route"`
-	Swagger bool `json:"swagger"`
+	Config bool `json:"config"`
+	Envvar bool `json:"envvar"`
+	Expvar bool `json:"expvar"`
+	Pprof  bool `json:"pprof"`
+	Route  bool `json:"route"`
 }
 
 // WebUIConfig는 내장 웹 페이지 노출 여부를 설정합니다.
@@ -123,12 +120,4 @@ var DefaultConfig = &Config{
 			},
 		},
 	},
-}
-
-// SetSwaggerInfo는 최상위 설정 객체를 읽고 Swagger 환경 전역 변수에 API 문서용 메타 정보를 적용합니다.
-func SetSwaggerInfo(cfg *Config) {
-	docs.SwaggerInfo.Title = cfg.App.Name
-	docs.SwaggerInfo.Description = cfg.App.Description
-	docs.SwaggerInfo.Version = cfg.App.Version
-	docs.SwaggerInfo.Host = fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 }

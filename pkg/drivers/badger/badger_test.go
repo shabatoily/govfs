@@ -207,11 +207,13 @@ func TestAllKeysByPrefix(t *testing.T) {
 }
 
 func TestConfigOptionsConvertsIndexCacheMiBToBytes(t *testing.T) {
-	cfg := Config{InMemory: true, CacheSize: 32}
+	cfg := Config{InMemory: true, CacheSize: 32, BlockCacheSize: 64}
 	require.Equal(t, 32*MiB, cfg.Options().IndexCacheSize)
+	require.Equal(t, 64*MiB, cfg.Options().BlockCacheSize)
 
 	cfg = Config{InMemory: true}
 	require.Equal(t, DefaultIndexCacheSize*MiB, cfg.Options().IndexCacheSize)
+	require.Equal(t, DefaultBlockCacheSize*MiB, cfg.Options().BlockCacheSize)
 }
 
 func TestCloseDoesNotCloseSharedLogger(t *testing.T) {

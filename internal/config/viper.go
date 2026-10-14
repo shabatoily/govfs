@@ -28,6 +28,8 @@ func LoadWithViper(in string, appInfo AppInfo) (*Config, error) {
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.SetDefault("vfs.idleTimeout", DefaultConfig.VFS.IdleTimeout)
+	v.SetDefault("vfs.driver.badger.cacheSize", 0)
+	v.SetDefault("vfs.driver.badger.blockCacheSize", 0)
 	err := v.ReadInConfig()
 	if err != nil {
 		return nil, err

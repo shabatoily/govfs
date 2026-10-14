@@ -32,7 +32,9 @@ const (
 	// DefaultSecretKeySize는 생성할 암호화 키의 기본 길이(바이트)입니다.
 	DefaultSecretKeySize = 32
 	// DefaultIndexCacheSize는 BadgerDB의 기본 인덱스 캐시 크기(MiB)입니다.
-	DefaultIndexCacheSize int64 = 100
+	DefaultIndexCacheSize int64 = 16
+	// DefaultBlockCacheSize는 사용자 드라이브의 기본 블록 캐시 크기(MiB)입니다.
+	DefaultBlockCacheSize int64 = 32
 	// ChunkSize는 데이터를 저장할 때 분할하는 기본 청크 크기입니다.
 	ChunkSize = 256 * KiB
 )
@@ -61,6 +63,8 @@ type Config struct {
 	Path string `json:"path"`
 	// CacheSize는 인덱스 캐시 크기(MiB)입니다.
 	CacheSize int64 `json:"cacheSize"`
+	// BlockCacheSize는 블록 캐시 크기(MiB)입니다.
+	BlockCacheSize int64 `json:"blockCacheSize"`
 	// EncryptKey는 데이터 암호화에 사용할 키입니다.
 	EncryptKey []byte `json:"-"`
 	// EncryptionKeyRotationDuration은 암호화 키 회전 주기입니다.
@@ -100,6 +104,9 @@ func (cfg *Config) Options() badger.Options {
 	if cfg.CacheSize == 0 {
 		cfg.CacheSize = DefaultIndexCacheSize
 	}
+	if cfg.BlockCacheSize == 0 {
+		cfg.BlockCacheSize = DefaultBlockCacheSize
+	}
 	if cfg.EncryptionKeyRotationDuration == 0 {
 		cfg.EncryptionKeyRotationDuration = time.Hour * 24
 	}
@@ -108,7 +115,8 @@ func (cfg *Config) Options() badger.Options {
 		WithInMemory(cfg.InMemory).
 		WithEncryptionKey(cfg.EncryptKey).
 		WithEncryptionKeyRotationDuration(cfg.EncryptionKeyRotationDuration).
-		WithIndexCacheSize(cfg.CacheSize * MiB)
+		WithIndexCacheSize(cfg.CacheSize * MiB).
+		WithBlockCacheSize(cfg.BlockCacheSize * MiB)
 }
 
 // BadgerVFS는 BadgerDB를 백엔드로 사용하는 VFS 구현체입니다.
@@ -1237,7 +1245,6 @@ func (br *blobReader) readLocked(p []byte) (n int, err error) {
 
 		// 캐시된 청크가 없거나 인덱스가 다르면 로드
 		if br.cachedChunk == nil || br.cachedChunkIdx != chunkIdx {
-			var chunkData []byte
 			err := br.vfs.db.View(func(txn *badger.Txn) error {
 				key := makeChunkKey(br.id, chunkIdx)
 				item, err := txn.Get(key)
@@ -1245,14 +1252,13 @@ func (br *blobReader) readLocked(p []byte) (n int, err error) {
 					return err
 				}
 				return item.Value(func(val []byte) error {
-					chunkData = append([]byte(nil), val...)
+					br.cachedChunk = append(br.cachedChunk[:0], val...)
 					return nil
 				})
 			})
 			if err != nil {
 				return read, err
 			}
-			br.cachedChunk = chunkData
 			br.cachedChunkIdx = chunkIdx
 		}
 

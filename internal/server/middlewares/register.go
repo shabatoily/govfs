@@ -21,7 +21,6 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/responsetime"
 	vfs "github.com/shabatoily/govfs"
 	"github.com/shabatoily/govfs/internal/config"
-	"github.com/shabatoily/govfs/internal/server/middlewares/swaggo"
 	"github.com/shabatoily/govfs/internal/server/services"
 	"github.com/shabatoily/govfs/internal/types"
 )
@@ -104,13 +103,6 @@ func Register(app *fiber.App, cfg *config.ServerConfig, users *services.UserStor
 		app.Get("/routes", jwtAuth, userAuth, AdminOnly, func(c fiber.Ctx) error {
 			return c.Status(fiber.StatusOK).JSON(app.GetRoutes())
 		}).Name("routes")
-	}
-
-	// Swagger UI 활성화 여부 확인
-	if cfg.Middlewares.Swagger {
-		app.Get("/swagger/*", jwtAuth, userAuth, AdminOnly, swaggo.New(swaggo.Config{
-			Title: cfg.Fiber.AppName,
-		}))
 	}
 
 	// 헬스체크 엔드포인트

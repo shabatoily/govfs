@@ -7,7 +7,6 @@ require (
 	github.com/goccy/go-json v0.10.5
 	github.com/gofiber/contrib/v3/jwt v1.0.0
 	github.com/gofiber/fiber/v3 v3.4.0
-	github.com/gofiber/utils/v2 v2.1.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jedib0t/go-pretty/v6 v6.7.7
 	github.com/joho/godotenv v1.5.1
@@ -18,7 +17,6 @@ require (
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
-	github.com/swaggo/files/v2 v2.0.2
 	github.com/swaggo/swag/v2 v2.0.0-rc6
 	github.com/valyala/fasthttp v1.72.0
 	golang.org/x/crypto v0.57.0
@@ -49,6 +47,7 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.26.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/gofiber/schema v1.8.0 // indirect
+	github.com/gofiber/utils/v2 v2.1.1 // indirect
 	github.com/google/flatbuffers v25.9.23+incompatible // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect

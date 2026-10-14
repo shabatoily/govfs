@@ -35,6 +35,22 @@ func TestVFSIdleTimeoutDefaultAndDisable(t *testing.T) {
 	}
 }
 
+func TestBadgerCacheEnvironmentOverrides(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(path, []byte("[vfs.driver]\ntype = \"badger\"\n[vfs.driver.badger]\ncacheSize = 16\nblockCacheSize = 32\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("VFS_DRIVER_BADGER_CACHESIZE", "24")
+	t.Setenv("VFS_DRIVER_BADGER_BLOCKCACHESIZE", "64")
+	cfg, err := LoadWithViper(path, AppInfo{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.VFS.Driver.Badger.CacheSize != 24 || cfg.VFS.Driver.Badger.BlockCacheSize != 64 {
+		t.Fatalf("unexpected cache sizes: %+v", cfg.VFS.Driver.Badger)
+	}
+}
+
 func TestResolveConfigExpandsHomePaths(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
