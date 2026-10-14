@@ -39,8 +39,8 @@ type = "badger"
 
 [vfs.driver.badger]
 # 사용자 드라이브별 캐시 한도(MiB)
-cacheSize = 16
-blockCacheSize = 32
+cacheSize = 100
+blockCacheSize = 256
 path = "~/.govfs/drives"
 encryptKeyRotateDuration = "24h"
 gcInterval = "5m"

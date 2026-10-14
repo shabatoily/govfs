@@ -30,7 +30,7 @@ Fiber Server
 [DESIGN.md](./DESIGN.md), 선택 기준은 [BENCHMARK.md](./BENCHMARK.md)를
 참조하세요. 암호화 키 rotation과 `/badger/*` 진단 API는 Badger 전용입니다.
 
-Badger 기본 캐시 한도는 사용자 드라이브별 인덱스 16 MiB, 블록 32 MiB입니다.
+Badger 기본 캐시 한도는 사용자 드라이브별 인덱스 100 MiB, 블록 256 MiB입니다.
 큰 데이터의 반복 조회가 많은 환경에서는 `vfs.driver.badger.cacheSize`와
 `blockCacheSize`를 높일 수 있습니다. MemTable 등 다른 DB 메모리는 이 한도에 포함되지 않습니다.
 
@@ -186,8 +186,8 @@ type = "badger"
 
 [vfs.driver.badger]
 # 사용자 드라이브별 캐시 한도(MiB). 실제 메모리 점유량과는 다릅니다.
-cacheSize = 16
-blockCacheSize = 32
+cacheSize = 100
+blockCacheSize = 256
 # 사용자 DB: {path}/{user UUID}
 # 시스템 DB: {path의 상위 경로}/system/users
 path = "~/.govfs/drives"

@@ -32,9 +32,9 @@ const (
 	// DefaultSecretKeySize는 생성할 암호화 키의 기본 길이(바이트)입니다.
 	DefaultSecretKeySize = 32
 	// DefaultIndexCacheSize는 BadgerDB의 기본 인덱스 캐시 크기(MiB)입니다.
-	DefaultIndexCacheSize int64 = 16
+	DefaultIndexCacheSize int64 = 100
 	// DefaultBlockCacheSize는 사용자 드라이브의 기본 블록 캐시 크기(MiB)입니다.
-	DefaultBlockCacheSize int64 = 32
+	DefaultBlockCacheSize int64 = 256
 	// ChunkSize는 데이터를 저장할 때 분할하는 기본 청크 크기입니다.
 	ChunkSize = 256 * KiB
 )
