@@ -158,10 +158,9 @@ func initServer(ctx serverContext) *fiber.App {
 		return err
 	})
 
-	// 리슨 주소를 설정과 Swagger 정보에 반영합니다.
+	// 실제 리슨 주소를 설정에 반영합니다.
 	app.Hooks().OnListen(func(listenData fiber.ListenData) error {
 		srvCfg.Host = listenData.Host
-		config.SetSwaggerInfo(ctx.Config)
 		return nil
 	})
 

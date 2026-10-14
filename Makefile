@@ -90,7 +90,6 @@ build: os ?= $(OS)
 build: arch ?= $(ARCH)
 build: tag ?= $(VERSION)
 build: build-webui
-build: swag
 build:
 	@echo "[build] building for $(os)/$(arch) at $(DATE_UTC)"
 	@echo "[build] tag: $(tag)"
@@ -99,19 +98,18 @@ build:
 	-X github.com/shabatoily/govfs/cmd.name=$(PRJ_NAME) \
 	-X github.com/shabatoily/govfs/pkg/version.version=$(tag) \
 	-X github.com/shabatoily/govfs/pkg/version.buildTime=$(DATE_UTC)" \
-	-o bin/$(PRJ_NAME)-$(os)-$(arch) cmd/$(PRJ_NAME)/main.go
+	-o bin/$(PRJ_NAME)-$(os)-$(arch) ./cmd/$(PRJ_NAME)
 	@echo "[build] target: bin/$(PRJ_NAME)-cli-$(os)-$(arch)"
 	@GOOS=$(os) GOARCH=$(arch) go build -trimpath -ldflags "-s -w \
 	-X github.com/shabatoily/govfs/cmd.name=$(PRJ_NAME)-cli \
 	-X github.com/shabatoily/govfs/pkg/version.version=$(tag) \
 	-X github.com/shabatoily/govfs/pkg/version.buildTime=$(DATE_UTC)" \
-	-o bin/$(PRJ_NAME)-cli-$(os)-$(arch) cmd/$(PRJ_NAME)-cli/main.go
+	-o bin/$(PRJ_NAME)-cli-$(os)-$(arch) ./cmd/$(PRJ_NAME)-cli
 	@echo "[build] Complete build"
 
 ##build-docker tag={tag [v1.0.0]}: build docker image
 .PHONY: build-docker
 build-docker: tag ?= "latest"
-build-docker: swag
 build-docker:
 	@echo "[build-docker] building docker image at $(DATE_UTC)"
 	@echo "[build-docker] tag: $(tag)"
@@ -210,7 +208,6 @@ release:
 ##release-docker tag={tag [v1.0.0]}: release application
 .PHONY: release-docker
 release-docker: tag ?= latest
-release-docker: swag
 release-docker:
 	@echo "[release-docker] starting release-docker"
 	@echo "[release-docker] platforms: $(DOCKER_PLATFORMS)"

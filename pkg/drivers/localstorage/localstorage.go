@@ -93,7 +93,7 @@ func (ls *LocalStorage) saveIndex() error {
 	for _, m := range ls.idMap {
 		metas = append(metas, m)
 	}
-	data, err := json.MarshalIndent(metas, "", "  ")
+	data, err := json.Marshal(metas)
 	if err != nil {
 		return err
 	}
@@ -555,7 +555,7 @@ func (ls *LocalStorage) Backup(w io.Writer, _ uint64) (size uint64, err error) {
 	for _, m := range ls.idMap {
 		metas = append(metas, m)
 	}
-	indexData, err := json.MarshalIndent(metas, "", "  ")
+	indexData, err := json.Marshal(metas)
 	if err != nil {
 		return 0, err
 	}

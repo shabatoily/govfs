@@ -27,7 +27,6 @@ envvar = false
 expvar = false
 pprof = false
 route = false
-swagger = false
 
 [server.webui]
 enabled = true
@@ -39,6 +38,9 @@ idleTimeout = "30m"
 type = "badger"
 
 [vfs.driver.badger]
+# 사용자 드라이브별 캐시 한도(MiB)
+cacheSize = 16
+blockCacheSize = 32
 path = "~/.govfs/drives"
 encryptKeyRotateDuration = "24h"
 gcInterval = "5m"

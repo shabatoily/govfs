@@ -157,3 +157,24 @@ func TestKeyGenerationDoesNotOverwriteExistingSecret(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, key, stored)
 }
+
+func TestReadReusesChunkBuffer(t *testing.T) {
+	b, err := New(&Config{InMemory: true})
+	require.NoError(t, err)
+	defer b.Close()
+	content := strings.Repeat("a", int(ChunkSize)) + strings.Repeat("b", int(ChunkSize)) + "end"
+	meta, err := b.Create("/chunks", strings.NewReader(content))
+	require.NoError(t, err)
+	file, err := b.Open(meta.ID)
+	require.NoError(t, err)
+	defer file.Close()
+	data, err := io.ReadAll(file)
+	require.NoError(t, err)
+	require.Equal(t, content, string(data))
+	_, err = file.Seek(ChunkSize-2, io.SeekStart)
+	require.NoError(t, err)
+	buf := make([]byte, 4)
+	_, err = io.ReadFull(file, buf)
+	require.NoError(t, err)
+	require.Equal(t, "aabb", string(buf))
+}
