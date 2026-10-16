@@ -3,7 +3,7 @@ module github.com/shabatoily/govfs
 go 1.27.0
 
 require (
-	github.com/dgraph-io/badger/v4 v4.8.0
+	github.com/dgraph-io/badger/v4 v4.9.6
 	github.com/goccy/go-json v0.10.5
 	github.com/gofiber/contrib/v3/jwt v1.0.0
 	github.com/gofiber/fiber/v3 v3.4.0
