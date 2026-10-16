@@ -132,3 +132,15 @@ export function isAncestorOrSame(ancestor: string, path: string): boolean {
 
     return p.startsWith(a);
 }
+
+export function formatBytes(value: number): string {
+    if (value === 0) return '0 B';
+    const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+    const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+    return `${Number((value / 1024 ** index).toFixed(2))} ${units[index]}`;
+}
+
+export function treeSize(node: TreeNode): number {
+    return (node.meta.isDir ? 0 : node.meta.size) +
+        (node.children ?? []).reduce((total, child) => total + treeSize(child), 0);
+}

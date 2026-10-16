@@ -18,6 +18,7 @@ export interface CurrentUser {
 }
 
 export class AppState {
+    selectedEntryId = $state<string | null>(null);
     currentPath = $state('/');
     currentFile = $state<FileInfo | null>(null);
     fileList = $state<FileInfo[]>([]);
@@ -61,6 +62,7 @@ export class AppState {
         });
         this.isLoggedIn = false;
         this.currentUser = null;
+        this.selectedEntryId = null;
 		this.adminPage = null;
         sseClient.disconnect();
     }

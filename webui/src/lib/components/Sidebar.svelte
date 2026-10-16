@@ -47,6 +47,7 @@
 
     function focusItem(id: string) {
         focusedId = id;
+        appState.selectedEntryId = id;
         requestAnimationFrame(() => {
             const item = visibleItems().find(
                 (element) => element.dataset.fileId === id,
@@ -453,40 +454,43 @@
         {/if}
     </div>
 
-    {#if appState.currentUser?.role === "admin"}
-        <div class="border-t border-gray-700 bg-gray-800 p-2">
-            <div
-                class="mb-1 px-2 text-[10px] font-bold tracking-wider text-gray-500"
-            >
-                ADMIN
-            </div>
+    <div class="workspace-bottom overflow-hidden bg-gray-800 border-t border-gray-700">
+        <div class="min-h-0 overflow-auto bg-gray-800 p-2">
+            {#if appState.currentUser?.role === "admin"}
+                <div
+                    class="mb-1 px-2 text-[10px] font-bold tracking-wider text-gray-500"
+                >
+                    ADMIN
+                </div>
+                <button
+                    onclick={() => (appState.adminPage = "server")}
+                    class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white"
+                >
+                    <ServerCog size={15} /> Server status
+                </button>
+                <button
+                    onclick={() => (appState.adminPage = "users")}
+                    class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white"
+                >
+                    <Users size={15} /> User management
+                </button>
+            {/if}
+        </div>
+
+        <div class="min-h-0 flex items-center border-t border-gray-700 bg-gray-800 px-2">
             <button
-                onclick={() => (appState.adminPage = "server")}
+                onclick={() => (appState.adminPage = "password")}
                 class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white"
             >
-                <ServerCog size={15} /> Server status
-            </button>
-            <button
-                onclick={() => (appState.adminPage = "users")}
-                class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white"
-            >
-                <Users size={15} /> User management
+                <KeyRound size={15} /> Change password
             </button>
         </div>
-    {/if}
 
-    <div class="border-t border-gray-700 bg-gray-800 p-2">
-        <button
-            onclick={() => (appState.adminPage = "password")}
-            class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white"
-        >
-            <KeyRound size={15} /> Change password
-        </button>
     </div>
 
     <!-- Path Status -->
     <div
-        class="border-t border-gray-700 px-2 py-1 text-xs text-gray-500 truncate bg-gray-950"
+        class="h-6 shrink-0 flex items-center border-t border-gray-700 px-2 text-xs text-gray-500 truncate bg-gray-950"
         title={appState.currentPath}
     >
         {appState.currentPath || "/"}

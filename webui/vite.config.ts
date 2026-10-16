@@ -12,6 +12,11 @@ const viteConfig = defineConfig({
     },
     server: {
         proxy: {
+            '/auth': {
+                target: 'http://localhost:3000',
+                changeOrigin: true,
+                rewrite: (path: string) => path
+            },
             '/vfs': {
                 target: 'http://localhost:3000',
                 changeOrigin: true,
