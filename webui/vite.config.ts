@@ -12,6 +12,22 @@ const viteConfig = defineConfig({
     },
     server: {
         proxy: {
+            '/admin': {
+                target: 'http://localhost:3000',
+                changeOrigin: true,
+            },
+            '/config': {
+                target: 'http://localhost:3000',
+                changeOrigin: true,
+            },
+            '/routes': {
+                target: 'http://localhost:3000',
+                changeOrigin: true,
+            },
+            '/debug/vars': {
+                target: 'http://localhost:3000',
+                changeOrigin: true,
+            },
             '/auth': {
                 target: 'http://localhost:3000',
                 changeOrigin: true,
