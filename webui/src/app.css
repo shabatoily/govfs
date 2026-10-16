@@ -7,3 +7,10 @@ html, body, #app {
     margin: 0;
     overflow: hidden;
 }
+
+.workspace-bottom {
+    display: grid;
+    grid-template-rows: 6rem 2.5rem;
+    height: calc(8.5rem + 1px);
+    flex-shrink: 0;
+}

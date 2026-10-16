@@ -87,7 +87,7 @@ const vfs: VFS = {
     },
 
     async tree(path: string = '/'): Promise<TreeNode> {
-        const res = await vfsFetch(`vfs?q=${path}&viewType=tree`, {
+        const res = await vfsFetch(`/vfs?q=${encodeURIComponent(path)}&viewType=tree`, {
             headers: getHeaders()
         });
         if (!res.ok) throw new Error(await res.text());

@@ -3,7 +3,9 @@
     import Sidebar from "./lib/components/Sidebar.svelte";
     import Editor from "./lib/components/Editor.svelte";
     import Preview from "./lib/components/Preview.svelte";
-    import Terminal from "./lib/components/Terminal.svelte";
+    import EntryComment from "./lib/components/EntryComment.svelte";
+    import EntryDetails from "./lib/components/EntryDetails.svelte";
+    import StorageUsage from "./lib/components/StorageUsage.svelte";
     import Toast from "./lib/components/Toast.svelte";
     import ConnectionStatus from "./lib/components/ConnectionStatus.svelte";
     import Login from "./lib/components/Login.svelte";
@@ -133,7 +135,7 @@
         <!-- Main Editor Area -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-            class="flex-1 overflow-hidden relative border-b border-gray-700 relative"
+            class="flex-1 min-h-0 overflow-hidden relative"
             ondragover={handleDragOver}
             ondragleave={handleDragLeave}
             ondrop={handleDrop}
@@ -171,16 +173,21 @@
             {/if}
         </div>
 
-        <!-- Terminal -->
-        <div class="h-48 flex-shrink-0">
-            <Terminal />
+        <div class="workspace-bottom overflow-hidden border-t border-gray-700 bg-gray-800">
+            <div class="min-h-0 overflow-auto">
+                {#if showPreview}
+                    <EntryComment />
+                {/if}
+            </div>
+            <EntryDetails />
         </div>
         {/if}
 
         <!-- Status Bar Footer -->
         <div
-            class="h-6 bg-gray-800 border-t border-gray-700 flex items-center px-2 justify-end"
+            class="h-6 shrink-0 bg-gray-800 border-t border-gray-700 flex items-center px-2 justify-between"
         >
+            <StorageUsage />
             <ConnectionStatus />
         </div>
     </div>
