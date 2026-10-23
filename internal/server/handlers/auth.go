@@ -3,7 +3,9 @@ package handlers
 
 import (
 	"errors"
+	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	jwtware "github.com/gofiber/contrib/v3/jwt"
@@ -26,6 +28,18 @@ type AuthHandler struct {
 // NewAuthHandler는 새로운 AuthHandler 인스턴스를 생성합니다.
 func NewAuthHandler(cfg config.AuthConfig, users *services.UserStore, drives *services.DriveManager) *AuthHandler {
 	return &AuthHandler{cfg: cfg, users: users, drives: drives}
+}
+
+func secureCookie(c fiber.Ctx) bool {
+	host := c.Hostname()
+	if c.Protocol() == "https" {
+		return true
+	}
+	if strings.EqualFold(host, "localhost") || strings.HasSuffix(strings.ToLower(host), ".localhost") {
+		return false
+	}
+	ip := net.ParseIP(host)
+	return ip == nil || !ip.IsLoopback()
 }
 
 // Login은 사용자 로그인을 처리합니다.
@@ -72,7 +86,7 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 		Value:    t,
 		Expires:  exp,
 		HTTPOnly: true,
-		Secure:   true,
+		Secure:   secureCookie(c),
 		SameSite: fiber.CookieSameSiteStrictMode,
 	})
 
@@ -105,7 +119,7 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 		Value:    "",
 		Expires:  time.Now().Add(-time.Hour),
 		HTTPOnly: true,
-		Secure:   true,
+		Secure:   secureCookie(c),
 		SameSite: fiber.CookieSameSiteStrictMode,
 	})
 
