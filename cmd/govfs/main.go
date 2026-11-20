@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
 	"syscall"
@@ -139,8 +140,12 @@ func newRootCommand(appInfo config.AppInfo) *cobra.Command {
 				return err
 			}
 			prg = &program{appInfo: appInfo, configPath: path}
-			if command == root && service.Interactive() {
-				return nil
+			if command == root {
+				if service.Interactive() {
+					return nil
+				}
+			} else if err := checkServiceUser(runtime.GOOS, os.Geteuid()); err != nil {
+				return err
 			}
 
 			svc, err = newService(prg)
@@ -162,14 +167,14 @@ func newRootCommand(appInfo config.AppInfo) *cobra.Command {
 
 	serviceCommand := &cobra.Command{
 		Use:   "service",
-		Short: "Manage the system service",
+		Short: "Manage the govfs service",
 		Args:  cobra.NoArgs,
 	}
 
 	for _, action := range service.ControlAction {
 		serviceCommand.AddCommand(&cobra.Command{
 			Use:   action,
-			Short: action + " the system service",
+			Short: action + " the govfs service",
 			Args:  cobra.NoArgs,
 			RunE: func(_ *cobra.Command, _ []string) error {
 				return service.Control(svc, action)
@@ -179,7 +184,7 @@ func newRootCommand(appInfo config.AppInfo) *cobra.Command {
 
 	serviceCommand.AddCommand(&cobra.Command{
 		Use:   "status",
-		Short: "Show the system service status",
+		Short: "Show the govfs service status",
 		Args:  cobra.NoArgs,
 		RunE: func(command *cobra.Command, _ []string) error {
 			status, err := svc.Status()
@@ -203,6 +208,13 @@ func newRootCommand(appInfo config.AppInfo) *cobra.Command {
 	})
 
 	return root
+}
+
+func checkServiceUser(goos string, euid int) error {
+	if goos == "darwin" && euid == 0 {
+		return errors.New("govfs uses a per-user macOS LaunchAgent; run govfs service as the user who installed it, without sudo")
+	}
+	return nil
 }
 
 func serviceStatusText(status service.Status) string {

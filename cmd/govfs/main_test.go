@@ -42,6 +42,23 @@ func TestServiceStatusText(t *testing.T) {
 	}
 }
 
+func TestCheckServiceUser(t *testing.T) {
+	for _, tt := range []struct {
+		goos    string
+		euid    int
+		wantErr bool
+	}{
+		{goos: "darwin", euid: 0, wantErr: true},
+		{goos: "darwin", euid: 501},
+		{goos: "linux", euid: 0},
+		{goos: "windows", euid: -1},
+	} {
+		if err := checkServiceUser(tt.goos, tt.euid); (err != nil) != tt.wantErr {
+			t.Errorf("checkServiceUser(%q, %d) = %v, 오류 기대 여부 %t", tt.goos, tt.euid, err, tt.wantErr)
+		}
+	}
+}
+
 func TestVersionWithoutConfig(t *testing.T) {
 	for _, arg := range []string{"--version", "version"} {
 		t.Run(arg, func(t *testing.T) {
