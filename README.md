@@ -89,6 +89,9 @@ go run ./cmd/govfs -config /path/to/config.toml
 Linux는 systemd 사용자 서비스, macOS는 LaunchAgent를 사용하며 Windows에서는 관리자
 권한으로 Windows Service를 등록합니다.
 
+macOS에서는 LaunchAgent를 등록한 사용자로 아래 명령을 실행하세요. `sudo`를 붙이면
+호출자가 root로 바뀌어 해당 사용자의 LaunchAgent를 조회하거나 제어할 수 없습니다.
+
 ```bash
 govfs service install
 govfs service start
