@@ -603,18 +603,18 @@
     picocolors "^1.1.1"
     redent "^3.0.0"
 
-"@testing-library/svelte-core@1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@testing-library/svelte-core/-/svelte-core-1.0.0.tgz#09ad79f5491600afa1cd064203223c9cdcd5799f"
-  integrity sha512-VkUePoLV6oOYwSUvX6ShA8KLnJqZiYMIbP2JW2t0GLWLkJxKGvuH5qrrZBV/X7cXFnLGuFQEC7RheYiZOW68KQ==
+"@testing-library/svelte-core@1.1.3":
+  version "1.1.3"
+  resolved "https://registry.yarnpkg.com/@testing-library/svelte-core/-/svelte-core-1.1.3.tgz#b9a086228ad305a2e05289c9d57e30b28beb6899"
+  integrity sha512-KkMAvXeWorxN2Yn0kdC1lfoAItxpoj4uOWzxK5leDrNxonLvS5nwBFvztrroyTszQ0Wf/EU6iLT8JhY5qcn22g==
 
-"@testing-library/svelte@^5.3.1":
-  version "5.3.1"
-  resolved "https://registry.yarnpkg.com/@testing-library/svelte/-/svelte-5.3.1.tgz#8142c1894be5e173f1fea9afcedbb2df537e37e3"
-  integrity sha512-8Ez7ZOqW5geRf9PF5rkuopODe5RGy3I9XR+kc7zHh26gBiktLaxTfKmhlGaSHYUOTQE7wFsLMN9xCJVCszw47w==
+"@testing-library/svelte@^5.4.2":
+  version "5.4.2"
+  resolved "https://registry.yarnpkg.com/@testing-library/svelte/-/svelte-5.4.2.tgz#0678ed039a221e0da090d55ffd140cb3c7d6e174"
+  integrity sha512-4o31E4HGo5BU5KwPkulNRocEden+7Tt9JYm9uhln5ajF7DULeyFA46BBWVfKJ8Ms9B3JmOFPTIiVamH7n3KpuQ==
   dependencies:
     "@testing-library/dom" "9.x.x || 10.x.x"
-    "@testing-library/svelte-core" "1.0.0"
+    "@testing-library/svelte-core" "1.1.3"
 
 "@tsconfig/svelte@^5.0.6":
   version "5.0.8"
