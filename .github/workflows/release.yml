@@ -19,6 +19,8 @@ jobs:
   test:
     name: Unit Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -36,10 +38,13 @@ jobs:
           cache-dependency-path: 'webui/yarn.lock'
 
       - name: Install dependencies
-        run: make install
+        run: yarn --cwd webui install --frozen-lockfile
 
-      - name: Create webui/dist (bypass go:embed error)
-        run: mkdir -p webui/dist && touch webui/dist/index.html
+      - name: Build Web UI
+        run: make build-webui
+
+      - name: Build Go packages
+        run: go build ./...
 
       - name: Run Tests
         run: make test
