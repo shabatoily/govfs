@@ -28,7 +28,6 @@ const docTemplate = `{
                 "type": "object"
             },
             "time.Duration": {
-                "description": "재연결 시도 주기",
                 "enum": [
                     -9223372036854775808,
                     9223372036854775807,
@@ -189,7 +188,6 @@ const docTemplate = `{
                 "type": "object"
             },
             "types.MetaRes": {
-                "description": "노드 메타데이터",
                 "properties": {
                     "comments": {
                         "type": "string"
@@ -242,14 +240,14 @@ const docTemplate = `{
                 "type": "object"
             },
             "types.SSEData": {
-                "description": "데이터 페이로드",
                 "properties": {
                     "message": {
                         "description": "메시지 내용",
                         "type": "string"
                     },
                     "meta": {
-                        "$ref": "#/components/schemas/types.SSEMeta"
+                        "$ref": "#/components/schemas/types.SSEMeta",
+                        "description": "메타데이터"
                     },
                     "status": {
                         "description": "성공 여부",
@@ -263,7 +261,6 @@ const docTemplate = `{
                 "type": "object"
             },
             "types.SSEEvent": {
-                "description": "이벤트 유형",
                 "enum": [
                     "heartbeat",
                     "subscribe",
@@ -283,23 +280,25 @@ const docTemplate = `{
             "types.SSEMessage": {
                 "properties": {
                     "data": {
-                        "$ref": "#/components/schemas/types.SSEData"
+                        "$ref": "#/components/schemas/types.SSEData",
+                        "description": "데이터 페이로드"
                     },
                     "event": {
-                        "$ref": "#/components/schemas/types.SSEEvent"
+                        "$ref": "#/components/schemas/types.SSEEvent",
+                        "description": "이벤트 유형"
                     },
                     "id": {
                         "description": "메시지 고유 ID",
                         "type": "string"
                     },
                     "retry": {
-                        "$ref": "#/components/schemas/time.Duration"
+                        "$ref": "#/components/schemas/time.Duration",
+                        "description": "재연결 시도 주기"
                     }
                 },
                 "type": "object"
             },
             "types.SSEMeta": {
-                "description": "메타데이터",
                 "properties": {
                     "action": {
                         "description": "수행된 액션",
@@ -416,7 +415,8 @@ const docTemplate = `{
                         "uniqueItems": false
                     },
                     "meta": {
-                        "$ref": "#/components/schemas/types.MetaRes"
+                        "$ref": "#/components/schemas/types.MetaRes",
+                        "description": "노드 메타데이터"
                     }
                 },
                 "type": "object"
@@ -1234,16 +1234,9 @@ const docTemplate = `{
                     "content": {
                         "application/json": {
                             "schema": {
-                                "oneOf": [
-                                    {
-                                        "type": "object"
-                                    },
-                                    {
-                                        "$ref": "#/components/schemas/types.LoginReq",
-                                        "summary": "request",
-                                        "description": "login request"
-                                    }
-                                ]
+                                "$ref": "#/components/schemas/types.LoginReq",
+                                "summary": "request",
+                                "description": "login request"
                             }
                         }
                     },
@@ -1497,16 +1490,9 @@ const docTemplate = `{
                     "content": {
                         "application/json": {
                             "schema": {
-                                "oneOf": [
-                                    {
-                                        "type": "object"
-                                    },
-                                    {
-                                        "$ref": "#/components/schemas/types.RotateKeyReq",
-                                        "summary": "key",
-                                        "description": "new key"
-                                    }
-                                ]
+                                "$ref": "#/components/schemas/types.RotateKeyReq",
+                                "summary": "key",
+                                "description": "new key"
                             }
                         }
                     },
@@ -1636,16 +1622,9 @@ const docTemplate = `{
                     "content": {
                         "application/json": {
                             "schema": {
-                                "oneOf": [
-                                    {
-                                        "type": "object"
-                                    },
-                                    {
-                                        "$ref": "#/components/schemas/types.SSEMeta",
-                                        "summary": "metaData",
-                                        "description": "meta data"
-                                    }
-                                ]
+                                "$ref": "#/components/schemas/types.SSEMeta",
+                                "summary": "metaData",
+                                "description": "meta data"
                             }
                         }
                     },
@@ -1859,31 +1838,28 @@ const docTemplate = `{
                 "description": "새로운 파일이나 디렉터리를 생성합니다.",
                 "requestBody": {
                     "content": {
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "oneOf": [
-                                    {
-                                        "title": "isDir",
-                                        "type": "string"
-                                    },
-                                    {
-                                        "title": "name",
-                                        "type": "string"
-                                    },
-                                    {
-                                        "title": "file",
-                                        "type": "file"
-                                    }
-                                ]
-                            }
-                        },
                         "multipart/form-data": {
                             "schema": {
+                                "properties": {
+                                    "file": {
+                                        "description": "file (isDir=false인 경우 필수)",
+                                        "format": "binary",
+                                        "type": "string"
+                                    },
+                                    "isDir": {
+                                        "description": "is directory",
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "description": "name",
+                                        "type": "string"
+                                    }
+                                },
                                 "type": "object"
                             }
                         }
                     },
-                    "description": "is directory | name | file (isDir=false인 경우 필수)"
+                    "description": "is directory"
                 },
                 "responses": {
                     "202": {
@@ -1989,14 +1965,18 @@ const docTemplate = `{
                 "description": "업로드된 백업 파일을 통해 파일 시스템을 복구합니다.",
                 "requestBody": {
                     "content": {
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "title": "file",
-                                "type": "file"
-                            }
-                        },
                         "multipart/form-data": {
                             "schema": {
+                                "properties": {
+                                    "file": {
+                                        "description": "file",
+                                        "format": "binary",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "file"
+                                ],
                                 "type": "object"
                             }
                         }
@@ -2303,16 +2283,9 @@ const docTemplate = `{
                     "content": {
                         "application/json": {
                             "schema": {
-                                "oneOf": [
-                                    {
-                                        "type": "object"
-                                    },
-                                    {
-                                        "$ref": "#/components/schemas/types.DstReq",
-                                        "summary": "dst",
-                                        "description": "destination"
-                                    }
-                                ]
+                                "$ref": "#/components/schemas/types.DstReq",
+                                "summary": "dst",
+                                "description": "destination"
                             }
                         }
                     },
@@ -2408,16 +2381,9 @@ const docTemplate = `{
                     "content": {
                         "application/json": {
                             "schema": {
-                                "oneOf": [
-                                    {
-                                        "type": "object"
-                                    },
-                                    {
-                                        "$ref": "#/components/schemas/types.WriteReq",
-                                        "summary": "content",
-                                        "description": "content"
-                                    }
-                                ]
+                                "$ref": "#/components/schemas/types.WriteReq",
+                                "summary": "content",
+                                "description": "content"
                             }
                         }
                     },
@@ -2495,16 +2461,9 @@ const docTemplate = `{
                     "content": {
                         "application/json": {
                             "schema": {
-                                "oneOf": [
-                                    {
-                                        "type": "object"
-                                    },
-                                    {
-                                        "$ref": "#/components/schemas/types.WriteCommentReq",
-                                        "summary": "comment",
-                                        "description": "comment"
-                                    }
-                                ]
+                                "$ref": "#/components/schemas/types.WriteCommentReq",
+                                "summary": "comment",
+                                "description": "comment"
                             }
                         }
                     },
@@ -2590,16 +2549,9 @@ const docTemplate = `{
                     "content": {
                         "application/json": {
                             "schema": {
-                                "oneOf": [
-                                    {
-                                        "type": "object"
-                                    },
-                                    {
-                                        "$ref": "#/components/schemas/types.DstReq",
-                                        "summary": "dst",
-                                        "description": "destination"
-                                    }
-                                ]
+                                "$ref": "#/components/schemas/types.DstReq",
+                                "summary": "dst",
+                                "description": "destination"
                             }
                         }
                     },
