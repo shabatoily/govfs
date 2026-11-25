@@ -8,6 +8,8 @@ FROM node:26.13-alpine AS node
 
 WORKDIR /webui
 
+RUN npm install --global yarn@1.22.22
+
 COPY webui/package.json webui/yarn.lock ./
 
 RUN yarn install --frozen-lockfile
