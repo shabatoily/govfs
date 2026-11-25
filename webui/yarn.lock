@@ -1093,10 +1093,10 @@ magic-string@^1.4.5:
   dependencies:
     "@jridgewell/sourcemap-codec" "^1.6.0"
 
-markdown-actions@^1.1.2:
-  version "1.1.2"
-  resolved "https://registry.yarnpkg.com/markdown-actions/-/markdown-actions-1.1.2.tgz#3feb13ae2cb206919c5082aba6422ab470bea2e1"
-  integrity sha512-U7rmgTvUP3neh3XaVblikslRWWhfpzF2SiI1A6z3az7IpYuAiVvdqtZrFCArV22TSj2Ht+r0ResohlsJ8/ntbw==
+markdown-actions@^1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/markdown-actions/-/markdown-actions-1.3.0.tgz#53e5b554ab3c056a44d4f5ee6f22225d43a55191"
+  integrity sha512-SiQ+wowIL+FbBGNT4VrLrpnN2EsXKV7fDKMb5ptAahcz0QjlwZdtYUlrzufXCi7URuZRg1ZaIu22VEXRKd+vyQ==
 
 mdn-data@2.27.1:
   version "2.27.1"
@@ -1175,13 +1175,13 @@ obug@^3.0.0:
   resolved "https://registry.yarnpkg.com/obug/-/obug-3.0.0.tgz#2ddfc17d1c1dd8c825eebd127099da307c919299"
   integrity sha512-5vvB5+W7ePv+p3uqxi+RcW1XAzLW0/hxt3/4X4Lc4qHudzOhmBiBwOY6DRob4WnanAEGvNcLjF+KNOufrUoEQw==
 
-overtype@^2.0.5:
-  version "2.3.5"
-  resolved "https://registry.yarnpkg.com/overtype/-/overtype-2.3.5.tgz#cc5ac4c64045a3fb9b887f9bff32398ce56d742f"
-  integrity sha512-Vrj8rkqZ2KqRW/xy4atauAiuCNr6V255BdTK4G79cbjuyZD5P8fG4/8DLYDwvuYwcADK98sX3ilIre8a1zsWmA==
+overtype@^2.9.0:
+  version "2.9.0"
+  resolved "https://registry.yarnpkg.com/overtype/-/overtype-2.9.0.tgz#9858cd5f5f9d7349c22d4ebf6f46efd78ce9124a"
+  integrity sha512-7GazO4BfWe7VsQXvwbKhHezBdQehCAN74mG1it1BxKVeeF6c61kYAFz+w3k8TQOzizjZb0EoXLR2J2lWXKnZfA==
   dependencies:
     "@floating-ui/dom" "^1.7.4"
-    markdown-actions "^1.1.2"
+    markdown-actions "^1.3.0"
 
 parse5@^8.0.0:
   version "8.0.0"
