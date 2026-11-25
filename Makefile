@@ -16,7 +16,8 @@ VERSION=$(shell git describe --tags --always --dirty 2>/dev/null || echo devel)
 OS=$(shell go env GOOS)
 ARCH=$(shell go env GOARCH)
 
-SWAGGO_VERSION=v2.0.0-rc5
+SWAGGO_VERSION=v2.0.0-rc6
+LINT_VERSION=v2.15.0
 BENCHSTAT_VERSION=v0.0.0-20260819171926-ebcb4798430d
 BENCHMARK_COUNT?=10
 BENCHMARK_TIME?=2s
@@ -183,7 +184,7 @@ fmt:
 .PHONY: lint
 lint:
 	@echo "[lint] starting lint"
-	@GOTOOLCHAIN=$(GOVERSION) go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 run ./...
+	@GOTOOLCHAIN=$(GOVERSION) go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(LINT_VERSION) run ./...
 	@echo "[lint] complete lint"
 
 ##release tag={tag [v1.0.0]}: release application

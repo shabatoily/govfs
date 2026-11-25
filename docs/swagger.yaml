@@ -13,7 +13,6 @@ components:
           $ref: '#/components/schemas/types.TreeNodeRes'
       type: object
     time.Duration:
-      description: 재연결 시도 주기
       enum:
       - -9223372036854775808
       - 9223372036854775807
@@ -125,7 +124,6 @@ components:
           type: string
       type: object
     types.MetaRes:
-      description: 노드 메타데이터
       properties:
         comments:
           type: string
@@ -161,13 +159,13 @@ components:
           type: string
       type: object
     types.SSEData:
-      description: 데이터 페이로드
       properties:
         message:
           description: 메시지 내용
           type: string
         meta:
           $ref: '#/components/schemas/types.SSEMeta'
+          description: 메타데이터
         status:
           description: 성공 여부
           type: boolean
@@ -176,7 +174,6 @@ components:
           type: string
       type: object
     types.SSEEvent:
-      description: 이벤트 유형
       enum:
       - heartbeat
       - subscribe
@@ -194,16 +191,18 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/types.SSEData'
+          description: 데이터 페이로드
         event:
           $ref: '#/components/schemas/types.SSEEvent'
+          description: 이벤트 유형
         id:
           description: 메시지 고유 ID
           type: string
         retry:
           $ref: '#/components/schemas/time.Duration'
+          description: 재연결 시도 주기
       type: object
     types.SSEMeta:
-      description: 메타데이터
       properties:
         action:
           description: 수행된 액션
@@ -284,6 +283,7 @@ components:
           uniqueItems: false
         meta:
           $ref: '#/components/schemas/types.MetaRes'
+          description: 노드 메타데이터
       type: object
     types.UpdateUserReq:
       properties:
@@ -786,11 +786,9 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-              - type: object
-              - $ref: '#/components/schemas/types.LoginReq'
-                description: login request
-                summary: request
+              $ref: '#/components/schemas/types.LoginReq'
+              description: login request
+              summary: request
         description: login request
         required: true
       responses:
@@ -942,11 +940,9 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-              - type: object
-              - $ref: '#/components/schemas/types.RotateKeyReq'
-                description: new key
-                summary: key
+              $ref: '#/components/schemas/types.RotateKeyReq'
+              description: new key
+              summary: key
         description: new key
         required: true
       responses:
@@ -1023,11 +1019,9 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-              - type: object
-              - $ref: '#/components/schemas/types.SSEMeta'
-                description: meta data
-                summary: metaData
+              $ref: '#/components/schemas/types.SSEMeta'
+              description: meta data
+              summary: metaData
         description: meta data
         required: true
       responses:
@@ -1155,19 +1149,21 @@ paths:
       description: 새로운 파일이나 디렉터리를 생성합니다.
       requestBody:
         content:
-          application/x-www-form-urlencoded:
-            schema:
-              oneOf:
-              - title: isDir
-                type: string
-              - title: name
-                type: string
-              - title: file
-                type: file
           multipart/form-data:
             schema:
+              properties:
+                file:
+                  description: file (isDir=false인 경우 필수)
+                  format: binary
+                  type: string
+                isDir:
+                  description: is directory
+                  type: string
+                name:
+                  description: name
+                  type: string
               type: object
-        description: is directory | name | file (isDir=false인 경우 필수)
+        description: is directory
       responses:
         "202":
           content:
@@ -1307,11 +1303,9 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-              - type: object
-              - $ref: '#/components/schemas/types.DstReq'
-                description: destination
-                summary: dst
+              $ref: '#/components/schemas/types.DstReq'
+              description: destination
+              summary: dst
         description: destination
         required: true
       responses:
@@ -1369,11 +1363,9 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-              - type: object
-              - $ref: '#/components/schemas/types.WriteReq'
-                description: content
-                summary: content
+              $ref: '#/components/schemas/types.WriteReq'
+              description: content
+              summary: content
         description: content
         required: true
       responses:
@@ -1420,11 +1412,9 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-              - type: object
-              - $ref: '#/components/schemas/types.WriteCommentReq'
-                description: comment
-                summary: comment
+              $ref: '#/components/schemas/types.WriteCommentReq'
+              description: comment
+              summary: comment
         description: comment
         required: true
       responses:
@@ -1476,11 +1466,9 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-              - type: object
-              - $ref: '#/components/schemas/types.DstReq'
-                description: destination
-                summary: dst
+              $ref: '#/components/schemas/types.DstReq'
+              description: destination
+              summary: dst
         description: destination
         required: true
       responses:
@@ -1603,12 +1591,15 @@ paths:
       description: 업로드된 백업 파일을 통해 파일 시스템을 복구합니다.
       requestBody:
         content:
-          application/x-www-form-urlencoded:
-            schema:
-              title: file
-              type: file
           multipart/form-data:
             schema:
+              properties:
+                file:
+                  description: file
+                  format: binary
+                  type: string
+              required:
+              - file
               type: object
         description: file
         required: true
