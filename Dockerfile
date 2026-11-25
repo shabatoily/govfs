@@ -4,7 +4,7 @@ LABEL maintainer="meteormin"
 
 RUN apk add curl
 
-FROM node:24.15-alpine AS node
+FROM node:26.13-alpine AS node
 
 WORKDIR /webui
 

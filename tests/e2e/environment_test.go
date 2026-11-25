@@ -35,7 +35,7 @@ type environment struct {
 	secret      string
 	token       string
 	process     *exec.Cmd
-	done        chan error
+	done        chan struct{}
 	session     *mcp.ClientSession
 	fixtures    []fixture
 	fixtureRoot string
@@ -155,8 +155,11 @@ func (e *environment) launch(t *testing.T) {
 		e.process = nil
 		t.Fatal(err)
 	}
-	e.done = make(chan error, 1)
-	go func() { e.done <- e.process.Wait() }()
+	e.done = make(chan struct{})
+	go func() {
+		_ = e.process.Wait()
+		close(e.done)
+	}()
 	client := http.Client{Timeout: time.Second}
 	end := time.Now().Add(10 * time.Second)
 	for time.Now().Before(end) {
