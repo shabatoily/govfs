@@ -16,7 +16,7 @@
     "@testing-library/svelte": "^5.4.2",
     "@tsconfig/svelte": "^5.0.6",
     "@types/node": "^26.6.6",
-    "@typescript-eslint/types": "^8.53.1",
+    "@typescript-eslint/types": "^8.74.0",
     "autoprefixer": "^10.4.0",
     "jsdom": "^27.4.0",
     "lucide-svelte": "^0.562.0",

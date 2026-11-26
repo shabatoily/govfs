@@ -533,10 +533,10 @@
   dependencies:
     undici-types "~8.9.0"
 
-"@typescript-eslint/types@^8.53.1":
-  version "8.57.2"
-  resolved "https://registry.yarnpkg.com/@typescript-eslint/types/-/types-8.57.2.tgz#efe0da4c28b505ed458f113aa960dce2c5c671f4"
-  integrity sha512-/iZM6FnM4tnx9csuTxspMW4BOSegshwX5oBDznJ7S4WggL7Vczz5d2W11ecc4vRrQMQHXRSxzrCsyG5EsPPTbA==
+"@typescript-eslint/types@^8.74.0":
+  version "8.74.0"
+  resolved "https://registry.yarnpkg.com/@typescript-eslint/types/-/types-8.74.0.tgz#db010a2b419d9a57717eda8d97eafea0cad3ae97"
+  integrity sha512-MpnMrJCVNpP1iVL8NiHkQZgQqIMBH5ewDGUPBh1pqQXwFtMFjsl1M03QcYPXmv6stCKEiF0PN7CGbU1ZbXFzEA==
 
 "@typescript/typescript-aix-ppc64@7.0.2":
   version "7.0.2"
